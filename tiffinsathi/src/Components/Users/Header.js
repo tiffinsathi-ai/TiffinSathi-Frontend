@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { HiHome, HiCube, HiCalendar, HiUser } from "react-icons/hi";
-import logo from "../assets/logo.png";
+import logo from "../../assets/logo.png";
 
 const Header = () => {
   return (
