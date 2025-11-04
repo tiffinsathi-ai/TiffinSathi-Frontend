@@ -10,13 +10,11 @@ import {
 } from "react-icons/hi";
 import { FaLeaf } from "react-icons/fa";
 import homeBg from "../assets/home.jpg";
-import Header from "../Components/Header";
-import Footer from "../Components/Footer";
+
 
 const Home = () => {
   return (
     <div className="flex flex-col min-h-screen w-full">
-      <Header />
       <div className="flex-grow">
         {/* Hero Section */}
         <section
@@ -251,7 +249,6 @@ const Home = () => {
           </div>
         </section>
       </div>
-      <Footer />
     </div>
   );
 };

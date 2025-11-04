@@ -1,7 +1,7 @@
 import React from "react";
 import { FaFacebookF, FaInstagram, FaTwitter } from "react-icons/fa";
 import { HiPhone, HiMail, HiLocationMarker } from "react-icons/hi";
-import logo from "../assets/logo.png";
+import logo from "../../assets/logo.png";
 
 const Footer = () => {
   return (
@@ -122,4 +122,3 @@ const Footer = () => {
 };
 
 export default Footer;
-
