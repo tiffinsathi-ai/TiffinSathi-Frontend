@@ -207,7 +207,11 @@ const Login = () => {
           <div className="mt-8 space-y-4 text-center">
             <p className="text-gray-700">
               Don't have an account?{" "}
-              <a href="#" className="font-medium" style={{ color: "#F5B800" }}>
+              <a
+                href="/signup"
+                className="font-medium"
+                style={{ color: "#F5B800" }}
+              >
                 Sign up here
               </a>
             </p>
