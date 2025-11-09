@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import {
   HiMail,
   HiLockClosed,
@@ -19,6 +20,8 @@ const Login = () => {
     password: "",
     rememberMe: false,
   });
+  const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -26,12 +29,111 @@ const Login = () => {
       ...formData,
       [name]: type === "checkbox" ? checked : value,
     });
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: "" });
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Redirect to home page
-    navigate("/");
+    setErrors({});
+
+    if (!formData.email || !formData.password) {
+      setErrors({
+        submit: "Please enter both email and password",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await axios.post(
+        "/auth/login",
+        {
+          email: formData.email,
+          password: formData.password,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // Store token and user data in localStorage
+      const responseData = response.data;
+      console.log("Login response:", responseData);
+
+      // Extract token from response (could be responseData.token, responseData.accessToken, or just the token string)
+      const token =
+        responseData?.token || responseData?.accessToken || responseData;
+      console.log("Extracted token:", token);
+
+      if (token) {
+        // Store the token
+        localStorage.setItem(
+          "token",
+          typeof token === "string" ? token : JSON.stringify(token)
+        );
+        localStorage.setItem("isAuthenticated", "true");
+
+        // Store user data if available
+        if (responseData?.user || responseData?.userData) {
+          const userData = responseData.user || responseData.userData;
+          localStorage.setItem("user", JSON.stringify(userData));
+        } else if (responseData?.userName || responseData?.email) {
+          // If user data is in the root of response, store it
+          localStorage.setItem("user", JSON.stringify(responseData));
+        }
+
+        // If remember me is checked, also store email
+        if (formData.rememberMe) {
+          localStorage.setItem("rememberedEmail", formData.email);
+        }
+      }
+
+      // Redirect to home page
+      navigate("/");
+    } catch (error) {
+      console.error("Login error:", error);
+
+      let errorMessage = "Failed to login. Please try again.";
+
+      if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
+        errorMessage =
+          "Network error: Cannot connect to server. Please ensure the backend is running on http://localhost:8080";
+      } else if (error.code === "ECONNREFUSED") {
+        errorMessage =
+          "Connection refused: The backend server is not running or not accessible on http://localhost:8080";
+      } else if (error.response) {
+        const status = error.response.status;
+        const responseData = error.response.data;
+
+        if (status === 401 || status === 403) {
+          errorMessage = responseData?.message || "Invalid email or password";
+        } else if (status === 404) {
+          errorMessage =
+            "Login endpoint not found. Please check the backend configuration.";
+        } else {
+          errorMessage =
+            responseData?.message ||
+            responseData?.error ||
+            `Server error: ${status} ${error.response.statusText}`;
+        }
+      } else if (error.request) {
+        errorMessage =
+          "No response from server. Please check if the backend is running and CORS is configured correctly.";
+      } else {
+        errorMessage = error.message || errorMessage;
+      }
+
+      setErrors({
+        submit: errorMessage,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -108,6 +210,13 @@ const Login = () => {
             Welcome Back!
           </h2>
           <p className="text-gray-600 mb-8">Sign in to your account</p>
+
+          {/* Error Message */}
+          {errors.submit && (
+            <div className="mb-4 p-3 rounded-lg text-white text-sm bg-red-500">
+              {errors.submit}
+            </div>
+          )}
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -189,17 +298,26 @@ const Login = () => {
             {/* Sign In Button */}
             <button
               type="submit"
-              className="w-full py-3 rounded-lg font-bold text-white flex items-center justify-center gap-2 shadow-lg transition-colors"
+              disabled={isLoading}
+              className="w-full py-3 rounded-lg font-bold text-white flex items-center justify-center gap-2 shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ backgroundColor: "#F5B800" }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor = "#e0a500")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.backgroundColor = "#F5B800")
-              }
+              onMouseEnter={(e) => {
+                if (!isLoading)
+                  e.currentTarget.style.backgroundColor = "#e0a500";
+              }}
+              onMouseLeave={(e) => {
+                if (!isLoading)
+                  e.currentTarget.style.backgroundColor = "#F5B800";
+              }}
             >
-              <FaArrowRight className="w-5 h-5" />
-              <span>Sign In</span>
+              {isLoading ? (
+                <span>Signing in...</span>
+              ) : (
+                <>
+                  <FaArrowRight className="w-5 h-5" />
+                  <span>Sign In</span>
+                </>
+              )}
             </button>
           </form>
 
@@ -223,7 +341,7 @@ const Login = () => {
               <span>
                 Want to join as a Restaurant?{" "}
                 <a
-                  href="#"
+                  href="/vendor-signup"
                   className="font-medium"
                   style={{ color: "#4A8C39" }}
                 >
