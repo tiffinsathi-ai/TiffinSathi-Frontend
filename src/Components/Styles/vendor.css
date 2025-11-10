@@ -1,0 +1,59 @@
+:root {
+  --green: #6DB33F;
+  --green-dark: #5FA535;
+  --muted: #6C757D;
+  --bg: #F8F9FA;
+  --card: #FFFFFF;
+}
+
+body {
+  background: var(--bg);
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  color: #212529;
+}
+/* Page shell */
+.vendor-page { padding-bottom: 80px; }
+
+/* Cards */
+.card, .bg-white { background: var(--card); border-radius: 12px; box-shadow: 0 6px 18px rgba(15,23,42,0.06); padding: 1rem; }
+.card { padding: 1rem; }
+
+/* small helpers */
+.muted { color: var(--muted); font-size: .9rem; }
+.card-value { font-weight:700; font-size:1.5rem; color:var(--green); display:block; margin-top:.4rem; }
+.btn-primary { background: var(--green); color:#fff; padding:.5rem 1rem; border-radius:8px; }
+.btn { padding:.4rem .8rem; border-radius:8px; background:#fff; border:1px solid #E9ECEF; }
+.input { border:1px solid #e9ecef; padding:.6rem; border-radius:8px; width:100%; }
+.input-small { border:1px solid #e9ecef; padding:.3rem; border-radius:6px; min-width:140px; }
+
+/* cards grid helpers */
+.card-img { height: 160px; width:100%; object-fit:cover; border-radius:8px; margin-bottom:0.5rem; }
+
+/* chips */
+.chip { padding:.25rem .5rem; border-radius:999px; background:#f3f4f6; font-size:.8rem; }
+.chip-active { background: rgba(109,179,63,0.12); color:var(--green); }
+
+/* status labels */
+.status { padding:.2rem .5rem; border-radius:6px; font-size:.85rem; }
+.status.pending { background: #FFF4E6; color: #B45309; }
+.status.preparing { background: #FEF3C7; color: #92400E; }
+.status.out_for_delivery { background: #EBF8FF; color: #0369A1; }
+.status.delivered { background:#ECFDF5; color:#065F46; }
+.status.cancelled { background:#FEF2F2; color:#B91C1C; }
+
+/* modal */
+.modal-backdrop { position: fixed; inset:0; background: rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:60; padding:1rem; }
+.modal { background:#fff; border-radius:10px; padding:1rem; width:100%; max-width:720px; box-shadow:0 10px 30px rgba(0,0,0,0.12); }
+
+/* simple chart bar */
+.bar { background: var(--green); height:40%; border-radius:6px; transition:height .3s; }
+
+/* tables */
+table { border-collapse: collapse; width:100%; }
+thead th { padding:.75rem 0; text-align:left; color:var(--muted); font-weight:600; }
+tbody td { padding:.75rem 0; vertical-align:middle; }
+
+/* responsive */
+@media (max-width:768px){
+  .grid.md\:grid-cols-3 { grid-template-columns: repeat(1, minmax(0,1fr)); }
+}
