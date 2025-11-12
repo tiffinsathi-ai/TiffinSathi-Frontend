@@ -3,6 +3,9 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Home from "./Pages/User/Home";
 import Login from "./Pages/Login";
 import Signup from "./Pages/User/Signup";
+import ForgetPassword from "./Pages/User/ForgetPassword";
+import VerifyOTP from "./Pages/User/VerifyOTP";
+import ResetPassword from "./Pages/User/ResetPassword";
 import Layout from "./Components/Users/Layout";
 import VendorLayout from "./Components/Vendor/VendorLayout";
 import AdminLayout from "./Components/Admin/AdminLayout";
@@ -19,6 +22,9 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={<ForgetPassword />} />
+            <Route path="/verify-otp" element={<VerifyOTP />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/vendor-signup" element={<VendorSignup />} />
             <Route path="/" element={<Layout />}>
               <Route index element={<Home />} />

@@ -3,56 +3,56 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
   HiMail,
-  HiLockClosed,
   HiCheckCircle,
   HiInformationCircle,
-  HiChevronDown,
+  HiArrowLeft,
 } from "react-icons/hi";
 import { FaArrowRight } from "react-icons/fa";
-import loginBg from "../assets/login.jpg";
-import logo from "../assets/logo.png";
+import loginBg from "../../assets/login.jpg";
+import logo from "../../assets/logo.png";
 
-const Login = () => {
+const ForgetPassword = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    loginAs: "User",
-    email: "",
-    password: "",
-    rememberMe: false,
-  });
+  const [email, setEmail] = useState("");
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === "checkbox" ? checked : value,
-    });
+    const { value } = e.target;
+    setEmail(value);
     // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors({ ...errors, [name]: "" });
+    if (errors.email) {
+      setErrors({ ...errors, email: "" });
     }
+  };
+
+  const validateEmail = () => {
+    if (!email.trim()) {
+      setErrors({ email: "Email is required" });
+      return false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setErrors({ email: "Please enter a valid email address" });
+      return false;
+    }
+    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSuccessMessage("");
     setErrors({});
 
-    if (!formData.email || !formData.password) {
-      setErrors({
-        submit: "Please enter both email and password",
-      });
+    if (!validateEmail()) {
       return;
     }
 
     setIsLoading(true);
     try {
       const response = await axios.post(
-        "/auth/login",
+        "/auth/forgot-password",
         {
-          email: formData.email,
-          password: formData.password,
+          email: email.trim(),
         },
         {
           headers: {
@@ -61,44 +61,38 @@ const Login = () => {
         }
       );
 
-      // Store token and user data in localStorage
-      const responseData = response.data;
-      console.log("Login response:", responseData);
-
-      // Extract token from response (could be responseData.token, responseData.accessToken, or just the token string)
-      const token =
-        responseData?.token || responseData?.accessToken || responseData;
-      console.log("Extracted token:", token);
-
+      // Store email and token in localStorage for next steps
+      // Token might be in response.data.token, response.data, or the entire response.data
+      const token = response.data?.token || response.data;
+      console.log("Forgot password response:", response.data);
+      console.log("Extracted token type:", typeof token);
+      console.log("Extracted token:", token ? (typeof token === "string" ? token.substring(0, 50) + "..." : JSON.stringify(token).substring(0, 50) + "...") : "null");
+      
       if (token) {
-        // Store the token
-        localStorage.setItem(
-          "token",
-          typeof token === "string" ? token : JSON.stringify(token)
-        );
-        localStorage.setItem("isAuthenticated", "true");
-
-        // Store user data if available
-        if (responseData?.user || responseData?.userData) {
-          const userData = responseData.user || responseData.userData;
-          localStorage.setItem("user", JSON.stringify(userData));
-        } else if (responseData?.userName || responseData?.email) {
-          // If user data is in the root of response, store it
-          localStorage.setItem("user", JSON.stringify(responseData));
-        }
-
-        // If remember me is checked, also store email
-        if (formData.rememberMe) {
-          localStorage.setItem("rememberedEmail", formData.email);
-        }
+        // Always store as a plain string, never as JSON
+        const tokenString = typeof token === "string" ? token.trim() : String(token).trim();
+        localStorage.setItem("forgotPasswordToken", tokenString);
+        localStorage.setItem("forgotPasswordEmail", email.trim());
+        console.log("Token stored in localStorage (plain string):", tokenString.substring(0, 50) + "...");
+        console.log("Token length:", tokenString.length);
+      } else {
+        console.error("No token received from forgot-password API");
+        setErrors({
+          submit: "No token received from server. Please try again.",
+        });
+        return;
       }
 
-      // Redirect to home page
-      navigate("/");
+      setSuccessMessage(
+        "OTP has been sent to your email. Redirecting to verification..."
+      );
+      setTimeout(() => {
+        navigate("/verify-otp");
+      }, 2000);
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("Forgot password error:", error);
 
-      let errorMessage = "Failed to login. Please try again.";
+      let errorMessage = "Failed to send OTP. Please try again.";
 
       if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
         errorMessage =
@@ -110,11 +104,9 @@ const Login = () => {
         const status = error.response.status;
         const responseData = error.response.data;
 
-        if (status === 401 || status === 403) {
-          errorMessage = responseData?.message || "Invalid email or password";
-        } else if (status === 404) {
+        if (status === 404) {
           errorMessage =
-            "Login endpoint not found. Please check the backend configuration.";
+            "Endpoint not found. Please check the backend configuration.";
         } else {
           errorMessage =
             responseData?.message ||
@@ -202,14 +194,27 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Right Section - Login Form */}
+      {/* Right Section - Forgot Password Form */}
       <div className="w-full md:w-3/5 bg-white flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md">
           {/* Title */}
           <h2 className="text-4xl font-bold text-gray-800 mb-2">
-            Welcome Back!
+            Forgot Password?
           </h2>
-          <p className="text-gray-600 mb-8">Sign in to your account</p>
+          <p className="text-gray-600 mb-8">
+            Enter your email address and we'll send you an OTP to reset your
+            password
+          </p>
+
+          {/* Success Message */}
+          {successMessage && (
+            <div
+              className="mb-4 p-3 rounded-lg text-white text-sm"
+              style={{ backgroundColor: "#4A8C39" }}
+            >
+              {successMessage}
+            </div>
+          )}
 
           {/* Error Message */}
           {errors.submit && (
@@ -218,28 +223,8 @@ const Login = () => {
             </div>
           )}
 
-          {/* Login Form */}
+          {/* Forgot Password Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Login As Dropdown */}
-            <div>
-              <label className="block text-left text-gray-700 font-medium mb-2">
-                Login as
-              </label>
-              <div className="relative">
-                <select
-                  name="loginAs"
-                  value={formData.loginAs}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent appearance-none bg-white"
-                  style={{ borderColor: "#CCCCCC" }}
-                >
-                  <option value="User">User</option>
-                  <option value="Restaurant">Restaurant</option>
-                </select>
-                <HiChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-              </div>
-            </div>
-
             {/* Email Address */}
             <div>
               <label className="block text-left text-gray-700 font-medium mb-2">
@@ -250,56 +235,22 @@ const Login = () => {
                 <input
                   type="email"
                   name="email"
-                  value={formData.email}
+                  value={email}
                   onChange={handleChange}
                   required
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                  style={{ borderColor: "#CCCCCC" }}
+                  style={{
+                    borderColor: errors.email ? "#ef4444" : "#CCCCCC",
+                  }}
+                  placeholder="Enter your email"
                 />
               </div>
+              {errors.email && (
+                <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+              )}
             </div>
 
-            {/* Password */}
-            <div>
-              <label className="block text-left text-gray-700 font-medium mb-2">
-                Password<span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <HiLockClosed className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                  style={{ borderColor: "#CCCCCC" }}
-                />
-              </div>
-            </div>
-
-            {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 text-gray-700">
-                <input
-                  type="checkbox"
-                  name="rememberMe"
-                  checked={formData.rememberMe}
-                  onChange={handleChange}
-                  className="w-4 h-4 rounded border-gray-300"
-                />
-                <span>Remember me</span>
-              </label>
-              <a
-                href="/forgot-password"
-                className="font-medium"
-                style={{ color: "#F5B800" }}
-              >
-                Forgot password?
-              </a>
-            </div>
-
-            {/* Sign In Button */}
+            {/* Send OTP Button */}
             <button
               type="submit"
               disabled={isLoading}
@@ -315,41 +266,38 @@ const Login = () => {
               }}
             >
               {isLoading ? (
-                <span>Signing in...</span>
+                <span>Sending OTP...</span>
               ) : (
                 <>
                   <FaArrowRight className="w-5 h-5" />
-                  <span>Sign In</span>
+                  <span>Send OTP</span>
                 </>
               )}
             </button>
           </form>
 
-          {/* Account Management Links */}
+          {/* Back to Login Link */}
           <div className="mt-8 space-y-4 text-center">
-            <p className="text-gray-700">
-              Don't have an account?{" "}
-              <a
-                href="/signup"
-                className="font-medium"
-                style={{ color: "#F5B800" }}
-              >
-                Sign up here
-              </a>
-            </p>
+            <button
+              onClick={() => navigate("/login")}
+              className="flex items-center justify-center gap-2 text-gray-700 hover:text-gray-900 transition-colors"
+            >
+              <HiArrowLeft className="w-5 h-5" />
+              <span>Back to Login</span>
+            </button>
             <div className="flex items-center justify-center gap-2 text-gray-700">
               <HiInformationCircle
                 className="w-5 h-5"
                 style={{ color: "#4A8C39" }}
               />
               <span>
-                Want to join as a Restaurant?{" "}
+                Remember your password?{" "}
                 <a
-                  href="/vendor-signup"
+                  href="/login"
                   className="font-medium"
                   style={{ color: "#4A8C39" }}
                 >
-                  Click here
+                  Sign in here
                 </a>
               </span>
             </div>
@@ -360,4 +308,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default ForgetPassword;
