@@ -13,7 +13,6 @@ import {
   FileText,
   ChefHat,
   ArrowLeft,
-  Lock,
 } from "lucide-react";
 import loginBg from "../../assets/login.jpg";
 
@@ -46,6 +45,16 @@ const uploadFileToCloudinary = async (file) => {
       "File upload service failed. Please check network and file size."
     );
   }
+};
+
+// Convert file to base64
+const convertToBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
 };
 
 const designTokens = {
@@ -84,8 +93,6 @@ const VendorSignup = () => {
     email: "",
     phone: "",
     alternatePhone: "",
-    password: "",
-    confirmPassword: "",
     address: "",
     city: "",
     state: "",
@@ -100,7 +107,6 @@ const VendorSignup = () => {
     ifscCode: "",
     accountHolderName: "",
     panNumber: "",
-    gstNumber: "",
     fssaiNumber: "",
     termsAccepted: false,
     businessImage: null,
@@ -108,8 +114,6 @@ const VendorSignup = () => {
   const [documents, setDocuments] = useState({
     fssaiLicense: null,
     panCard: null,
-    gstCertificate: null,
-    addressProof: null,
     bankProof: null,
     menuCard: null,
   });
@@ -119,14 +123,16 @@ const VendorSignup = () => {
   const [submitError, setSubmitError] = useState("");
 
   const cuisineOptions = [
-    "North Indian",
-    "South Indian",
-    "Chinese",
-    "Continental",
-    "Gujarati",
-    "Punjabi",
-    "Bengali",
-    "Maharashtrian",
+    "Vegetarian",
+    "Non-Vegetarian",
+    "Vegan",
+    "Gluten-Free",
+    "Keto",
+    "Mediterranean",
+    "Asian Fusion",
+    "Street Food",
+    "Comfort Food",
+    "Healthy & Organic"
   ];
 
   const steps = [
@@ -141,22 +147,7 @@ const VendorSignup = () => {
     const { name, value, type, checked } = e.target;
     const newValue = type === "checkbox" ? checked : value;
 
-    setFormData((prev) => {
-      const updated = { ...prev, [name]: newValue };
-      // Clear confirmPassword error when passwords match
-      if (name === "password" && updated.confirmPassword) {
-        if (newValue === updated.confirmPassword && errors.confirmPassword) {
-          setErrors((prevErrors) => ({ ...prevErrors, confirmPassword: "" }));
-        }
-      }
-      // Clear confirmPassword error when confirmPassword changes and they match
-      if (name === "confirmPassword" && updated.password) {
-        if (newValue === updated.password && errors.confirmPassword) {
-          setErrors((prevErrors) => ({ ...prevErrors, confirmPassword: "" }));
-        }
-      }
-      return updated;
-    });
+    setFormData((prev) => ({ ...prev, [name]: newValue }));
 
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
@@ -182,7 +173,7 @@ const VendorSignup = () => {
     }
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
       setFormData((prev) => ({ ...prev, businessImage: file }));
@@ -199,16 +190,6 @@ const VendorSignup = () => {
         newErrors.email = "Valid email required";
       if (!formData.phone || !/^\d{10}$/.test(formData.phone))
         newErrors.phone = "Valid 10-digit phone required";
-      if (!formData.password) {
-        newErrors.password = "Password is required";
-      } else if (formData.password.length < 6) {
-        newErrors.password = "Password must be at least 6 characters";
-      }
-      if (!formData.confirmPassword) {
-        newErrors.confirmPassword = "Please confirm your password";
-      } else if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = "Passwords do not match";
-      }
     }
 
     if (step === 2) {
@@ -231,7 +212,6 @@ const VendorSignup = () => {
     if (step === 5) {
       if (!documents.fssaiLicense) newErrors.fssaiLicense = "Required";
       if (!documents.panCard) newErrors.panCard = "Required";
-      if (!documents.addressProof) newErrors.addressProof = "Required";
       if (!formData.termsAccepted) newErrors.terms = "You must accept terms";
     }
     setErrors(newErrors);
@@ -261,10 +241,10 @@ const VendorSignup = () => {
     setSubmitError("");
 
     try {
-      // Upload business image to Cloudinary
-      let businessImageUrl = null;
+      // Convert business image to base64
+      let profilePictureBase64 = null;
       if (formData.businessImage instanceof File) {
-        businessImageUrl = await uploadFileToCloudinary(formData.businessImage);
+        profilePictureBase64 = await convertToBase64(formData.businessImage);
       }
 
       // Upload documents to Cloudinary
@@ -281,11 +261,20 @@ const VendorSignup = () => {
         uploadPromises.filter((p) => p !== null)
       );
       results.forEach((result) => {
-        uploadedDocumentUrls[result.key] = result.url;
+        // Map frontend document keys to backend field names
+        const backendFieldName = {
+          fssaiLicense: "fssaiLicenseUrl",
+          panCard: "panCardUrl", 
+          bankProof: "bankProofUrl",
+          menuCard: "menuCardUrl"
+        }[result.key];
+        
+        if (backendFieldName) {
+          uploadedDocumentUrls[backendFieldName] = result.url;
+        }
       });
 
-      // Prepare data for API submission (matching backend entity field names)
-      // Helper function to convert empty strings to null
+      // Prepare data for API submission
       const nullIfEmpty = (value) =>
         value && value.trim() !== "" ? value.trim() : null;
 
@@ -311,43 +300,26 @@ const VendorSignup = () => {
           ? parseInt(formData.yearsInBusiness, 10)
           : 0;
 
-      // Convert capacity to integer if provided
+      // Convert capacity to integer if provided (can be negative)
       const capacity =
         formData.capacity && formData.capacity.trim() !== ""
           ? parseInt(formData.capacity, 10)
           : null;
 
-      // Ensure required fields are not empty (double-check before sending)
-      // Check email first - this is critical
+      // Validate required fields
       if (!formData.email || typeof formData.email !== "string") {
-        console.error("Email is missing or invalid:", formData.email);
-        throw new Error(
-          "Business email is required. Please fill in the email field."
-        );
+        throw new Error("Business email is required");
       }
-
       const trimmedEmail = formData.email.trim();
-
-      if (!trimmedEmail || trimmedEmail.length === 0) {
-        console.error("Email is empty after trimming:", formData.email);
-        throw new Error(
-          "Business email cannot be empty. Please enter a valid email address."
-        );
+      if (!trimmedEmail || !/\S+@\S+\.\S+/.test(trimmedEmail)) {
+        throw new Error("Please enter a valid business email address");
       }
 
-      if (!/\S+@\S+\.\S+/.test(trimmedEmail)) {
-        console.error("Email format is invalid:", trimmedEmail);
-        throw new Error(
-          "Please enter a valid business email address (e.g., example@domain.com)"
-        );
-      }
-
-      // Validate other required fields
       if (!formData.ownerName || typeof formData.ownerName !== "string") {
         throw new Error("Owner name is required");
       }
       const trimmedOwnerName = formData.ownerName.trim();
-      if (!trimmedOwnerName || trimmedOwnerName.length === 0) {
+      if (!trimmedOwnerName) {
         throw new Error("Owner name cannot be empty");
       }
 
@@ -355,7 +327,7 @@ const VendorSignup = () => {
         throw new Error("Business name is required");
       }
       const trimmedBusinessName = formData.businessName.trim();
-      if (!trimmedBusinessName || trimmedBusinessName.length === 0) {
+      if (!trimmedBusinessName) {
         throw new Error("Business name cannot be empty");
       }
 
@@ -371,57 +343,40 @@ const VendorSignup = () => {
         throw new Error("Food license number is required");
       }
       const trimmedFoodLicense = formData.fssaiNumber.trim();
-      if (!trimmedFoodLicense || trimmedFoodLicense.length === 0) {
+      if (!trimmedFoodLicense) {
         throw new Error("Food license number cannot be empty");
       }
 
       // Build the payload with validated data
-      // NOTE: Backend DTO expects camelCase field names (matching VendorSignupRequest)
       const apiPayload = {
-        userName: trimmedOwnerName, // Backend expects userName for owner name
+        userName: trimmedOwnerName,
         businessName: trimmedBusinessName,
-        phoneNumber: trimmedPhone, // Backend expects phoneNumber
-        email: trimmedEmail, // Backend expects email (not business_email)
+        phoneNumber: trimmedPhone,
+        email: trimmedEmail,
+        password: "defaultPassword123", // Set a default password
+        profilePicture: profilePictureBase64, // Base64 string
         businessAddress: businessAddress,
         alternatePhone: nullIfEmpty(formData.alternatePhone),
         yearsInBusiness: yearsInBusiness,
         cuisineType: cuisineType,
-        capacity: capacity,
+        capacity: capacity, // Can be negative
         description: nullIfEmpty(formData.description),
         bankName: nullIfEmpty(formData.bankName),
         accountNumber: nullIfEmpty(formData.accountNumber),
-        branchName: nullIfEmpty(formData.ifscCode), // Using ifscCode field for branchName
+        branchName: nullIfEmpty(formData.ifscCode),
         accountHolderName: nullIfEmpty(formData.accountHolderName),
         panNumber: nullIfEmpty(formData.panNumber),
-        vatNumber: nullIfEmpty(formData.gstNumber), // GST number maps to VAT number
+        vatNumber: null, // Removed GST
         foodLicenseNumber: trimmedFoodLicense,
-        companyRegistrationNumber: null, // Not in form, but backend accepts it
-        licenseDocument: null, // Documents are uploaded to Cloudinary, not sent as bytes
-        password: formData.password,
-        role: "VENDOR", // Backend sets this, but include for clarity
+        companyRegistrationNumber: null,
+        ...uploadedDocumentUrls, // Spread the document URLs
       };
 
-      // Final verification - ensure email is definitely set
-      if (!apiPayload.email || apiPayload.email.length === 0) {
-        console.error("CRITICAL: email is missing in payload!", apiPayload);
-        throw new Error(
-          "Internal error: Business email is missing. Please try again."
-        );
-      }
-
-      console.log("✅ All files uploaded successfully to Cloudinary.");
-      console.log("=== FORM DATA DEBUG ===");
-      console.log("Form Data (email):", formData.email);
-      console.log("Form Data (email type):", typeof formData.email);
-      console.log("Trimmed Email:", trimmedEmail);
-      console.log("Trimmed Email length:", trimmedEmail?.length);
-      console.log("=== PAYLOAD DEBUG ===");
-      console.log("Full API Payload:", JSON.stringify(apiPayload, null, 2));
-      console.log("Email in payload:", apiPayload.email);
-      console.log("Email type:", typeof apiPayload.email);
-      console.log("Email is null?", apiPayload.email === null);
-      console.log("Email is undefined?", apiPayload.email === undefined);
-      console.log("Email is empty?", apiPayload.email === "");
+      console.log("Submitting vendor registration...");
+      console.log("API Payload:", JSON.stringify({
+        ...apiPayload,
+        profilePicture: profilePictureBase64 ? "base64_image_data" : null
+      }, null, 2));
 
       // Send data to backend API
       const response = await axios.post(
@@ -431,6 +386,7 @@ const VendorSignup = () => {
           headers: {
             "Content-Type": "application/json",
           },
+          timeout: 30000, // 30 second timeout
         }
       );
 
@@ -438,78 +394,37 @@ const VendorSignup = () => {
       setSubmitted(true);
     } catch (error) {
       console.error("Submission Error:", error);
-      console.error("Error details:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
-
+      
       let errorMessage = "Failed to register. Please try again.";
 
-      // Check if it's a validation error (thrown by our code)
-      if (
-        error.message &&
-        (error.message.includes("required") ||
-          error.message.includes("cannot be empty") ||
-          error.message.includes("invalid") ||
-          error.message.includes("Internal error"))
-      ) {
-        errorMessage = error.message;
-      } else if (
-        error.code === "ERR_NETWORK" ||
-        error.message === "Network Error"
-      ) {
-        errorMessage =
-          "Network error: Cannot connect to server. Please ensure the backend is running on http://localhost:8080";
-      } else if (error.code === "ECONNREFUSED") {
-        errorMessage =
-          "Connection refused: The backend server is not running or not accessible on http://localhost:8080";
-      } else if (error.response) {
-        // Server responded with error status
-        const status = error.response.status;
-        const responseData = error.response.data;
+    if (error.response) {
+      // Server responded with error status
+      const status = error.response.status;
+      const responseData = error.response.data;
 
-        if (status === 400) {
-          // Check for specific backend validation errors
-          if (
-            responseData?.message?.includes("business_email") ||
-            responseData?.message?.includes("email") ||
-            responseData?.message?.includes("cannot be null")
-          ) {
-            errorMessage =
-              "Business email is required. Please ensure you have filled in the email field correctly.";
-          } else if (responseData?.message?.includes("already in use")) {
-            errorMessage = responseData.message;
-          } else {
-            errorMessage =
-              responseData?.message ||
-              responseData?.error ||
-              "Invalid data. Please check all fields and try again.";
-          }
-        } else if (status === 409) {
-          errorMessage =
-            responseData?.message ||
-            "Email or phone number already registered. Please use different credentials.";
-        } else if (status === 404) {
-          errorMessage =
-            "Endpoint not found. Please verify the backend API endpoint is correct.";
-        } else {
-          errorMessage =
-            responseData?.message ||
-            responseData?.error ||
-            `Server error: ${status}. Please try again later.`;
-        }
-      } else if (error.request) {
-        errorMessage =
-          "No response from server. Please check if the backend is running and CORS is configured correctly.";
+      if (status === 403) {
+        errorMessage = "Access forbidden. Please check CORS configuration on the server.";
+      } else if (status === 400) {
+        errorMessage = responseData?.message || "Invalid data. Please check all fields.";
+      } else if (status === 409) {
+        errorMessage = responseData?.message || "Email or phone number already registered.";
+      } else if (status === 500) {
+        errorMessage = "Server error. Please try again later.";
       } else {
-        errorMessage = error.message || errorMessage;
+        errorMessage = `Server error (${status}). Please try again.`;
       }
-
-      setSubmitError(errorMessage);
-    } finally {
-      setIsSubmitting(false);
+    } else if (error.code === "ERR_NETWORK") {
+      errorMessage = "Cannot connect to server. Please ensure the backend is running on http://localhost:8080";
+    } else if (error.code === "ECONNREFUSED") {
+      errorMessage = "Connection refused. Please check if the backend server is running.";
+    } else if (error.message) {
+      errorMessage = error.message;
     }
+
+    setSubmitError(errorMessage);
+  } finally {
+    setIsSubmitting(false);
+  }
   };
 
   const previewImageUrl = useMemo(() => {
@@ -529,8 +444,6 @@ const VendorSignup = () => {
       email: "",
       phone: "",
       alternatePhone: "",
-      password: "",
-      confirmPassword: "",
       address: "",
       city: "",
       state: "",
@@ -545,7 +458,6 @@ const VendorSignup = () => {
       ifscCode: "",
       accountHolderName: "",
       panNumber: "",
-      gstNumber: "",
       fssaiNumber: "",
       termsAccepted: false,
       businessImage: null,
@@ -553,8 +465,6 @@ const VendorSignup = () => {
     setDocuments({
       fssaiLicense: null,
       panCard: null,
-      gstCertificate: null,
-      addressProof: null,
       bankProof: null,
       menuCard: null,
     });
@@ -572,7 +482,6 @@ const VendorSignup = () => {
           backgroundRepeat: "no-repeat",
         }}
       >
-        {/* Overlay with reduced opacity */}
         <div
           className="absolute inset-0"
           style={{
@@ -628,7 +537,6 @@ const VendorSignup = () => {
         backgroundRepeat: "no-repeat",
       }}
     >
-      {/* Overlay with reduced opacity */}
       <div
         className="absolute inset-0"
         style={{
@@ -636,7 +544,6 @@ const VendorSignup = () => {
         }}
       ></div>
 
-      {/* Back Button */}
       <button
         onClick={() => navigate(-1)}
         className="absolute top-4 left-4 z-20 p-2 rounded-lg transition-colors flex items-center gap-2 text-white"
@@ -670,7 +577,6 @@ const VendorSignup = () => {
           </div>
 
           <div className="px-8 py-6">
-            {/* Error Message */}
             {submitError && (
               <div
                 className="mb-6 p-4 rounded-lg text-white text-sm"
@@ -926,102 +832,6 @@ const VendorSignup = () => {
                         style={{ color: designTokens.colors.error.red }}
                       >
                         {errors.phone}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-1 text-left"
-                      style={{ color: designTokens.colors.text.primary }}
-                    >
-                      Password *
-                    </label>
-                    <div className="relative">
-                      <Lock
-                        className="absolute left-3 top-1/2 transform -translate-y-1/2"
-                        style={{ color: designTokens.colors.text.secondary }}
-                        size={18}
-                      />
-                      <input
-                        type="password"
-                        name="password"
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        placeholder="Enter password (min 6 characters)"
-                        className="w-full pl-10 pr-3 py-2 rounded-lg focus:outline-none focus:ring-2"
-                        style={{
-                          border: `1px solid ${
-                            errors.password
-                              ? designTokens.colors.error.red
-                              : designTokens.colors.border.light
-                          }`,
-                        }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor = errors.password
-                            ? designTokens.colors.error.red
-                            : designTokens.colors.border.light)
-                        }
-                      />
-                    </div>
-                    {errors.password && (
-                      <p
-                        className="text-xs mt-1"
-                        style={{ color: designTokens.colors.error.red }}
-                      >
-                        {errors.password}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-1 text-left"
-                      style={{ color: designTokens.colors.text.primary }}
-                    >
-                      Confirm Password *
-                    </label>
-                    <div className="relative">
-                      <Lock
-                        className="absolute left-3 top-1/2 transform -translate-y-1/2"
-                        style={{ color: designTokens.colors.text.secondary }}
-                        size={18}
-                      />
-                      <input
-                        type="password"
-                        name="confirmPassword"
-                        value={formData.confirmPassword}
-                        onChange={handleInputChange}
-                        placeholder="Confirm your password"
-                        className="w-full pl-10 pr-3 py-2 rounded-lg focus:outline-none focus:ring-2"
-                        style={{
-                          border: `1px solid ${
-                            errors.confirmPassword
-                              ? designTokens.colors.error.red
-                              : designTokens.colors.border.light
-                          }`,
-                        }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor = errors.confirmPassword
-                            ? designTokens.colors.error.red
-                            : designTokens.colors.border.light)
-                        }
-                      />
-                    </div>
-                    {errors.confirmPassword && (
-                      <p
-                        className="text-xs mt-1"
-                        style={{ color: designTokens.colors.error.red }}
-                      >
-                        {errors.confirmPassword}
                       </p>
                     )}
                   </div>
@@ -1317,6 +1127,7 @@ const VendorSignup = () => {
                           designTokens.colors.border.light)
                       }
                     />
+                    <p className="text-xs text-gray-500 mt-1">Can be negative for special cases</p>
                   </div>
 
                   <div>
@@ -1573,34 +1384,6 @@ const VendorSignup = () => {
                         }
                       />
                     </div>
-
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-1 text-left"
-                        style={{ color: designTokens.colors.text.primary }}
-                      >
-                        VAT Number (if applicable)
-                      </label>
-                      <input
-                        type="text"
-                        name="gstNumber"
-                        value={formData.gstNumber}
-                        onChange={handleInputChange}
-                        placeholder="GST/VAT Number"
-                        className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
-                        style={{
-                          border: `1px solid ${designTokens.colors.border.light}`,
-                        }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
-                      />
-                    </div>
                   </div>
                 </div>
               </div>
@@ -1618,12 +1401,7 @@ const VendorSignup = () => {
                   {[
                     { key: "fssaiLicense", label: "FSSAI License *" },
                     { key: "panCard", label: "PAN Card *" },
-                    { key: "gstCertificate", label: "GST Certificate" },
-                    { key: "addressProof", label: "Address Proof *" },
-                    {
-                      key: "bankProof",
-                      label: "Cancelled Cheque/Bank Statement",
-                    },
+                    { key: "bankProof", label: "Cancelled Cheque/Bank Statement" },
                     { key: "menuCard", label: "Sample Menu Card" },
                   ].map((doc) => (
                     <div
