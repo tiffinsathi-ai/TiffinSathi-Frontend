@@ -6,6 +6,8 @@ import {
   HiCheckCircle,
   HiInformationCircle,
   HiArrowLeft,
+  HiEye,
+  HiEyeOff,
 } from "react-icons/hi";
 import { FaArrowRight } from "react-icons/fa";
 import loginBg from "../../assets/login.jpg";
@@ -21,6 +23,8 @@ const ResetPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [email, setEmail] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     // Check if token and email exist in localStorage
@@ -74,6 +78,15 @@ const ResetPassword = () => {
     if (errors[name]) {
       setErrors({ ...errors, [name]: "" });
     }
+  };
+
+  // Toggle password visibility functions
+  const toggleNewPasswordVisibility = () => {
+    setShowNewPassword(!showNewPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
   };
 
   const validateForm = () => {
@@ -343,17 +356,28 @@ const ResetPassword = () => {
               <div className="relative">
                 <HiLockClosed className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
-                  type="password"
+                  type={showNewPassword ? "text" : "password"}
                   name="newPassword"
                   value={formData.newPassword}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                   style={{
                     borderColor: errors.newPassword ? "#ef4444" : "#CCCCCC",
                   }}
                   placeholder="Enter new password"
                 />
+                <button
+                  type="button"
+                  onClick={toggleNewPasswordVisibility}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showNewPassword ? (
+                    <HiEyeOff className="w-5 h-5" />
+                  ) : (
+                    <HiEye className="w-5 h-5" />
+                  )}
+                </button>
               </div>
               {errors.newPassword && (
                 <p className="text-red-500 text-sm mt-1">
@@ -370,17 +394,28 @@ const ResetPassword = () => {
               <div className="relative">
                 <HiLockClosed className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                   style={{
                     borderColor: errors.confirmPassword ? "#ef4444" : "#CCCCCC",
                   }}
                   placeholder="Confirm new password"
                 />
+                <button
+                  type="button"
+                  onClick={toggleConfirmPasswordVisibility}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showConfirmPassword ? (
+                    <HiEyeOff className="w-5 h-5" />
+                  ) : (
+                    <HiEye className="w-5 h-5" />
+                  )}
+                </button>
               </div>
               {errors.confirmPassword && (
                 <p className="text-red-500 text-sm mt-1">

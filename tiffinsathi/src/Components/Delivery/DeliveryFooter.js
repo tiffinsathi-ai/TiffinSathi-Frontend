@@ -18,7 +18,7 @@ const designTokens = {
   }
 };
 
-const AdminFooter = () => {
+const DeliveryFooter = () => {
   return (
     <footer 
       className="py-4 px-6 border-t mt-auto" 
@@ -46,4 +46,4 @@ const AdminFooter = () => {
   );
 };
 
-export default AdminFooter;
+export default DeliveryFooter;

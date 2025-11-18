@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
+  Menu,
   Bell,
+  User,
   Settings,
   LogOut,
   UserCircle,
-  Shield,
+  Package,
 } from "lucide-react";
 import logo from "../../assets/logo.png";
 import defaultUser from "../../assets/default-user.jpg";
@@ -31,7 +33,7 @@ const designTokens = {
   },
 };
 
-const AdminNavbar = ({ onToggleSidebar }) => {
+const DeliveryNavbar = ({ onToggleSidebar }) => {
   const [hoveredItem, setHoveredItem] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [user, setUser] = useState(null);
@@ -56,9 +58,9 @@ const AdminNavbar = ({ onToggleSidebar }) => {
       } catch (error) {
         console.error("Error parsing user data:", error);
         setUser({ 
-          userName: username || "Admin", 
+          userName: username || "Delivery Partner", 
           email: localStorage.getItem("userEmail") || "",
-          username: username || "Admin"
+          username: username || "Delivery Partner"
         });
         setProfilePicture(null);
       }
@@ -93,12 +95,12 @@ const AdminNavbar = ({ onToggleSidebar }) => {
   }, []);
 
   const getDisplayName = () => {
-    if (!user) return "Admin";
+    if (!user) return "Delivery Partner";
     
     return user.username || 
            user.userName || 
            user.name || 
-           "Admin";
+           "Delivery Partner";
   };
 
   const getUserEmail = () => {
@@ -177,7 +179,7 @@ const AdminNavbar = ({ onToggleSidebar }) => {
                 className="absolute -top-1 -right-1 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center text-white"
                 style={{ backgroundColor: designTokens.colors.accent.red }}
               >
-                5
+                2
               </span>
             </button>
 
@@ -261,8 +263,8 @@ const AdminNavbar = ({ onToggleSidebar }) => {
                           {getUserEmail()}
                         </p>
                         <div className="flex items-center gap-1 mt-1">
-                          <Shield size={12} className="text-blue-500" />
-                          <span className="text-xs text-blue-600 font-medium">Administrator</span>
+                          <Package size={12} className="text-green-500" />
+                          <span className="text-xs text-green-600 font-medium">Delivery Partner</span>
                         </div>
                       </div>
                     </div>
@@ -285,6 +287,21 @@ const AdminNavbar = ({ onToggleSidebar }) => {
                     </a>
 
                     <a
+                      href="#deliveries"
+                      className="flex items-center gap-3 px-4 py-2 transition-colors"
+                      style={{ color: designTokens.colors.text.primary }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.backgroundColor = "#F8F9FA")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.backgroundColor = "transparent")
+                      }
+                    >
+                      <Package size={18} />
+                      <span className="text-sm">My Deliveries</span>
+                    </a>
+
+                    <a
                       href="#settings"
                       className="flex items-center gap-3 px-4 py-2 transition-colors"
                       style={{ color: designTokens.colors.text.primary }}
@@ -296,7 +313,7 @@ const AdminNavbar = ({ onToggleSidebar }) => {
                       }
                     >
                       <Settings size={18} />
-                      <span className="text-sm">Admin Settings</span>
+                      <span className="text-sm">Settings</span>
                     </a>
                   </div>
 
@@ -329,4 +346,4 @@ const AdminNavbar = ({ onToggleSidebar }) => {
   );
 };
 
-export default AdminNavbar;
+export default DeliveryNavbar;

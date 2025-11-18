@@ -7,6 +7,8 @@ import {
   HiCheckCircle,
   HiInformationCircle,
   HiChevronDown,
+  HiEye,
+  HiEyeOff,
 } from "react-icons/hi";
 import { FaArrowRight } from "react-icons/fa";
 import loginBg from "../assets/login.jpg";
@@ -22,6 +24,70 @@ const Login = () => {
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Function to decode JWT token and extract role
+  const decodeToken = (token) => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      
+      return JSON.parse(jsonPayload);
+    } catch (error) {
+      console.error("Error decoding token:", error);
+      return null;
+    }
+  };
+
+  // Function to determine redirect path based on role
+  const getRedirectPath = (role) => {
+    switch (role) {
+      case "ADMIN":
+        return "/admin";
+      case "DELIVERY":
+        return "/delivery";
+      case "VENDOR":
+        return "/vendor";
+      case "USER":
+      default:
+        return "/";
+    }
+  };
+
+  // Function to validate if user role matches the selected login type
+  const validateRoleAccess = (userRole, loginType) => {
+    const userRoles = ["USER", "ADMIN"];
+    const restaurantRoles = ["VENDOR", "DELIVERY"];
+
+    if (loginType === "User" && userRoles.includes(userRole)) {
+      return true;
+    }
+    if (loginType === "Restaurant" && restaurantRoles.includes(userRole)) {
+      return true;
+    }
+    return false;
+  };
+
+  // Function to extract username from email
+  const getUsernameFromEmail = (email) => {
+    if (!email) return "User";
+    return email.split('@')[0];
+  };
+
+  // Function to get display name based on user data
+  const getDisplayName = (decodedToken, email) => {
+    // Try to get name from token claims first
+    if (decodedToken.name) return decodedToken.name;
+    if (decodedToken.userName) return decodedToken.userName;
+    if (decodedToken.ownerName) return decodedToken.ownerName;
+    if (decodedToken.businessName) return decodedToken.businessName;
+    
+    // Fallback to username from email
+    return getUsernameFromEmail(email);
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -33,6 +99,11 @@ const Login = () => {
     if (errors[name]) {
       setErrors({ ...errors, [name]: "" });
     }
+  };
+
+  // Toggle password visibility
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   const handleSubmit = async (e) => {
@@ -49,7 +120,7 @@ const Login = () => {
     setIsLoading(true);
     try {
       const response = await axios.post(
-        "/auth/login",
+        "http://localhost:8080/auth/login",
         {
           email: formData.email,
           password: formData.password,
@@ -65,36 +136,96 @@ const Login = () => {
       const responseData = response.data;
       console.log("Login response:", responseData);
 
-      // Extract token from response (could be responseData.token, responseData.accessToken, or just the token string)
-      const token =
-        responseData?.token || responseData?.accessToken || responseData;
+      // Extract token from response
+      const token = responseData?.token || responseData?.accessToken;
       console.log("Extracted token:", token);
 
       if (token) {
         // Store the token
-        localStorage.setItem(
-          "token",
-          typeof token === "string" ? token : JSON.stringify(token)
-        );
+        localStorage.setItem("token", token);
         localStorage.setItem("isAuthenticated", "true");
 
-        // Store user data if available
-        if (responseData?.user || responseData?.userData) {
-          const userData = responseData.user || responseData.userData;
+        // Decode token to get user role and info
+        const decodedToken = decodeToken(token);
+        console.log("Decoded token:", decodedToken);
+        
+        if (decodedToken) {
+          const userRole = decodedToken.role || "USER";
+          const userEmail = decodedToken.email || decodedToken.sub || formData.email;
+          const username = getDisplayName(decodedToken, userEmail);
+          
+          // Validate if user has access based on selected login type
+          const hasAccess = validateRoleAccess(userRole, formData.loginAs);
+          
+          if (!hasAccess) {
+            let errorMessage = "";
+            if (formData.loginAs === "User") {
+              errorMessage = "This account is not authorized for user login. Please use Restaurant login for vendor/delivery accounts.";
+            } else {
+              errorMessage = "This account is not authorized for restaurant login. Please use User login for admin/user accounts.";
+            }
+            
+            setErrors({ submit: errorMessage });
+            setIsLoading(false);
+            return;
+          }
+          
+          // Store user information in localStorage
+          localStorage.setItem("userRole", userRole);
+          localStorage.setItem("userEmail", userEmail);
+          localStorage.setItem("username", username);
+          
+          // Store complete user data
+          const userData = {
+            role: userRole,
+            email: userEmail,
+            username: username,
+            // Add other user data from token if available
+            ...(decodedToken.userId && { userId: decodedToken.userId }),
+            ...(decodedToken.vendorId && { vendorId: decodedToken.vendorId }),
+            ...(decodedToken.partnerId && { partnerId: decodedToken.partnerId }),
+            ...(decodedToken.name && { name: decodedToken.name }),
+            ...(decodedToken.userName && { userName: decodedToken.userName }),
+            ...(decodedToken.ownerName && { ownerName: decodedToken.ownerName }),
+            ...(decodedToken.businessName && { businessName: decodedToken.businessName }),
+          };
           localStorage.setItem("user", JSON.stringify(userData));
-        } else if (responseData?.userName || responseData?.email) {
-          // If user data is in the root of response, store it
-          localStorage.setItem("user", JSON.stringify(responseData));
+
+          console.log("Stored user data:", {
+            role: userRole,
+            email: userEmail,
+            username: username,
+            fullData: userData
+          });
+
+          // Determine redirect path based on role
+          const redirectPath = getRedirectPath(userRole);
+          console.log(`Redirecting ${userRole} (${username}) to: ${redirectPath}`);
+          
+          // Redirect based on role
+          navigate(redirectPath);
+        } else {
+          // If we can't determine role, use default values and redirect to home
+          console.warn("Could not determine user role from token, using defaults");
+          const defaultUsername = getUsernameFromEmail(formData.email);
+          localStorage.setItem("userRole", "USER");
+          localStorage.setItem("userEmail", formData.email);
+          localStorage.setItem("username", defaultUsername);
+          localStorage.setItem("user", JSON.stringify({
+            role: "USER",
+            email: formData.email,
+            username: defaultUsername
+          }));
+          navigate("/");
         }
 
         // If remember me is checked, also store email
         if (formData.rememberMe) {
           localStorage.setItem("rememberedEmail", formData.email);
         }
+      } else {
+        throw new Error("No token received from server");
       }
-
-      // Redirect to home page
-      navigate("/");
     } catch (error) {
       console.error("Login error:", error);
 
@@ -255,6 +386,7 @@ const Login = () => {
                   required
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                   style={{ borderColor: "#CCCCCC" }}
+                  placeholder="Enter your email"
                 />
               </div>
             </div>
@@ -267,14 +399,26 @@ const Login = () => {
               <div className="relative">
                 <HiLockClosed className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                   style={{ borderColor: "#CCCCCC" }}
+                  placeholder="Enter your password"
                 />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showPassword ? (
+                    <HiEyeOff className="w-5 h-5" />
+                  ) : (
+                    <HiEye className="w-5 h-5" />
+                  )}
+                </button>
               </div>
             </div>
 
