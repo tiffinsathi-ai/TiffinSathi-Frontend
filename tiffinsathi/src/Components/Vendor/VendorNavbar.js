@@ -1,14 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
-  Menu,
   Bell,
-  User,
   Settings,
   LogOut,
   UserCircle,
   CreditCard,
 } from "lucide-react";
 import logo from "../../assets/logo.png";
+import defaultUser from "../../assets/default-user.jpg";
 
 const designTokens = {
   colors: {
@@ -35,7 +34,53 @@ const designTokens = {
 const VendorNavbar = ({ onToggleSidebar }) => {
   const [hoveredItem, setHoveredItem] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const [profilePicture, setProfilePicture] = useState(null);
   const dropdownRef = useRef(null);
+
+  // Check authentication and user data
+  const checkAuthStatus = () => {
+    const token = localStorage.getItem("token");
+    const userData = localStorage.getItem("user");
+    const username = localStorage.getItem("username");
+
+    if (token && userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+        
+        if (parsedUser.profilePicture) {
+          setProfilePicture(parsedUser.profilePicture);
+        } else {
+          setProfilePicture(null);
+        }
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        setUser({ 
+          userName: username || "Vendor", 
+          email: localStorage.getItem("userEmail") || "",
+          username: username || "Vendor"
+        });
+        setProfilePicture(null);
+      }
+    }
+  };
+
+  useEffect(() => {
+    checkAuthStatus();
+    
+    const handleStorageChange = () => {
+      checkAuthStatus();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("focus", checkAuthStatus);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("focus", checkAuthStatus);
+    };
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -48,6 +93,55 @@ const VendorNavbar = ({ onToggleSidebar }) => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Get display name with fallbacks
+  const getDisplayName = () => {
+    if (!user) return "Vendor";
+    
+    return user.username || 
+           user.userName || 
+           user.name || 
+           user.ownerName || 
+           user.businessName || 
+           "Vendor";
+  };
+
+  // Get user email
+  const getUserEmail = () => {
+    if (!user) return "";
+    return user.email || localStorage.getItem("userEmail") || "";
+  };
+
+  // Format base64 image data for display
+  const getProfilePictureSrc = () => {
+    if (profilePicture) {
+      if (typeof profilePicture === 'string' && profilePicture.startsWith('data:')) {
+        return profilePicture;
+      }
+      if (typeof profilePicture === 'string') {
+        return `data:image/jpeg;base64,${profilePicture}`;
+      }
+      if (Array.isArray(profilePicture)) {
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(profilePicture)));
+        return `data:image/jpeg;base64,${base64}`;
+      }
+    }
+    return defaultUser;
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("rememberedEmail");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("username");
+    setUser(null);
+    setProfilePicture(null);
+    setIsDropdownOpen(false);
+    window.location.href = "/login";
+  };
 
   return (
     <nav
@@ -102,20 +196,21 @@ const VendorNavbar = ({ onToggleSidebar }) => {
                 onMouseEnter={() => setHoveredItem("profile")}
                 onMouseLeave={() => setHoveredItem(null)}
               >
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{
-                    backgroundColor: "#FFD700",
-                    border: "2px solid white",
-                  }}
-                >
-                  <User size={18} style={{ color: "white" }} />
+                <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border-2 border-white">
+                  <img
+                    src={getProfilePictureSrc()}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.src = defaultUser;
+                    }}
+                  />
                 </div>
                 <span
                   className="text-sm font-medium hidden sm:inline"
                   style={{ color: designTokens.colors.text.primary }}
                 >
-                  Spice Garden
+                  {getDisplayName()}
                 </span>
                 <svg
                   className={`w-4 h-4 transition-transform duration-200 ${
@@ -137,7 +232,7 @@ const VendorNavbar = ({ onToggleSidebar }) => {
 
               {isDropdownOpen && (
                 <div
-                  className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg overflow-hidden"
+                  className="absolute right-0 mt-2 w-64 rounded-lg shadow-lg overflow-hidden"
                   style={{
                     backgroundColor: designTokens.colors.background.primary,
                     border: `1px solid ${designTokens.colors.border.light}`,
@@ -145,21 +240,35 @@ const VendorNavbar = ({ onToggleSidebar }) => {
                 >
                   {/* User Info Section */}
                   <div
-                    className="px-4 py-3 border-b"
+                    className="px-4 py-4 border-b"
                     style={{ borderColor: designTokens.colors.border.light }}
                   >
-                    <p
-                      className="text-sm font-semibold"
-                      style={{ color: designTokens.colors.text.primary }}
-                    >
-                      Spice Garden
-                    </p>
-                    <p
-                      className="text-xs"
-                      style={{ color: designTokens.colors.text.secondary }}
-                    >
-                      contact@spicegarden.com
-                    </p>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden border-2 border-gray-200">
+                        <img
+                          src={getProfilePictureSrc()}
+                          alt="Profile"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.src = defaultUser;
+                          }}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className="text-sm font-semibold truncate"
+                          style={{ color: designTokens.colors.text.primary }}
+                        >
+                          {getDisplayName()}
+                        </p>
+                        <p
+                          className="text-xs truncate"
+                          style={{ color: designTokens.colors.text.secondary }}
+                        >
+                          {getUserEmail()}
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="py-2">
@@ -214,6 +323,7 @@ const VendorNavbar = ({ onToggleSidebar }) => {
                     style={{ borderColor: designTokens.colors.border.light }}
                   >
                     <button
+                      onClick={handleLogout}
                       className="flex items-center gap-3 w-full px-4 py-2 transition-colors"
                       style={{ color: designTokens.colors.accent.red }}
                       onMouseEnter={(e) =>

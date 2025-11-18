@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import AdminNavbar from './AdminNavbar';
-import AdminSidebar from './AdminSidebar';
-import AdminFooter from './AdminFooter';
+import DeliveryNavbar from './DeliveryNavbar';
+import DeliverySidebar from './DeliverySidebar';
+import DeliveryFooter from './DeliveryFooter';
 
 const designTokens = {
   colors: {
@@ -12,7 +12,7 @@ const designTokens = {
   }
 };
 
-const AdminLayout = () => {
+const DeliveryLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
@@ -20,12 +20,12 @@ const AdminLayout = () => {
       className="h-screen flex flex-col" 
       style={{ backgroundColor: designTokens.colors.background.secondary }}
     >
-      <AdminNavbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+      <DeliveryNavbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
     
       <div className="flex flex-1 h-full overflow-hidden">
         
         <div className="h-full sticky top-0 overflow-y-auto">
-          <AdminSidebar isOpen={sidebarOpen} />
+          <DeliverySidebar isOpen={sidebarOpen} />
         </div>
         
         <main className="flex-1 flex flex-col overflow-hidden">
@@ -33,11 +33,11 @@ const AdminLayout = () => {
             <Outlet />
           </div>
           
-          <AdminFooter />
+          <DeliveryFooter />
         </main>
       </div>
     </div>
   );
 };
 
-export default AdminLayout;
+export default DeliveryLayout;

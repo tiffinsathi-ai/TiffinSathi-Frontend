@@ -1,18 +1,18 @@
 import React, { useState } from "react";
 import {
   LayoutDashboard,
-  Users,
-  Store,
-  Settings,
+  Package,
+  MapPin,
+  Clock,
   BarChart3,
-  Shield,
+  User,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const designTokens = {
   colors: {
     secondary: {
-      main: "#3B82F6", // Blue color for admin
+      main: "#F59E0B", // Orange color for delivery
     },
     background: {
       primary: "#FFFFFF",
@@ -27,7 +27,7 @@ const designTokens = {
   },
 };
 
-const AdminSidebar = ({ isOpen }) => {
+const DeliverySidebar = ({ isOpen }) => {
   const [hoveredItem, setHoveredItem] = useState(null);
   const location = useLocation();
 
@@ -36,37 +36,37 @@ const AdminSidebar = ({ isOpen }) => {
       id: "dashboard",
       icon: LayoutDashboard,
       label: "Dashboard",
-      path: "/admin/dashboard",
+      path: "/delivery/dashboard",
     },
     {
-      id: "users",
-      icon: Users,
-      label: "User Management",
-      path: "/admin/users",
+      id: "deliveries",
+      icon: Package,
+      label: "My Deliveries",
+      path: "/delivery/deliveries",
     },
     {
-      id: "vendors",
-      icon: Store,
-      label: "Vendor Management",
-      path: "/admin/vendors",
+      id: "routes",
+      icon: MapPin,
+      label: "Delivery Routes",
+      path: "/delivery/routes",
     },
     {
-      id: "analytics",
+      id: "schedule",
+      icon: Clock,
+      label: "Schedule",
+      path: "/delivery/schedule",
+    },
+    {
+      id: "performance",
       icon: BarChart3,
-      label: "Analytics",
-      path: "/admin/analytics",
+      label: "Performance",
+      path: "/delivery/performance",
     },
     {
-      id: "system",
-      icon: Settings,
-      label: "System Settings",
-      path: "/admin/settings",
-    },
-    {
-      id: "admin",
-      icon: Shield,
-      label: "Admin Management",
-      path: "/admin/management",
+      id: "profile",
+      icon: User,
+      label: "My Profile",
+      path: "/delivery/profile",
     },
   ];
 
@@ -87,7 +87,7 @@ const AdminSidebar = ({ isOpen }) => {
           const Icon = item.icon;
           const isActive =
             location.pathname === item.path ||
-            (index === 0 && location.pathname.startsWith("/admin"));
+            (index === 0 && location.pathname.startsWith("/delivery"));
           const isHovered = hoveredItem === item.id;
           const isFirst = index === 0;
           const marginTop = isFirst ? "0" : "0.5rem";
@@ -103,7 +103,7 @@ const AdminSidebar = ({ isOpen }) => {
                 backgroundColor: isActive
                   ? designTokens.colors.secondary.main
                   : isHovered
-                  ? "#F3F4F6"
+                  ? "#FEF3C7"
                   : "transparent",
                 color: isActive
                   ? designTokens.colors.text.inverse
@@ -124,4 +124,4 @@ const AdminSidebar = ({ isOpen }) => {
   );
 };
 
-export default AdminSidebar;
+export default DeliverySidebar;

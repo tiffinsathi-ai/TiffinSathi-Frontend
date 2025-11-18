@@ -13,6 +13,7 @@ import UserManagementTable from "./Pages/Admin/UserManagement";
 import VendorManagementTable from "./Pages/Admin/VendorManagement";
 import VendorApprovalTable from "./Pages/Admin/VendorApproval";
 import VendorSignup from "./Pages/Vendor/VendorSignup";
+import DeliveryLayout from "./Components/Delivery/DeliveryLayout";
 
 function App() {
   return (
@@ -40,6 +41,8 @@ function App() {
               />
               <Route path="vendor-approval" element={<VendorApprovalTable />} />
             </Route>
+
+            <Route path="/delivery" element={<DeliveryLayout />}></Route>
           </Routes>
         </main>
       </div>
