@@ -14,6 +14,9 @@ import VendorManagementTable from "./Pages/Admin/VendorManagement";
 import VendorApprovalTable from "./Pages/Admin/VendorApproval";
 import VendorSignup from "./Pages/Vendor/VendorSignup";
 import DeliveryLayout from "./Components/Delivery/DeliveryLayout";
+import UserProfile from "./Pages/User/UserProfile";
+import VendorProfile from "./Pages/Vendor/VendorProfile";
+import DeliveryProfile from "./Pages/Delivery/DeliveryProfile";
 
 function App() {
   return (
@@ -29,12 +32,16 @@ function App() {
             <Route path="/vendor-signup" element={<VendorSignup />} />
             <Route path="/" element={<Layout />}>
               <Route index element={<Home />} />
+              <Route path="/profile" element={<UserProfile />} />
             </Route>
 
-            <Route path="/vendor" element={<VendorLayout />}></Route>
+            <Route path="/vendor" element={<VendorLayout />}>
+              <Route path="profile" element={<VendorProfile />} />
+            </Route>
 
             <Route path="/admin" element={<AdminLayout />}>
               <Route path="user-management" element={<UserManagementTable />} />
+              <Route path="profile" element={<UserProfile />} />
               <Route
                 path="vendors-management"
                 element={<VendorManagementTable />}
@@ -42,7 +49,9 @@ function App() {
               <Route path="vendor-approval" element={<VendorApprovalTable />} />
             </Route>
 
-            <Route path="/delivery" element={<DeliveryLayout />}></Route>
+            <Route path="/delivery" element={<DeliveryLayout />}>
+              <Route path="profile" element={<DeliveryProfile />} />
+            </Route>
           </Routes>
         </main>
       </div>

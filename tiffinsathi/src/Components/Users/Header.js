@@ -276,8 +276,7 @@ const Header = () => {
                 <button
                   onClick={() => {
                     setShowDropdown(false);
-                    // Navigate to profile page
-                    // navigate("/profile");
+                    navigate("/profile");
                   }}
                   className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-3"
                 >
