@@ -17,6 +17,8 @@ import DeliveryLayout from "./Components/Delivery/DeliveryLayout";
 import UserProfile from "./Pages/User/UserProfile";
 import VendorProfile from "./Pages/Vendor/VendorProfile";
 import DeliveryProfile from "./Pages/Delivery/DeliveryProfile";
+import MealManagement from "./Pages/Vendor/MealManagement";
+import DeliveryPartnersPage from "./Pages/Vendor/DeliveryPartnerPage";
 
 function App() {
   return (
@@ -37,15 +39,14 @@ function App() {
 
             <Route path="/vendor" element={<VendorLayout />}>
               <Route path="profile" element={<VendorProfile />} />
+              <Route path="meal" element={<MealManagement />} />
+              <Route path="delivery-partner" element={<DeliveryPartnersPage />} />
             </Route>
 
             <Route path="/admin" element={<AdminLayout />}>
               <Route path="user-management" element={<UserManagementTable />} />
               <Route path="profile" element={<UserProfile />} />
-              <Route
-                path="vendors-management"
-                element={<VendorManagementTable />}
-              />
+              <Route path="vendors-management" element={<VendorManagementTable />}/>
               <Route path="vendor-approval" element={<VendorApprovalTable />} />
             </Route>
 
