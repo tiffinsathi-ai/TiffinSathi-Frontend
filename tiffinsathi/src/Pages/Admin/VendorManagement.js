@@ -1,639 +1,759 @@
-import React, { useState, useMemo } from 'react';
-import { Search, ChevronUp, ChevronDown, Eye, Edit, Trash2, X } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Store, 
+  Edit, 
+  Trash2, 
+  Mail, 
+  Search, 
+  Filter, 
+  ChevronLeft, 
+  ChevronRight,
+  X,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Download,
+  Clock
+} from 'lucide-react';
 
-const VendorManagementTable = () => {
-  // Sample tiffin vendor data
-  const [vendors] = useState([
-    { 
-      id: 1, 
-      businessName: "Tiffin Delight Services", 
-      ownerName: "Priya Sharma", 
-      email: "priya.sharma@tiffindelights.com", 
-      phone: "9876543210",
-      alternatePhone: "9988776655",
-      status: "Active",
-      address: "12/A, Gandhi Road",
-      city: "Mumbai",
-      state: "Maharashtra",
-      pincode: "400001",
-      cuisineTypes: ["North Indian", "Gujarati"],
-      capacity: 200,
-      priceRange: "100-150",
-      yearsInBusiness: 3,
-      description: "We specialize in healthy, home-style North Indian and Gujarati meals, delivered fresh daily.",
-      bankName: "State Bank of India",
-      accountNumber: "123456789012",
-      ifscCode: "SBIN000001",
-      accountHolderName: "Priya Sharma",
-      panNumber: "ABCDE1234F",
-      gstNumber: "27ABCDE1234F1Z5",
-      fssaiNumber: "10012345678901",
-      businessImageUrl: "https://ui-avatars.com/api/?name=Tiffin+Delight&background=DC2626&color=fff&size=150",
-      registeredDate: "2024-01-15"
-    },
-    { 
-      id: 2, 
-      businessName: "Mumbai Meals Express", 
-      ownerName: "Rajesh Patel", 
-      email: "rajesh@mumbaimeals.com", 
-      phone: "9123456789",
-      alternatePhone: "9234567890",
-      status: "Active",
-      address: "45/B, Station Road",
-      city: "Pune",
-      state: "Maharashtra",
-      pincode: "411001",
-      cuisineTypes: ["South Indian", "Maharashtrian"],
-      capacity: 150,
-      priceRange: "80-120",
-      yearsInBusiness: 5,
-      description: "Traditional South Indian and Maharashtrian tiffin service with authentic flavors.",
-      bankName: "HDFC Bank",
-      accountNumber: "234567890123",
-      ifscCode: "HDFC0001234",
-      accountHolderName: "Rajesh Patel",
-      panNumber: "BCDEF2345G",
-      gstNumber: "27BCDEF2345G1Z6",
-      fssaiNumber: "10012345678902",
-      businessImageUrl: "https://ui-avatars.com/api/?name=Mumbai+Meals&background=0891B2&color=fff&size=150",
-      registeredDate: "2024-02-20"
-    },
-    { 
-      id: 3, 
-      businessName: "Healthy Bites Tiffin", 
-      ownerName: "Anjali Verma", 
-      email: "anjali@healthybites.com", 
-      phone: "9345678901",
-      alternatePhone: "9456789012",
-      status: "Inactive",
-      address: "78, Green Park",
-      city: "Delhi",
-      state: "Delhi",
-      pincode: "110016",
-      cuisineTypes: ["Continental", "Chinese"],
-      capacity: 100,
-      priceRange: "120-180",
-      yearsInBusiness: 2,
-      description: "Diet-friendly and nutritious tiffin options with international cuisines.",
-      bankName: "ICICI Bank",
-      accountNumber: "345678901234",
-      ifscCode: "ICIC0002345",
-      accountHolderName: "Anjali Verma",
-      panNumber: "CDEFG3456H",
-      gstNumber: "07CDEFG3456H1Z7",
-      fssaiNumber: "10012345678903",
-      businessImageUrl: "https://ui-avatars.com/api/?name=Healthy+Bites&background=059669&color=fff&size=150",
-      registeredDate: "2024-03-10"
-    },
-    { 
-      id: 4, 
-      businessName: "Spice Route Tiffins", 
-      ownerName: "Mohammed Khan", 
-      email: "khan@spiceroute.com", 
-      phone: "9567890123",
-      alternatePhone: "9678901234",
-      status: "Active",
-      address: "23, MG Road",
-      city: "Bangalore",
-      state: "Karnataka",
-      pincode: "560001",
-      cuisineTypes: ["North Indian", "Mughlai"],
-      capacity: 250,
-      priceRange: "90-140",
-      yearsInBusiness: 4,
-      description: "Authentic Mughlai and North Indian cuisine prepared with traditional recipes.",
-      bankName: "Axis Bank",
-      accountNumber: "456789012345",
-      ifscCode: "UTIB0003456",
-      accountHolderName: "Mohammed Khan",
-      panNumber: "DEFGH4567I",
-      gstNumber: "29DEFGH4567I1Z8",
-      fssaiNumber: "10012345678904",
-      businessImageUrl: "https://ui-avatars.com/api/?name=Spice+Route&background=7C3AED&color=fff&size=150",
-      registeredDate: "2024-04-05"
-    },
-    { 
-      id: 5, 
-      businessName: "Home Kitchen Delights", 
-      ownerName: "Lakshmi Iyer", 
-      email: "lakshmi@homekitchen.com", 
-      phone: "9789012345",
-      alternatePhone: "9890123456",
-      status: "Active",
-      address: "56, Anna Nagar",
-      city: "Chennai",
-      state: "Tamil Nadu",
-      pincode: "600040",
-      cuisineTypes: ["South Indian", "Tamil"],
-      capacity: 180,
-      priceRange: "70-110",
-      yearsInBusiness: 6,
-      description: "Homemade South Indian meals with authentic Tamil flavors and traditional cooking methods.",
-      bankName: "Canara Bank",
-      accountNumber: "567890123456",
-      ifscCode: "CNRB0004567",
-      accountHolderName: "Lakshmi Iyer",
-      panNumber: "EFGHI5678J",
-      gstNumber: "33EFGHI5678J1Z9",
-      fssaiNumber: "10012345678905",
-      businessImageUrl: "https://ui-avatars.com/api/?name=Home+Kitchen&background=DB2777&color=fff&size=150",
-      registeredDate: "2024-05-12"
-    },
-  ]);
-
+const VendorManagement = () => {
+  const [vendors, setVendors] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [cuisineFilter, setCuisineFilter] = useState('All');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5);
   const [selectedVendor, setSelectedVendor] = useState(null);
-  const [modalType, setModalType] = useState(null);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  
+  const itemsPerPage = 10;
+  const API_BASE_URL = 'http://localhost:8080/api';
 
-  // Get unique cuisines
-  const allCuisines = [...new Set(vendors.flatMap(v => v.cuisineTypes))];
-
-  // Sorting function
-  const handleSort = (key) => {
-    let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
+  // Helper function to get auth token
+  const getAuthToken = () => {
+    return localStorage.getItem('token') || sessionStorage.getItem('token');
   };
 
-  // Filter and sort data
-  const filteredAndSortedVendors = useMemo(() => {
-    let filtered = vendors.filter(vendor => {
-      const matchesSearch = 
-        vendor.businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        vendor.ownerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        vendor.email.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCuisine = cuisineFilter === 'All' || vendor.cuisineTypes.includes(cuisineFilter);
-      const matchesStatus = statusFilter === 'All' || vendor.status === statusFilter;
-      
-      return matchesSearch && matchesCuisine && matchesStatus;
-    });
+  // API headers
+  const getHeaders = () => {
+    const token = getAuthToken();
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+  };
 
-    if (sortConfig.key) {
-      filtered.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
-        }
-        return 0;
-      });
+  // Status badge component
+  const StatusBadge = ({ status }) => {
+    const statusColors = {
+      PENDING: 'bg-yellow-100 text-yellow-800',
+      APPROVED: 'bg-green-100 text-green-800',
+      REJECTED: 'bg-red-100 text-red-800'
+    };
+
+    return (
+      <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${statusColors[status] || 'bg-gray-100 text-gray-800'}`}>
+        {status}
+      </span>
+    );
+  };
+
+  // Confirmation Modal Component
+  const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirmText = 'Delete', cancelText = 'Cancel' }) => {
+    if (!isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose} />
+          
+          <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+            <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+              <div className="sm:flex sm:items-start">
+                <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                  <AlertTriangle className="h-6 w-6 text-red-600" />
+                </div>
+                <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
+                  <h3 className="text-base font-semibold leading-6 text-gray-900">
+                    {title}
+                  </h3>
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-500">
+                      {message}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+              <button
+                type="button"
+                className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto"
+                onClick={onConfirm}
+              >
+                {confirmText}
+              </button>
+              <button
+                type="button"
+                className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                onClick={onClose}
+              >
+                {cancelText}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Modal Component
+  const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
+    if (!isOpen) return null;
+
+    const sizeClasses = {
+      sm: 'max-w-md',
+      md: 'max-w-2xl',
+      lg: 'max-w-4xl',
+      xl: 'max-w-6xl'
+    };
+
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose} />
+          
+          <div className={`relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 w-full ${sizeClasses[size]}`}>
+            <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold leading-6 text-gray-900">
+                  {title}
+                </h3>
+                <button
+                  onClick={onClose}
+                  className="rounded-md bg-white text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              {children}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Pagination Component
+  const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+    const pages = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pages.push(i);
     }
 
-    return filtered;
-  }, [vendors, searchTerm, cuisineFilter, statusFilter, sortConfig]);
+    return (
+      <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+        <div className="flex flex-1 justify-between sm:hidden">
+          <button
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <button
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+        <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-gray-700">
+              Showing page <span className="font-medium">{currentPage}</span> of{' '}
+              <span className="font-medium">{totalPages}</span>
+            </p>
+          </div>
+          <div>
+            <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm">
+              <button
+                onClick={() => onPageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              
+              {pages.map(page => (
+                <button
+                  key={page}
+                  onClick={() => onPageChange(page)}
+                  className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ring-1 ring-inset ring-gray-300 focus:z-20 focus:outline-offset-0 ${
+                    currentPage === page
+                      ? 'bg-blue-600 text-white focus:visible:outline-2 focus:visible:outline-offset-2 focus:visible:outline-blue-600'
+                      : 'text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              
+              <button
+                onClick={() => onPageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </nav>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
-  // Pagination
-  const totalPages = Math.ceil(filteredAndSortedVendors.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedVendors = filteredAndSortedVendors.slice(startIndex, startIndex + itemsPerPage);
+  // API functions
+  const fetchVendors = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/vendors`, {
+        headers: getHeaders()
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch vendors: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      setVendors(data);
+    } catch (err) {
+      setError(err.message);
+      console.error('Error fetching vendors:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Actions
+  const updateVendorStatus = async (vendorId, status, reason = '') => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/vendors/${vendorId}/status`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify({ status, reason })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update vendor status: ${response.statusText}`);
+      }
+      
+      const updatedVendor = await response.json();
+      setVendors(vendors.map(vendor => 
+        vendor.vendorId === vendorId ? updatedVendor : vendor
+      ));
+      return updatedVendor;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  const deleteVendor = async (vendorId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/vendors/${vendorId}`, {
+        method: 'DELETE',
+        headers: getHeaders()
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete vendor: ${response.statusText}`);
+      }
+      
+      setVendors(vendors.filter(vendor => vendor.vendorId !== vendorId));
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  const updateVendor = async (vendorId, vendorData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/vendors/${vendorId}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(vendorData)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update vendor: ${response.statusText}`);
+      }
+      
+      const updatedVendor = await response.json();
+      setVendors(vendors.map(vendor => 
+        vendor.vendorId === vendorId ? updatedVendor : vendor
+      ));
+      return updatedVendor;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  // Fetch vendors on component mount
+  useEffect(() => {
+    fetchVendors();
+  }, []);
+
+  // Filter and search vendors
+  const filteredVendors = useMemo(() => {
+    return vendors.filter(vendor => {
+      const matchesSearch = vendor.businessName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          vendor.ownerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          vendor.businessEmail?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'ALL' || vendor.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [vendors, searchTerm, statusFilter]);
+
+  // Paginate vendors
+  const paginatedVendors = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredVendors.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredVendors, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredVendors.length / itemsPerPage);
+
+  const statusOptions = [
+    { value: 'ALL', label: 'All Status' },
+    { value: 'PENDING', label: 'Pending' },
+    { value: 'APPROVED', label: 'Approved' },
+    { value: 'REJECTED', label: 'Rejected' }
+  ];
+
+  // Event handlers
+  const handleStatusChange = (vendor, status) => {
+    setSelectedVendor(vendor);
+    if (status === 'REJECTED') {
+      setIsStatusModalOpen(true);
+    } else {
+      confirmStatusChange(status);
+    }
+  };
+
   const handleView = (vendor) => {
     setSelectedVendor(vendor);
-    setModalType('view');
-  };
-
-  const handleEdit = (vendor) => {
-    setSelectedVendor(vendor);
-    setModalType('edit');
+    setIsViewModalOpen(true);
   };
 
   const handleDelete = (vendor) => {
     setSelectedVendor(vendor);
-    setModalType('delete');
+    setIsDeleteModalOpen(true);
   };
 
-  const closeModal = () => {
-    setSelectedVendor(null);
-    setModalType(null);
+  const confirmStatusChange = async (status) => {
+    if (selectedVendor) {
+      await updateVendorStatus(selectedVendor.vendorId, status, rejectionReason);
+      setIsStatusModalOpen(false);
+      setSelectedVendor(null);
+      setRejectionReason('');
+    }
   };
 
-  const SortIcon = ({ column }) => {
-    if (sortConfig.key !== column) return <ChevronUp className="w-4 h-4 opacity-30" />;
-    return sortConfig.direction === 'asc' ? 
-      <ChevronUp className="w-4 h-4" /> : 
-      <ChevronDown className="w-4 h-4" />;
+  const confirmDelete = async () => {
+    if (selectedVendor) {
+      await deleteVendor(selectedVendor.vendorId);
+      setIsDeleteModalOpen(false);
+      setSelectedVendor(null);
+    }
+  };
+
+  const downloadDocument = async (url, filename) => {
+    try {
+      const response = await fetch(url, {
+        headers: getHeaders()
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to download document');
+      }
+      
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      setError('Failed to download document');
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Tiffin Vendor Management</h1>
-        
-        {/* Filters and Search */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search by business, owner or email..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Cuisine Filter */}
-            <select
-              value={cuisineFilter}
-              onChange={(e) => {
-                setCuisineFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="All">All Cuisines</option>
-              {allCuisines.map(cuisine => (
-                <option key={cuisine} value={cuisine}>{cuisine}</option>
-              ))}
-            </select>
-
-            {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="All">All Status</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-          </div>
+    <div className="p-6 space-y-6">
+      <div className="sm:flex sm:items-center">
+        <div className="sm:flex-auto">
+          <h1 className="text-2xl font-semibold leading-6 text-gray-900 flex items-center">
+            <Store className="h-8 w-8 mr-3" />
+            Vendor Management
+          </h1>
+          <p className="mt-2 text-sm text-gray-700">
+            Manage all vendors in the system. Review, approve, and manage vendor accounts.
+          </p>
         </div>
+      </div>
 
-        {/* Table */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th 
-                    onClick={() => handleSort('businessName')}
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  >
-                    <div className="flex items-center gap-2">
-                      Business Name
-                      <SortIcon column="businessName" />
-                    </div>
-                  </th>
-                  <th 
-                    onClick={() => handleSort('ownerName')}
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  >
-                    <div className="flex items-center gap-2">
-                      Owner
-                      <SortIcon column="ownerName" />
-                    </div>
-                  </th>
-                  <th 
-                    onClick={() => handleSort('city')}
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  >
-                    <div className="flex items-center gap-2">
-                      Location
-                      <SortIcon column="city" />
-                    </div>
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cuisines
-                  </th>
-                  <th 
-                    onClick={() => handleSort('capacity')}
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  >
-                    <div className="flex items-center gap-2">
-                      Capacity
-                      <SortIcon column="capacity" />
-                    </div>
-                  </th>
-                  <th 
-                    onClick={() => handleSort('status')}
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  >
-                    <div className="flex items-center gap-2">
-                      Status
-                      <SortIcon column="status" />
-                    </div>
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedVendors.map((vendor) => (
-                  <tr key={vendor.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      <div className="flex items-center gap-3">
-                        <img 
-                          src={vendor.businessImageUrl} 
-                          alt={vendor.businessName}
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
-                        <span>{vendor.businessName}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {vendor.ownerName}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {vendor.city}, {vendor.state}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      <div className="flex flex-wrap gap-1">
-                        {vendor.cuisineTypes.map((cuisine, idx) => (
-                          <span key={idx} className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                            {cuisine}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {vendor.capacity} meals/day
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        vendor.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {vendor.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleView(vendor)}
-                          className="p-1 hover:bg-blue-50 rounded text-blue-600"
-                          title="View"
-                        >
-                          <Eye className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleEdit(vendor)}
-                          className="p-1 hover:bg-green-50 rounded text-green-600"
-                          title="Edit"
-                        >
-                          <Edit className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(vendor)}
-                          className="p-1 hover:bg-red-50 rounded text-red-600"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredAndSortedVendors.length)} of {filteredAndSortedVendors.length} results
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              {[...Array(totalPages)].map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`px-4 py-2 border rounded-lg text-sm font-medium ${
-                    currentPage === i + 1
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Modal */}
-        {selectedVendor && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white p-6 border-b flex justify-between items-center">
-                <h2 className="text-xl font-bold text-gray-900">
-                  {modalType === 'view' && 'Vendor Details'}
-                  {modalType === 'edit' && 'Edit Vendor'}
-                  {modalType === 'delete' && 'Delete Vendor'}
-                </h2>
-                <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
-                  <X className="w-6 h-6" />
-                </button>
+      {error && (
+        <div className="rounded-md bg-red-50 p-4">
+          <div className="flex">
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Error</h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>{error}</p>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-              <div className="p-6">
-                {modalType === 'view' && (
-                  <div className="space-y-6">
-                    {/* Business Image */}
-                    <div className="flex justify-center">
-                      <img 
-                        src={selectedVendor.businessImageUrl} 
-                        alt={selectedVendor.businessName}
-                        className="w-32 h-32 rounded-full object-cover"
-                      />
-                    </div>
+      {/* Search and Filter */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+            <Search className="h-5 w-5 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            className="block w-full rounded-md border-0 py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+            placeholder="Search vendors by business name, owner, or email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        
+        <div className="relative">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+            <Filter className="h-5 w-5 text-gray-400" />
+          </div>
+          <select
+            className="block w-full rounded-md border-0 py-1.5 pl-10 pr-8 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            {statusOptions.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
-                    {/* Business Information */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Business Information</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Business Name</span>
-                          <p className="text-gray-900">{selectedVendor.businessName}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Owner Name</span>
-                          <p className="text-gray-900">{selectedVendor.ownerName}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Email</span>
-                          <p className="text-gray-900">{selectedVendor.email}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Phone</span>
-                          <p className="text-gray-900">{selectedVendor.phone}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Alternate Phone</span>
-                          <p className="text-gray-900">{selectedVendor.alternatePhone}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Years in Business</span>
-                          <p className="text-gray-900">{selectedVendor.yearsInBusiness} years</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Address Information */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Address</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="col-span-2">
-                          <span className="text-sm font-medium text-gray-500">Street Address</span>
-                          <p className="text-gray-900">{selectedVendor.address}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">City</span>
-                          <p className="text-gray-900">{selectedVendor.city}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">State</span>
-                          <p className="text-gray-900">{selectedVendor.state}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Pincode</span>
-                          <p className="text-gray-900">{selectedVendor.pincode}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Service Details */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Service Details</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Cuisine Types</span>
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            {selectedVendor.cuisineTypes.map((cuisine, idx) => (
-                              <span key={idx} className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                                {cuisine}
-                              </span>
-                            ))}
+      {/* Vendors Table */}
+      <div className="bg-white shadow rounded-lg">
+        {loading ? (
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+              <table className="min-w-full divide-y divide-gray-300">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Business
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Contact
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Details
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Created
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {paginatedVendors.map((vendor) => (
+                    <tr key={vendor.vendorId} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 flex-shrink-0">
+                            {vendor.profilePicture ? (
+                              <img
+                                className="h-10 w-10 rounded-full object-cover"
+                                src={vendor.profilePicture}
+                                alt=""
+                              />
+                            ) : (
+                              <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                <Mail className="h-5 w-5 text-gray-500" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {vendor.businessName}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {vendor.ownerName}
+                            </div>
                           </div>
                         </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Daily Capacity</span>
-                          <p className="text-gray-900">{selectedVendor.capacity} meals/day</p>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div>{vendor.businessEmail}</div>
+                        <div>{vendor.phone}</div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        <div>Cuisine: {vendor.cuisineType || 'N/A'}</div>
+                        <div>Capacity: {vendor.capacity || 'N/A'}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <StatusBadge status={vendor.status} />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(vendor.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleView(vendor)}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            View
+                          </button>
+                          
+                          {vendor.status === 'PENDING' && (
+                            <>
+                              <button
+                                onClick={() => handleStatusChange(vendor, 'APPROVED')}
+                                className="text-green-600 hover:text-green-900"
+                                title="Approve"
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handleStatusChange(vendor, 'REJECTED')}
+                                className="text-red-600 hover:text-red-900"
+                                title="Reject"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
+                          
+                          <button
+                            onClick={() => handleDelete(vendor)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Price Range</span>
-                          <p className="text-gray-900">₹{selectedVendor.priceRange}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Status</span>
-                          <p className="text-gray-900">{selectedVendor.status}</p>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-sm font-medium text-gray-500">Description</span>
-                          <p className="text-gray-900">{selectedVendor.description}</p>
-                        </div>
-                      </div>
-                    </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </>
+        )}
+      </div>
 
-                    {/* Bank Details */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Bank Details</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Bank Name</span>
-                          <p className="text-gray-900">{selectedVendor.bankName}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Account Holder</span>
-                          <p className="text-gray-900">{selectedVendor.accountHolderName}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Account Number</span>
-                          <p className="text-gray-900">{selectedVendor.accountNumber}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">IFSC Code</span>
-                          <p className="text-gray-900">{selectedVendor.ifscCode}</p>
-                        </div>
-                      </div>
-                    </div>
+      <div className="text-sm text-gray-500">
+        Showing {paginatedVendors.length} of {filteredVendors.length} vendors
+      </div>
 
-                    {/* Legal Documents */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Legal Documents</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">PAN Number</span>
-                          <p className="text-gray-900">{selectedVendor.panNumber}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">GST Number</span>
-                          <p className="text-gray-900">{selectedVendor.gstNumber}</p>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-sm font-medium text-gray-500">FSSAI Number</span>
-                          <p className="text-gray-900">{selectedVendor.fssaiNumber}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {modalType === 'edit' && (
-                  <div className="space-y-4">
-                    <p className="text-gray-600">Edit functionality would be implemented here with form fields for all vendor information.</p>
-                    <button className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                      Save Changes
-                    </button>
-                  </div>
-                )}
-
-                {modalType === 'delete' && (
-                  <div>
-                    <p className="text-gray-600 mb-4">
-                      Are you sure you want to delete vendor "{selectedVendor.businessName}"? This action cannot be undone.
-                    </p>
-                    <div className="flex gap-3">
-                      <button
-                        onClick={closeModal}
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                      >
-                        Cancel
-                      </button>
-                      <button className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                )}
+      {/* View Vendor Details Modal */}
+      <Modal
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        title="Vendor Details"
+        size="lg"
+      >
+        {selectedVendor && (
+          <div className="space-y-6">
+            {/* Business Information */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Business Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Business Name</label>
+                  <p className="mt-1 text-sm text-gray-900">{selectedVendor.businessName}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Owner Name</label>
+                  <p className="mt-1 text-sm text-gray-900">{selectedVendor.ownerName}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Email</label>
+                  <p className="mt-1 text-sm text-gray-900">{selectedVendor.businessEmail}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Phone</label>
+                  <p className="mt-1 text-sm text-gray-900">{selectedVendor.phone}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700">Address</label>
+                  <p className="mt-1 text-sm text-gray-900">{selectedVendor.businessAddress}</p>
+                </div>
               </div>
+            </div>
+
+            {/* Business Details */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Business Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Cuisine Type</label>
+                  <p className="mt-1 text-sm text-gray-900">{selectedVendor.cuisineType || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Capacity</label>
+                  <p className="mt-1 text-sm text-gray-900">{selectedVendor.capacity || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Years in Business</label>
+                  <p className="mt-1 text-sm text-gray-900">{selectedVendor.yearsInBusiness || 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Documents */}
+            {(selectedVendor.fssaiLicenseUrl || selectedVendor.panCardUrl || selectedVendor.bankProofUrl || selectedVendor.menuCardUrl) && (
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Documents</h3>
+                <div className="space-y-2">
+                  {selectedVendor.fssaiLicenseUrl && (
+                    <button
+                      onClick={() => downloadDocument(selectedVendor.fssaiLicenseUrl, 'fssai-license.pdf')}
+                      className="flex items-center space-x-2 text-blue-600 hover:text-blue-500"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>FSSAI License</span>
+                    </button>
+                  )}
+                  {selectedVendor.panCardUrl && (
+                    <button
+                      onClick={() => downloadDocument(selectedVendor.panCardUrl, 'pan-card.pdf')}
+                      className="flex items-center space-x-2 text-blue-600 hover:text-blue-500"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>PAN Card</span>
+                    </button>
+                  )}
+                  {selectedVendor.bankProofUrl && (
+                    <button
+                      onClick={() => downloadDocument(selectedVendor.bankProofUrl, 'bank-proof.pdf')}
+                      className="flex items-center space-x-2 text-blue-600 hover:text-blue-500"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>Bank Proof</span>
+                    </button>
+                  )}
+                  {selectedVendor.menuCardUrl && (
+                    <button
+                      onClick={() => downloadDocument(selectedVendor.menuCardUrl, 'menu-card.pdf')}
+                      className="flex items-center space-x-2 text-blue-600 hover:text-blue-500"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>Menu Card</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-4">
+              <button
+                type="button"
+                onClick={() => setIsViewModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
+              >
+                Close
+              </button>
             </div>
           </div>
         )}
-      </div>
+      </Modal>
+
+      {/* Rejection Reason Modal */}
+      <Modal
+        isOpen={isStatusModalOpen}
+        onClose={() => {
+          setIsStatusModalOpen(false);
+          setRejectionReason('');
+        }}
+        title="Reject Vendor"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Reason for Rejection</label>
+            <textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              rows={4}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              placeholder="Please provide a reason for rejection..."
+            />
+          </div>
+          
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setIsStatusModalOpen(false);
+                setRejectionReason('');
+              }}
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => confirmStatusChange('REJECTED')}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+            >
+              Reject Vendor
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation */}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Vendor"
+        message={`Are you sure you want to delete ${selectedVendor?.businessName}? This action cannot be undone.`}
+        confirmText="Delete Vendor"
+      />
     </div>
   );
 };
 
-export default VendorManagementTable;
+export default VendorManagement;
