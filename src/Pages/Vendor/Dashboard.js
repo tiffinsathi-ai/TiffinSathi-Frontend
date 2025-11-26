@@ -1,263 +1,341 @@
 // src/Pages/Vendor/Dashboard.js
-import React, { useEffect, useMemo, useState } from 'react';
-import { readData, writeData } from '../../helpers/storage';
-import '../../Components/Styles/vendor.css'; // update path if your CSS lives elsewhere
-
-// Recharts
+import React, { useEffect, useState } from "react";
 import {
-  ResponsiveContainer,
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  PieChart, Pie, Cell, Legend
-} from 'recharts';
+  TrendingUp,
+  Package,
+  Users,
+  Star,
+  AlertCircle,
+  Calendar,
+  DollarSign,
+  ShoppingCart,
+  RefreshCw,
+} from "lucide-react";
+import { readData, writeData } from "../../helpers/storage";
 
-const COLORS = ['#6DB33F', '#FF9F43', '#4F46E5', '#FF6B6B', '#38BDF8', '#F59E0B'];
+const Dashboard = () => {
+  const [dashboardData, setDashboardData] = useState({});
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  // Remove activeTab since it's not used
+  // const [activeTab, setActiveTab] = useState("overview");
 
-function formatDateKey(date){
-  return date.toISOString().slice(0,10); // YYYY-MM-DD
-}
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
 
-function lastNDates(n){
-  const arr = [];
-  const now = new Date();
-  for(let i=n-1;i>=0;i--){
-    const d = new Date(now.getTime() - i*24*60*60*1000);
-    arr.push(formatDateKey(d));
-  }
-  return arr;
-}
+  const loadDashboardData = () => {
+    setLoading(true);
+    const data = readData();
+    
+    // Calculate metrics
+    const today = new Date().toDateString();
+    const ordersToday = data.orders.filter(o => 
+      new Date(o.createdAt).toDateString() === today
+    );
+    
+    const totalSales = data.transactions.reduce((sum, t) => sum + t.amount, 0);
+    const pendingOrders = data.orders.filter(o => o.status === 'pending').length;
+    const activeSubscriptions = data.subscriptions?.filter(s => s.status === 'active').length || 0;
+    const avgRating = data.reviews.length > 0 
+      ? (data.reviews.reduce((sum, r) => sum + r.rating, 0) / data.reviews.length).toFixed(1)
+      : "0.0";
 
-export default function Dashboard(){
-  const [data, setData] = useState(readData());
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [quickModalOpen, setQuickModalOpen] = useState(false);
-  const [quickForm, setQuickForm] = useState({ name:'', price:0, plan_type:'7 days', image:'/src/assets/meal1.jpg', description:'' });
-
-  // persist
-  useEffect(()=> { writeData(data); }, [data]);
-
-  // Derived KPIs
-  const totalTiffins = data.tiffins.length;
-  const activePlans = data.tiffins.filter(t => t.active).length;
-  const pendingOrders = data.orders.filter(o => o.status === 'pending').length;
-  const monthlyEarnings = data.orders
-    .filter(o => o.paymentStatus === 'paid' && (new Date(o.createdAt) >= new Date(Date.now() - 30*24*60*60*1000)))
-    .reduce((s,o)=> s + (o.total||0), 0);
-
-  // Recent orders (most recent 6)
-  const recentOrders = data.orders.slice().sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt)).slice(0,6);
-
-  // Revenue trend data (last 30 days)
-  const revenueTrend = useMemo(()=>{
-    const keys = lastNDates(30);
-    const map = {};
-    keys.forEach(k=> map[k]=0);
-    data.orders.forEach(o => {
-      const k = (o.createdAt||'').slice(0,10);
-      if(k in map && o.paymentStatus==='paid') map[k] += (o.total||0);
+    setDashboardData({
+      totalSales,
+      ordersToday: ordersToday.length,
+      totalCustomers: data.customers.length,
+      pendingOrders,
+      activeSubscriptions,
+      avgRating,
+      totalOrders: data.orders.length
     });
-    return keys.map(k => ({ date: k.slice(5), revenue: Math.round(map[k]) }));
-  }, [data.orders]);
+    
+    setRecentOrders(data.orders.slice(0, 5));
+    setLoading(false);
+  };
 
-  // Top selling tiffins (by quantity sold)
-  const topTiffins = useMemo(()=>{
-    const counts = {};
-    data.orders.forEach(o=>{
-      (o.items||[]).forEach(it=>{
-        counts[it.tiffinId] = (counts[it.tiffinId]||0) + (it.qty||1);
-      });
-    });
-    const arr = Object.keys(counts).map(id=>{
-      const t = data.tiffins.find(x=>x.id===id);
-      return { id, name: t ? t.name : id, value: counts[id] };
-    }).sort((a,b)=> b.value - a.value);
-    // if empty, show tiffins with zero
-    if(arr.length===0){
-      return data.tiffins.slice(0,5).map((t,i)=> ({ id: t.id, name: t.name, value: 0 }));
-    }
-    return arr.slice(0,6);
-  }, [data.orders, data.tiffins]);
+  const StatCard = ({ icon, label, value, change, changeType, onClick }) => (
+    <div 
+      className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 cursor-pointer"
+      onClick={onClick}
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-600 mb-1">{label}</p>
+          <p className="text-2xl font-bold text-gray-900">{value}</p>
+          {change && (
+            <p className={`text-sm mt-1 ${
+              changeType === 'positive' ? 'text-green-600' : 
+              changeType === 'negative' ? 'text-red-600' : 'text-gray-600'
+            }`}>
+              {change}
+            </p>
+          )}
+        </div>
+        <div className="p-3 rounded-full bg-blue-50 text-blue-600">
+          {icon}
+        </div>
+      </div>
+    </div>
+  );
 
-  function quickAddTiffin(){
-    if(!quickForm.name) return alert('Enter name');
-    const copy = JSON.parse(JSON.stringify(data));
-    const id = 't'+Date.now().toString(36);
-    copy.tiffins.push({ id, ...quickForm, active: true, createdAt: new Date().toISOString() });
-    setData(copy);
-    setQuickForm({ name:'', price:0, plan_type:'7 days', image:'/src/assets/meal1.jpg', description:'' });
-    setQuickModalOpen(false);
-  }
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+      preparing: "bg-blue-100 text-blue-800 border-blue-200",
+      out_for_delivery: "bg-purple-100 text-purple-800 border-purple-200",
+      delivered: "bg-green-100 text-green-800 border-green-200",
+      cancelled: "bg-red-100 text-red-800 border-red-200"
+    };
+    return colors[status] || "bg-gray-100 text-gray-800 border-gray-200";
+  };
 
-  function viewOrder(o){
-    setSelectedOrder(o);
-  }
+  const updateOrderStatus = (orderId, newStatus) => {
+    const data = readData();
+    const updatedOrders = data.orders.map(order =>
+      order.id === orderId ? { ...order, status: newStatus } : order
+    );
+    
+    data.orders = updatedOrders;
+    writeData(data);
+    loadDashboardData(); // Refresh data
+  };
 
-  function changeOrderStatus(orderId, newStatus){
-    const copy = JSON.parse(JSON.stringify(data));
-    const idx = copy.orders.findIndex(x=>x.id===orderId);
-    if(idx >= 0){
-      copy.orders[idx].status = newStatus;
-      setData(copy);
-    }
+  const QuickAction = ({ icon, label, description, onClick, color = "blue" }) => (
+    <button
+      onClick={onClick}
+      className={`p-4 border border-gray-200 rounded-lg text-left hover:shadow-md transition-all duration-200 bg-white hover:bg-gray-50 w-full`}
+    >
+      <div className={`w-10 h-10 rounded-full bg-${color}-50 flex items-center justify-center mb-3`}>
+        {React.cloneElement(icon, { className: `text-${color}-600`, size: 20 })}
+      </div>
+      <p className="font-medium text-gray-900">{label}</p>
+      <p className="text-sm text-gray-600 mt-1">{description}</p>
+    </button>
+  );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <RefreshCw className="animate-spin text-green-600 mr-2" size={24} />
+        <span className="text-gray-600">Loading dashboard...</span>
+      </div>
+    );
   }
 
   return (
-    <div className="vendor-page container mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Vendor Dashboard</h1>
-        <div className="flex items-center gap-3">
-          <button onClick={()=> setQuickModalOpen(true)} className="btn-primary">Quick Add Tiffin</button>
-          <button onClick={()=> { window.location.href = '/vendor/tiffins'; }} className="btn">Manage Tiffins</button>
-          <button onClick={()=> { window.location.href = '/vendor/orders'; }} className="btn">View Orders</button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Vendor Dashboard</h2>
+          <p className="text-gray-600">Overview of your business performance</p>
+        </div>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 text-sm text-gray-600">
+            <Calendar size={16} />
+            <span>{new Date().toLocaleDateString('en-US', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}</span>
+          </div>
+          <button
+            onClick={loadDashboardData}
+            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <RefreshCw size={16} />
+            <span>Refresh</span>
+          </button>
         </div>
       </div>
 
-      {/* KPI cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="card">
-          <div className="muted">Total Tiffins</div>
-          <div className="card-value">{totalTiffins}</div>
-        </div>
-        <div className="card">
-          <div className="muted">Active Plans</div>
-          <div className="card-value">{activePlans}</div>
-        </div>
-        <div className="card">
-          <div className="muted">Monthly Earnings</div>
-          <div className="card-value">NPR {monthlyEarnings}</div>
-        </div>
-        <div className="card">
-          <div className="muted">Pending Orders</div>
-          <div className="card-value">{pendingOrders}</div>
-        </div>
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard
+          icon={<TrendingUp size={24} />}
+          label="Total Revenue"
+          value={`Rs ${dashboardData.totalSales?.toLocaleString() || '0'}`}
+          change="+12.5% from last month"
+          changeType="positive"
+          onClick={() => window.location.href = '/vendor/earnings'}
+        />
+        <StatCard
+          icon={<ShoppingCart size={24} />}
+          label="Orders Today"
+          value={dashboardData.ordersToday || '0'}
+          change={`${dashboardData.pendingOrders || 0} pending`}
+          changeType="neutral"
+          onClick={() => window.location.href = '/vendor/orders'}
+        />
+        <StatCard
+          icon={<Users size={24} />}
+          label="Active Customers"
+          value={dashboardData.totalCustomers || '0'}
+          change={`${dashboardData.activeSubscriptions || 0} active subscriptions`}
+          changeType="positive"
+          onClick={() => window.location.href = '/vendor/customers'}
+        />
+        <StatCard
+          icon={<Star size={24} />}
+          label="Average Rating"
+          value={dashboardData.avgRating || '0.0'}
+          change="Based on customer reviews"
+          changeType="neutral"
+          onClick={() => window.location.href = '/vendor/reviews'}
+        />
       </div>
 
-      {/* Charts row */}
-      <div className="grid md:grid-cols-3 gap-4 mb-6">
-        <div className="card md:col-span-2">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold">Revenue Trend (30 days)</h3>
-            <div className="muted text-sm">Paid orders only</div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Recent Orders */}
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">Recent Orders</h3>
+            <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+              View All Orders
+            </button>
           </div>
-          <div style={{ width:'100%', height:240 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={revenueTrend} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip formatter={(v)=> `NPR ${v}`} />
-                <Line type="monotone" dataKey="revenue" stroke="#6DB33F" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold">Top Tiffins</h3>
-            <div className="muted text-sm">By qty sold</div>
-          </div>
-          <div style={{ width:'100%', height:240 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={topTiffins} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label>
-                  {topTiffins.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                </Pie>
-                <Legend verticalAlign="bottom" height={36}/>
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent orders */}
-      <div className="bg-white p-4 rounded shadow">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold">Recent Orders</h3>
-          <div className="muted text-sm">Latest 6 orders</div>
-        </div>
-
-        <table className="w-full text-sm">
-          <thead className="border-b">
-            <tr>
-              <th className="py-2">Order</th>
-              <th>Customer</th>
-              <th>Items</th>
-              <th>Status</th>
-              <th>Total</th>
-              <th>Date</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recentOrders.length === 0 && (
-              <tr><td colSpan="7" className="py-6 text-center muted">No recent orders</td></tr>
-            )}
-            {recentOrders.map(o => (
-              <tr key={o.id} className="border-b">
-                <td className="py-2">{o.id}</td>
-                <td>{o.userName}</td>
-                <td>
-                  {(o.items||[]).map(it=> `${it.name} x${it.qty}`).join(', ')}
-                </td>
-                <td><span className={`status ${o.status}`}>{o.status.replace(/_/g,' ')}</span></td>
-                <td>NPR {o.total}</td>
-                <td>{new Date(o.createdAt).toLocaleString()}</td>
-                <td>
-                  <button onClick={()=> viewOrder(o)} className="text-blue mr-2">View</button>
-                  <select value={o.status} onChange={(e)=> changeOrderStatus(o.id, e.target.value)} className="input-small">
-                    <option value="pending">pending</option>
-                    <option value="preparing">preparing</option>
-                    <option value="out_for_delivery">out_for_delivery</option>
-                    <option value="delivered">delivered</option>
-                    <option value="cancelled">cancelled</option>
+          <div className="space-y-4">
+            {recentOrders.map((order) => (
+              <div
+                key={order.id}
+                className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center space-x-4">
+                  <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
+                    <Package size={18} className="text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{order.userName}</p>
+                    <p className="text-sm text-gray-500">
+                      {order.items?.map(item => item.name).join(', ') || 'N/A'}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(order.createdAt).toLocaleTimeString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                    {order.status.replace('_', ' ')}
+                  </span>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">
+                    Rs {order.total}
+                  </p>
+                  <select
+                    value={order.status}
+                    onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                    className="text-xs border border-gray-300 rounded px-2 py-1 mt-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="preparing">Preparing</option>
+                    <option value="out_for_delivery">Out for Delivery</option>
+                    <option value="delivered">Delivered</option>
                   </select>
-                </td>
-              </tr>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Order modal */}
-      {selectedOrder && (
-        <div className="modal-backdrop">
-          <div className="modal">
-            <div className="flex items-start justify-between mb-3">
-              <h3 className="font-semibold">Order {selectedOrder.id}</h3>
-              <button onClick={()=> setSelectedOrder(null)} className="btn">Close</button>
-            </div>
-            <div className="mb-2"><strong>Customer:</strong> {selectedOrder.userName}</div>
-            <div className="mb-2"><strong>Address:</strong> {selectedOrder.address}</div>
-            <div className="mb-2"><strong>Items:</strong></div>
-            <ul className="mb-3">
-              {(selectedOrder.items||[]).map((it,idx)=> <li key={idx}>{it.name} — {it.qty} × NPR {it.price}</li>)}
-            </ul>
-            <div className="mb-3"><strong>Total:</strong> NPR {selectedOrder.total}</div>
-            <div className="flex gap-3 justify-end">
-              <button onClick={()=> setSelectedOrder(null)} className="btn">Close</button>
-            </div>
+            {recentOrders.length === 0 && (
+              <div className="text-center py-8">
+                <Package size={48} className="mx-auto text-gray-300 mb-3" />
+                <p className="text-gray-500">No orders yet</p>
+                <p className="text-sm text-gray-400 mt-1">Orders will appear here when customers place them</p>
+              </div>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Quick Add Modal */}
-      {quickModalOpen && (
-        <div className="modal-backdrop">
-          <div className="modal">
-            <h3 className="font-semibold mb-3">Quick Add Tiffin</h3>
-            <div className="grid gap-3">
-              <input className="input" placeholder="Name" value={quickForm.name} onChange={e=>setQuickForm({...quickForm, name:e.target.value})} />
-              <input className="input" placeholder="Price" type="number" value={quickForm.price} onChange={e=>setQuickForm({...quickForm, price: Number(e.target.value)})} />
-              <input className="input" placeholder="Image path (e.g. /src/assets/meal1.jpg)" value={quickForm.image} onChange={e=>setQuickForm({...quickForm, image:e.target.value})} />
-              <textarea className="input" placeholder="Short description" value={quickForm.description} onChange={e=>setQuickForm({...quickForm, description:e.target.value})} />
-              <div className="flex justify-end gap-3">
-                <button onClick={()=> setQuickModalOpen(false)} className="btn">Cancel</button>
-                <button onClick={quickAddTiffin} className="btn-primary">Add</button>
+        {/* Quick Actions & Insights */}
+        <div className="space-y-6">
+          {/* Quick Actions */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+            <div className="grid grid-cols-1 gap-3">
+              <QuickAction
+                icon={<Package size={20} />}
+                label="Add New Meal Plan"
+                description="Create a new tiffin meal plan"
+                color="green"
+                onClick={() => window.location.href = '/vendor/tiffins'}
+              />
+              <QuickAction
+                icon={<Users size={20} />}
+                label="Manage Customers"
+                description="View and manage customer subscriptions"
+                color="blue"
+                onClick={() => window.location.href = '/vendor/customers'}
+              />
+              <QuickAction
+                icon={<DollarSign size={20} />}
+                label="View Earnings"
+                description="Check your revenue and payments"
+                color="purple"
+                onClick={() => window.location.href = '/vendor/earnings'}
+              />
+              <QuickAction
+                icon={<AlertCircle size={20} />}
+                label="Business Reports"
+                description="Generate performance reports"
+                color="orange"
+                onClick={() => window.location.href = '/vendor/analytics'}
+              />
+            </div>
+          </div>
+
+          {/* Performance Insights */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Insights</h3>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Order Completion Rate</span>
+                <span className="text-sm font-semibold text-green-600">94%</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Avg Preparation Time</span>
+                <span className="text-sm font-semibold text-blue-600">32 mins</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Customer Satisfaction</span>
+                <span className="text-sm font-semibold text-yellow-600">4.6/5</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Repeat Customers</span>
+                <span className="text-sm font-semibold text-purple-600">68%</span>
               </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Recent Activity */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+        <div className="space-y-3">
+          {recentOrders.slice(0, 3).map((order, index) => (
+            <div key={index} className="flex items-center space-x-4 p-3 border border-gray-100 rounded-lg">
+              <div className={`w-2 h-2 rounded-full ${
+                order.status === 'delivered' ? 'bg-green-500' : 
+                order.status === 'preparing' ? 'bg-blue-500' : 'bg-yellow-500'
+              }`} />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900">
+                  New order from <span className="text-blue-600">{order.userName}</span>
+                </p>
+                <p className="text-xs text-gray-500">
+                  {order.items?.map(item => item.name).join(', ')} • {new Date(order.createdAt).toLocaleTimeString()}
+                </p>
+              </div>
+              <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(order.status)}`}>
+                {order.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default Dashboard;

@@ -1,6 +1,7 @@
+// src/Components/Admin/AdminSidebar.js
 import React, { useState } from 'react';
-import { BarChart3, Users, UtensilsCrossed, Package, FileText, Settings } from 'lucide-react'; // ✅ removed LogOut
-import { Link, useLocation } from 'react-router-dom';
+import { BarChart3, Users, UtensilsCrossed, Package, FileText, Settings, LogOut } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const designTokens = {
   colors: {
@@ -12,9 +13,18 @@ const designTokens = {
   }
 };
 
-const AdminSidebar = ({ isOpen }) => {
+const AdminSidebar = ({ isOpen = true }) => {
   const [hoveredItem, setHoveredItem] = useState(null);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("email");
+    localStorage.removeItem("name");
+    navigate("/login");
+  };
 
   const menuItems = [
     { id: 'dashboard', icon: BarChart3, label: 'Dashboard', path: '/admin/dashboard' },
@@ -22,7 +32,7 @@ const AdminSidebar = ({ isOpen }) => {
     { id: 'vendors', icon: UtensilsCrossed, label: 'Vendors', path: '/admin/vendors-management' },
     { id: 'orders', icon: Package, label: 'Orders', path: '/admin/orders' },
     { id: 'reports', icon: FileText, label: 'Reports', path: '/admin/reports' },
-    { id: 'settings', icon: Settings, label: 'Settings', path: '/admin/settings' }
+    { id: 'settings', icon: Settings, label: 'Settings', path: '/admin/settings' },
   ];
 
   if (!isOpen) return null;
@@ -63,6 +73,15 @@ const AdminSidebar = ({ isOpen }) => {
             </Link>
           );
         })}
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center space-x-3 px-4 py-3 mt-6 rounded-lg transition-all duration-200 text-gray-400 hover:bg-red-600 hover:text-white"
+        >
+          <LogOut size={20} />
+          <span className="font-medium">Logout</span>
+        </button>
       </nav>
     </aside>
   );
