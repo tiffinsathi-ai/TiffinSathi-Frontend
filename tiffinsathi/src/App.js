@@ -1,6 +1,7 @@
 // src/App.js
 import React, { useEffect } from "react";
 import "./App.css";
+<<<<<<< HEAD
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 
 // ---------- Auth & Public ----------
@@ -10,6 +11,15 @@ import RegisterVendor from "./Pages/Auth/RegisterVendor";
 
 // ---------- User ----------
 import Home from "./Pages/Home";
+=======
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Home from "./Pages/User/Home";
+import Login from "./Pages/Login";
+import Signup from "./Pages/User/Signup";
+import ForgetPassword from "./Pages/User/ForgetPassword";
+import VerifyOTP from "./Pages/User/VerifyOTP";
+import ResetPassword from "./Pages/User/ResetPassword";
+>>>>>>> 12ee76fb8ea2c55f29c2526202536502d5042465
 import Layout from "./Components/Users/Layout";
 
 // ---------- Vendor ----------
@@ -31,6 +41,7 @@ import AdminDashboard from "./Pages/Admin/AdminDashboard";
 import UserManagementTable from "./Pages/Admin/UserManagement";
 import VendorManagementTable from "./Pages/Admin/VendorManagement";
 import VendorApprovalTable from "./Pages/Admin/VendorApproval";
+<<<<<<< HEAD
 import AdminOrders from "./Pages/Admin/AdminOrders";
 import AdminReports from "./Pages/Admin/AdminReports";
 import AdminSettings from "./Pages/Admin/AdminSettings";
@@ -69,6 +80,15 @@ const RedirectAfterLogin = () => {
 
   return null;
 };
+=======
+import VendorSignup from "./Pages/Vendor/VendorSignup";
+import DeliveryLayout from "./Components/Delivery/DeliveryLayout";
+import UserProfile from "./Pages/User/UserProfile";
+import VendorProfile from "./Pages/Vendor/VendorProfile";
+import DeliveryProfile from "./Pages/Delivery/DeliveryProfile";
+import MealManagement from "./Pages/Vendor/MealManagement";
+import DeliveryPartnersPage from "./Pages/Vendor/DeliveryPartnerPage";
+>>>>>>> 12ee76fb8ea2c55f29c2526202536502d5042465
 
 function App() {
   return (
@@ -77,6 +97,7 @@ function App() {
       <div className="App flex flex-col min-h-screen">
         <main className="flex-grow">
           <Routes>
+<<<<<<< HEAD
             {/* Public & User */}
             <Route path="/" element={<Layout />}>
               <Route index element={<Home />} />
@@ -117,6 +138,35 @@ function App() {
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
+=======
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={<ForgetPassword />} />
+            <Route path="/verify-otp" element={<VerifyOTP />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/vendor-signup" element={<VendorSignup />} />
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Home />} />
+              <Route path="/profile" element={<UserProfile />} />
+            </Route>
+
+            <Route path="/vendor" element={<VendorLayout />}>
+              <Route path="profile" element={<VendorProfile />} />
+              <Route path="meal" element={<MealManagement />} />
+              <Route path="delivery-partner" element={<DeliveryPartnersPage />} />
+            </Route>
+
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route path="user-management" element={<UserManagementTable />} />
+              <Route path="profile" element={<UserProfile />} />
+              <Route path="vendors-management" element={<VendorManagementTable />}/>
+              <Route path="vendor-approval" element={<VendorApprovalTable />} />
+            </Route>
+
+            <Route path="/delivery" element={<DeliveryLayout />}>
+              <Route path="profile" element={<DeliveryProfile />} />
+            </Route>
+>>>>>>> 12ee76fb8ea2c55f29c2526202536502d5042465
           </Routes>
         </main>
       </div>

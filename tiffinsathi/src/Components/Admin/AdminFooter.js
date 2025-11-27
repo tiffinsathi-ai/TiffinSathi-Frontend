@@ -2,6 +2,9 @@ import React from 'react';
 
 const designTokens = {
   colors: {
+    secondary: {
+      main: '#6DB33F'
+    },
     background: {
       secondary: '#F8F9FA'
     },
@@ -26,10 +29,17 @@ const AdminFooter = () => {
     >
       <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
         <p className="text-sm" style={{ color: designTokens.colors.text.secondary }}>
-          © 2025 Tiffin Sathi Admin Panel
+          © 2025 Tiffin Sathi Vendor Panel
         </p>
         <p className="text-sm" style={{ color: designTokens.colors.text.tertiary }}>
-          Version 1.0.0
+          Need help?{' '}
+          <a 
+            href="#support" 
+            className="font-medium transition-colors"
+            style={{ color: designTokens.colors.secondary.main }}
+          >
+            Contact Support
+          </a>
         </p>
       </div>
     </footer>

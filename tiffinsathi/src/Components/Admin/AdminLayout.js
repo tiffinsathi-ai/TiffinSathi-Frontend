@@ -21,7 +21,7 @@ const AdminLayout = () => {
       style={{ backgroundColor: designTokens.colors.background.secondary }}
     >
       <AdminNavbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-      
+    
       <div className="flex flex-1 h-full overflow-hidden">
         
         <div className="h-full sticky top-0 overflow-y-auto">
