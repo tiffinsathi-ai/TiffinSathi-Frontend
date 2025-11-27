@@ -9,13 +9,8 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-10">
         {/* Left Column: Company Information */}
         <div className="flex flex-col">
-          {/* Logo Section */}
           <div className="flex items-center gap-2 mb-4">
-            <img
-              src={logo}
-              alt="Tiffin Sathi Logo"
-              className="w-14 h-14 object-contain"
-            />
+            <img src={logo} alt="Tiffin Sathi Logo" className="w-14 h-14 object-contain" />
             <h1
               className="text-2xl font-bold"
               style={{
@@ -27,78 +22,45 @@ const Footer = () => {
             </h1>
           </div>
 
-          {/* Tagline */}
           <p className="text-sm text-gray-400 mb-6 leading-relaxed">
-            Bringing the authentic taste of home-cooked meals to your
-            doorstep. Fresh, healthy, and made with love.
+            Bringing the authentic taste of home-cooked meals to your doorstep. Fresh,
+            healthy, and made with love.
           </p>
 
-          {/* Social Media Icons */}
           <div className="flex gap-4">
-            <a
-              href="#"
+            <button
               className="text-white hover:text-gray-400 transition-colors"
               aria-label="Facebook"
             >
               <FaFacebookF className="w-5 h-5" />
-            </a>
-            <a
-              href="#"
+            </button>
+            <button
               className="text-white hover:text-gray-400 transition-colors"
               aria-label="Instagram"
             >
               <FaInstagram className="w-5 h-5" />
-            </a>
-            <a
-              href="#"
+            </button>
+            <button
               className="text-white hover:text-gray-400 transition-colors"
               aria-label="Twitter"
             >
               <FaTwitter className="w-5 h-5" />
-            </a>
+            </button>
           </div>
         </div>
 
-        {/* Middle Column: Quick Links */}
+        {/* Middle Column */}
         <div>
           <h2 className="text-white text-lg font-semibold mb-4">Quick Links</h2>
           <ul className="space-y-3">
-            <li>
-              <a
-                href="#"
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                About Us
-              </a>
-            </li>
-            <li>
-              <a
-                href="#"
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                Our Packages
-              </a>
-            </li>
-            <li>
-              <a
-                href="#"
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                How It Works
-              </a>
-            </li>
-            <li>
-              <a
-                href="#"
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                Contact
-              </a>
-            </li>
+            <li><button className="text-gray-400 hover:text-white transition-colors">About Us</button></li>
+            <li><button className="text-gray-400 hover:text-white transition-colors">Our Packages</button></li>
+            <li><button className="text-gray-400 hover:text-white transition-colors">How It Works</button></li>
+            <li><button className="text-gray-400 hover:text-white transition-colors">Contact</button></li>
           </ul>
         </div>
 
-        {/* Right Column: Contact Info */}
+        {/* Right Column */}
         <div>
           <h2 className="text-white text-lg font-semibold mb-4">Contact Info</h2>
           <ul className="space-y-3">

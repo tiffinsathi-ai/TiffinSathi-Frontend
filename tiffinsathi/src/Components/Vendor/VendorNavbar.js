@@ -1,162 +1,109 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Menu, Bell, User, Settings, LogOut, UserCircle, CreditCard } from 'lucide-react';
+// src/Components/Vendor/VendorNavbar.js
+import React, { useEffect, useRef, useState } from "react";
+import { Menu, Bell, User, Settings, LogOut } from "lucide-react";
+import { authStorage } from "../../helpers/api";
+import { useNavigate } from "react-router-dom";
 
 const designTokens = {
   colors: {
-    secondary: {
-      main: '#6DB33F',
-      hover: '#5FA535'
-    },
-    accent: {
-      red: '#D94826'
-    },
-    background: {
-      primary: '#FFFFFF'
-    },
-    text: {
-      primary: '#212529',
-      secondary: '#6C757D'
+    primary: {
+      main: "#16A34A",
+      hover: "#15803D",
     },
     border: {
-      light: '#E9ECEF'
-    }
-  }
+      light: "#E5E7EB",
+    },
+  },
 };
 
 const VendorNavbar = ({ onToggleSidebar }) => {
-  const [hoveredItem, setHoveredItem] = useState(null);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const navigate = useNavigate();
+  const user = authStorage.getUser();
 
-  // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
+    function onDoc(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false);
       }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
+  function logout() {
+    authStorage.clearAuth();
+    navigate("/login", { replace: true });
+  }
+
   return (
-    <nav style={{ backgroundColor: designTokens.colors.secondary.main, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} className="sticky top-0 z-50">
+    <nav
+      className="sticky top-0 z-50"
+      style={{ backgroundColor: designTokens.colors.primary.main }}
+    >
       <div className="px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Left Section */}
-          <div className="flex items-center space-x-4">
-            <button 
+        <div className="h-16 flex items-center justify-between">
+          {/* Left */}
+          <div className="flex items-center gap-4">
+            <button
               onClick={onToggleSidebar}
-              className="p-2 rounded-lg transition-all duration-200 text-white"
-              style={{ backgroundColor: hoveredItem === 'menu' ? designTokens.colors.secondary.hover : 'transparent' }}
-              onMouseEnter={() => setHoveredItem('menu')}
-              onMouseLeave={() => setHoveredItem(null)}
+              className="p-2 rounded-lg text-white"
+              style={{ backgroundColor: designTokens.colors.primary.hover }}
             >
-              <Menu size={24} />
+              <Menu size={22} />
             </button>
-            <h1 className="text-xl font-bold text-white">Vendor Dashboard</h1>
+
+            <h1 className="text-xl font-bold text-white">Tiffin Sathi Vendor</h1>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <button 
-              className="relative p-2 rounded-lg transition-all duration-200 text-white"
-              style={{ backgroundColor: hoveredItem === 'bell' ? designTokens.colors.secondary.hover : 'transparent' }}
-              onMouseEnter={() => setHoveredItem('bell')}
-              onMouseLeave={() => setHoveredItem(null)}
-            >
-              <Bell size={24} />
-              <span className="absolute -top-1 -right-1 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center text-white"
-                style={{ backgroundColor: designTokens.colors.accent.red }}>
+          {/* Right */}
+          <div className="flex items-center gap-4">
+            <button className="relative p-2 rounded-lg text-white hover:bg-green-700 transition">
+              <Bell size={20} />
+              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
                 3
               </span>
             </button>
 
-            <div className="relative" ref={dropdownRef}>
-              <button 
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center space-x-2 px-3 py-2 rounded-lg text-white transition-all duration-200" 
-                style={{ backgroundColor: isDropdownOpen ? designTokens.colors.secondary.hover : designTokens.colors.secondary.hover }}
+            <div ref={dropdownRef} className="relative">
+              <button
+                onClick={() => setDropdownOpen((v) => !v)}
+                className="flex items-center gap-2 px-3 py-1 rounded-lg text-white hover:bg-green-700"
               >
-                <div className="w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
-                  <User size={20} />
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  <User size={16} />
                 </div>
-                <span className="text-sm font-medium hidden sm:inline">Mom's Kitchen</span>
-                <svg 
-                  className={`w-4 h-4 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}
-                  fill="none" 
-                  stroke="currentColor" 
+
+                <div className="hidden sm:block text-left">
+                  <div className="text-sm font-medium">{user?.name || "Vendor"}</div>
+                  <div className="text-xs opacity-80">{user?.email || "vendor@example.com"}</div>
+                </div>
+
+                <svg
+                  className={`w-4 h-4 transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
 
-              {isDropdownOpen && (
-                <div 
-                  className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg overflow-hidden"
-                  style={{ 
-                    backgroundColor: designTokens.colors.background.primary,
-                    border: `1px solid ${designTokens.colors.border.light}`
-                  }}
+              {dropdownOpen && (
+                <div
+                  className="absolute right-0 mt-2 w-48 bg-white border rounded-md shadow-lg overflow-hidden"
+                  style={{ borderColor: designTokens.colors.border.light }}
                 >
-                  {/* User Info Section */}
-                  <div className="px-4 py-3 border-b" style={{ borderColor: designTokens.colors.border.light }}>
-                    <p className="text-sm font-semibold" style={{ color: designTokens.colors.text.primary }}>
-                      Mom's Kitchen
-                    </p>
-                    <p className="text-xs" style={{ color: designTokens.colors.text.secondary }}>
-                      contact@momskitchen.com
-                    </p>
-                  </div>
+                  <button onClick={() => navigate("/vendor/settings")} className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
+                    <Settings size={14} /> Settings
+                  </button>
 
-                  <div className="py-2">
-                    <a 
-                      href="#profile"
-                      className="flex items-center gap-3 px-4 py-2 transition-colors"
-                      style={{ color: designTokens.colors.text.primary }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <UserCircle size={18} />
-                      <span className="text-sm">My Profile</span>
-                    </a>
+                  <div className="border-t" />
 
-                    <a 
-                      href="#settings"
-                      className="flex items-center gap-3 px-4 py-2 transition-colors"
-                      style={{ color: designTokens.colors.text.primary }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <Settings size={18} />
-                      <span className="text-sm">Settings</span>
-                    </a>
-
-                    <a 
-                      href="#billing"
-                      className="flex items-center gap-3 px-4 py-2 transition-colors"
-                      style={{ color: designTokens.colors.text.primary }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <CreditCard size={18} />
-                      <span className="text-sm">Billing</span>
-                    </a>
-                  </div>
-
-                  <div className="border-t" style={{ borderColor: designTokens.colors.border.light }}>
-                    <button 
-                      className="flex items-center gap-3 w-full px-4 py-2 transition-colors"
-                      style={{ color: designTokens.colors.accent.red }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <LogOut size={18} />
-                      <span className="text-sm font-medium">Logout</span>
-                    </button>
-                  </div>
+                  <button onClick={logout} className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-red-600">
+                    <LogOut size={14} /> Logout
+                  </button>
                 </div>
               )}
             </div>

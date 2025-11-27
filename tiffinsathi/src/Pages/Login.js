@@ -34,6 +34,11 @@ const Login = () => {
     navigate("/");
   };
 
+  // Added placeholder click handler for now
+  const handlePlaceholderClick = (message) => {
+    alert(message);
+  };
+
   return (
     <div className="min-h-screen flex">
       {/* Left Section - Background and Branding */}
@@ -181,9 +186,14 @@ const Login = () => {
                 />
                 <span>Remember me</span>
               </label>
-              <a href="#" className="font-medium" style={{ color: "#F5B800" }}>
+              <button
+                type="button"
+                onClick={() => handlePlaceholderClick("Forgot password clicked")}
+                className="font-medium"
+                style={{ color: "#F5B800" }}
+              >
                 Forgot password?
-              </a>
+              </button>
             </div>
 
             {/* Sign In Button */}
@@ -207,9 +217,14 @@ const Login = () => {
           <div className="mt-8 space-y-4 text-center">
             <p className="text-gray-700">
               Don't have an account?{" "}
-              <a href="#" className="font-medium" style={{ color: "#F5B800" }}>
+              <button
+                type="button"
+                onClick={() => handlePlaceholderClick("Sign up clicked")}
+                className="font-medium"
+                style={{ color: "#F5B800" }}
+              >
                 Sign up here
-              </a>
+              </button>
             </p>
             <div className="flex items-center justify-center gap-2 text-gray-700">
               <HiInformationCircle
@@ -218,13 +233,14 @@ const Login = () => {
               />
               <span>
                 Want to join as a Restaurant?{" "}
-                <a
-                  href="#"
+                <button
+                  type="button"
+                  onClick={() => handlePlaceholderClick("Join as restaurant clicked")}
                   className="font-medium"
                   style={{ color: "#4A8C39" }}
                 >
                   Click here
-                </a>
+                </button>
               </span>
             </div>
           </div>
