@@ -9,8 +9,7 @@ import {
   HiEmojiHappy,
 } from "react-icons/hi";
 import { FaLeaf } from "react-icons/fa";
-import homeBg from "../assets/home.jpg";
-
+import homeBg from "../../assets/home.jpg";
 
 const Home = () => {
   return (
