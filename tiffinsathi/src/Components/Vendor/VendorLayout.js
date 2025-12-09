@@ -4,7 +4,7 @@ import { Outlet } from "react-router-dom";
 import VendorNavbar from "./VendorNavbar";
 import VendorSidebar from "./VendorSidebar";
 import VendorFooter from "./VendorFooter";
-import "../../Components/Styles/vendor.css"; // Fixed path
+import "../../Components/Styles/vendor.css"; 
 
 const VendorLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
