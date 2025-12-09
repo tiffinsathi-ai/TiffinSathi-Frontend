@@ -1,46 +1,14 @@
-import React from 'react';
-
-const designTokens = {
-  colors: {
-    secondary: {
-      main: '#6DB33F'
-    },
-    background: {
-      secondary: '#F8F9FA'
-    },
-    text: {
-      secondary: '#6C757D',
-      tertiary: '#ADB5BD'
-    },
-    border: {
-      light: '#E9ECEF'
-    }
-  }
-};
+// src/Components/Vendor/VendorFooter.js
+import React from "react";
 
 const VendorFooter = () => {
   return (
-    <footer 
-      className="py-4 px-6 border-t mt-auto" 
-      style={{ 
-        backgroundColor: designTokens.colors.background.secondary,
-        borderColor: designTokens.colors.border.light 
-      }}
-    >
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-        <p className="text-sm" style={{ color: designTokens.colors.text.secondary }}>
-          © 2025 Tiffin Sathi Vendor Panel
-        </p>
-        <p className="text-sm" style={{ color: designTokens.colors.text.tertiary }}>
-          Need help?{' '}
-          <a 
-            href="#support" 
-            className="font-medium transition-colors"
-            style={{ color: designTokens.colors.secondary.main }}
-          >
-            Contact Support
-          </a>
-        </p>
+    <footer className="border-t bg-white p-4">
+      <div className="max-w-7xl mx-auto text-sm text-gray-600 flex justify-between items-center">
+        <div>© {new Date().getFullYear()} Tiffin Sathi</div>
+        <div>
+          <a href="#help" className="text-green-600">Help</a> · <a href="#terms" className="text-green-600">Terms</a>
+        </div>
       </div>
     </footer>
   );

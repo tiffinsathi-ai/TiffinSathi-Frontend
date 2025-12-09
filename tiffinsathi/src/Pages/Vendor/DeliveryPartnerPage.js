@@ -1,4 +1,4 @@
-// DeliveryPartnersPage.jsx
+// src/Pages/Vendor/DeliveryPartnersPage.js
 import React, { useState, useEffect } from 'react';
 import DeliveryPartnerList from '../../Components/Vendor/DeliveryPartnerList';
 import DeliveryPartnerForm from '../../Components/Vendor/DeliveryPartnerForm';
@@ -8,7 +8,11 @@ import {
   UserCheck,
   UserPlus,
   Search,
-  Plus
+  Plus,
+  RefreshCw,
+  Truck,
+  AlertCircle,
+  Filter
 } from 'lucide-react';
 
 const DeliveryPartnersPage = () => {
@@ -18,12 +22,41 @@ const DeliveryPartnersPage = () => {
   const [editingPartner, setEditingPartner] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCount, setActiveCount] = useState(0);
+  const [error, setError] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const API_BASE_URL = 'http://localhost:8080/api/delivery-partners';
 
   // Get auth token from localStorage
   const getAuthToken = () => {
     return localStorage.getItem('token');
+  };
+
+  // Enhanced StatCard component
+  const StatCard = ({ title, value, icon: Icon, color, change }) => {
+    const colors = {
+      blue: "text-blue-600 bg-blue-50",
+      green: "text-green-600 bg-green-50",
+      purple: "text-purple-600 bg-purple-50",
+      orange: "text-orange-600 bg-orange-50"
+    };
+
+    return (
+      <div className="bg-white p-6 rounded-xl border shadow-sm hover:shadow-md transition-shadow">
+        <div className="flex items-center justify-between mb-4">
+          <div className={`p-3 rounded-lg ${colors[color]}`}>
+            <Icon className="h-6 w-6" />
+          </div>
+          {change && (
+            <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
+              {change}
+            </span>
+          )}
+        </div>
+        <h3 className="text-3xl font-bold text-gray-900 mb-1">{value}</h3>
+        <p className="text-sm text-gray-600">{title}</p>
+      </div>
+    );
   };
 
   // API call functions
@@ -49,7 +82,8 @@ const DeliveryPartnersPage = () => {
         }
       });
       if (!response.ok) throw new Error('Failed to fetch count');
-      return response.json();
+      const data = await response.json();
+      return data.count || data.activeCount || 0;
     },
 
     searchDeliveryPartners: async (name) => {
@@ -140,28 +174,23 @@ const DeliveryPartnersPage = () => {
 
   useEffect(() => {
     fetchDeliveryPartners();
-    fetchActiveCount();
   }, []);
 
   const fetchDeliveryPartners = async () => {
     try {
       setLoading(true);
+      setError('');
       const partners = await api.getMyDeliveryPartners();
       setDeliveryPartners(partners);
+      
+      // Calculate active count
+      const active = partners.filter(p => p.isActive).length;
+      setActiveCount(active);
     } catch (error) {
+      setError('Failed to load delivery partners: ' + error.message);
       toast.error('Failed to fetch delivery partners');
-      console.error('Error fetching delivery partners:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchActiveCount = async () => {
-    try {
-      const count = await api.getActivePartnersCount();
-      setActiveCount(count);
-    } catch (error) {
-      console.error('Error fetching active count:', error);
     }
   };
 
@@ -195,7 +224,6 @@ const DeliveryPartnersPage = () => {
         await api.deleteDeliveryPartner(partnerId);
         toast.success('Delivery partner deleted successfully');
         fetchDeliveryPartners();
-        fetchActiveCount();
       } catch (error) {
         toast.error('Failed to delete delivery partner');
       }
@@ -207,7 +235,6 @@ const DeliveryPartnersPage = () => {
       await api.toggleAvailability(partnerId);
       toast.success('Status updated successfully');
       fetchDeliveryPartners();
-      fetchActiveCount();
     } catch (error) {
       toast.error('Failed to update status');
     }
@@ -231,7 +258,6 @@ const DeliveryPartnersPage = () => {
     setShowForm(false);
     setEditingPartner(null);
     fetchDeliveryPartners();
-    fetchActiveCount();
   };
 
   const handleFormClose = () => {
@@ -239,108 +265,123 @@ const DeliveryPartnersPage = () => {
     setEditingPartner(null);
   };
 
+  const filteredPartners = deliveryPartners.filter(partner => {
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'active') return partner.isActive;
+    if (statusFilter === 'inactive') return !partner.isActive;
+    return true;
+  });
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Delivery Partners</h1>
-          <p className="text-gray-600 mt-2">Manage your delivery partners and their information</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Delivery Partners</h2>
+          <p className="text-gray-600">Manage your delivery partners and their information</p>
         </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <Users className="w-6 h-6 text-blue-600" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500">Total Partners</h3>
-                <p className="text-2xl font-semibold text-gray-900">{deliveryPartners.length}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <UserCheck className="w-6 h-6 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500">Active Partners</h3>
-                <p className="text-2xl font-semibold text-gray-900">{activeCount}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <UserPlus className="w-6 h-6 text-purple-600" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500">Add New Partner</h3>
-                <button
-                  onClick={handleCreate}
-                  className="text-purple-600 font-semibold hover:text-purple-700 mt-1"
-                >
-                  Click here →
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Search and Actions */}
-        <div className="bg-white rounded-lg shadow mb-6">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
-              <div className="flex-1 max-w-md">
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Search delivery partners by name..."
-                    value={searchTerm}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
-              <button
-                onClick={handleCreate}
-                className="w-full sm:w-auto bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors flex items-center"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                Add Delivery Partner
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Delivery Partners List */}
-        <DeliveryPartnerList
-          partners={deliveryPartners}
-          loading={loading}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onToggleStatus={handleToggleStatus}
-          onResetPassword={handleResetPassword}
-        />
-
-        {/* Form Modal */}
-        {showForm && (
-          <DeliveryPartnerForm
-            partner={editingPartner}
-            onSubmit={handleFormSubmit}
-            onClose={handleFormClose}
-            api={api}
-          />
-        )}
+        <button
+          onClick={fetchDeliveryPartners}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+        >
+          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+          <span>Refresh</span>
+        </button>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded flex items-center">
+          <AlertCircle className="h-5 w-5 mr-2" />
+          {error}
+        </div>
+      )}
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <StatCard
+          title="Total Partners"
+          value={deliveryPartners.length}
+          icon={Users}
+          color="blue"
+          change={`${activeCount} active`}
+        />
+        <StatCard
+          title="Active Partners"
+          value={activeCount}
+          icon={UserCheck}
+          color="green"
+          change={`${deliveryPartners.length - activeCount} inactive`}
+        />
+        <StatCard
+          title="Add New Partner"
+          value=""
+          icon={UserPlus}
+          color="purple"
+        >
+          <button
+            onClick={handleCreate}
+            className="text-purple-600 font-semibold hover:text-purple-700 mt-2 text-sm"
+          >
+            Click to add →
+          </button>
+        </StatCard>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="relative md:col-span-2">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search delivery partners by name..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={searchTerm}
+              onChange={(e) => handleSearch(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Filter size={18} className="text-gray-400" />
+            <select
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active Only</option>
+              <option value="inactive">Inactive Only</option>
+            </select>
+          </div>
+          <button
+            onClick={handleCreate}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors flex items-center justify-center"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Add Partner
+          </button>
+        </div>
+      </div>
+
+      {/* Delivery Partners List */}
+      <DeliveryPartnerList
+        partners={filteredPartners}
+        loading={loading}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onToggleStatus={handleToggleStatus}
+        onResetPassword={handleResetPassword}
+      />
+
+      {/* Form Modal */}
+      {showForm && (
+        <DeliveryPartnerForm
+          partner={editingPartner}
+          onSubmit={handleFormSubmit}
+          onClose={handleFormClose}
+          api={api}
+        />
+      )}
     </div>
   );
 };
