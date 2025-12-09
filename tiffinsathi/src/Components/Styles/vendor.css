@@ -1,0 +1,71 @@
+﻿/* Vendor Portal Global Styles */
+:root {
+    --vendor-primary: #10b981;
+    --vendor-secondary: #3b82f6;
+    --vendor-accent: #8b5cf6;
+    --vendor-bg: #f9fafb;
+    --vendor-card: #ffffff;
+    --vendor-text: #1f2937;
+    --vendor-border: #e5e7eb;
+}
+
+.vendor-theme {
+    background-color: var(--vendor-bg);
+    color: var(--vendor-text);
+    font-family: 'Inter', -apple-system, sans-serif;
+}
+
+/* Utility classes */
+.vendor-shadow {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.vendor-shadow-lg {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.vendor-rounded {
+    border-radius: 8px;
+}
+
+.vendor-rounded-lg {
+    border-radius: 12px;
+}
+
+.vendor-transition {
+    transition: all 0.3s ease;
+}
+
+/* Loading states */
+.vendor-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+}
+
+.vendor-spinner {
+    border: 3px solid var(--vendor-border);
+    border-top: 3px solid var(--vendor-primary);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Empty states */
+.vendor-empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6b7280;
+}
+
+.vendor-empty-state svg {
+    margin-bottom: 16px;
+    color: #9ca3af;
+}

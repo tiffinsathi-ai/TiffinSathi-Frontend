@@ -53,10 +53,8 @@ const VendorSidebar = ({ isOpen = true }) => {
   if (!isOpen) return null;
 
   return (
-    <aside className="w-64 h-screen sticky top-16 overflow-y-auto" style={{ backgroundColor: designTokens.colors.background.dark }}>
-      <div className="p-4">
-        <img src="/src/assets/admin-banner.jpg" alt="logo" className="w-full h-20 object-cover rounded mb-4" />
-
+    <aside className="w-64 h-screen sticky top-0 overflow-y-auto" style={{ backgroundColor: designTokens.colors.background.dark }}>
+      <div className="p-4 pt-6"> {/* Changed pt-6 to add some top padding */}
         <nav className="space-y-2">
           {menu.map((m) => {
             const Icon = m.icon;

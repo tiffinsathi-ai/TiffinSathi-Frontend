@@ -21,6 +21,7 @@ import {
   DollarSign,
   Package as PackageIcon,
   X,
+  RefreshCw,
   AlertCircle
 } from "lucide-react";
 
