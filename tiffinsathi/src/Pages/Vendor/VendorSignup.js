@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
@@ -122,17 +122,12 @@ const VendorSignup = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
+  // Simplified cuisine options as requested
   const cuisineOptions = [
     "Vegetarian",
-    "Non-Vegetarian",
+    "Non-Vegetarian", 
     "Vegan",
-    "Gluten-Free",
-    "Keto",
-    "Mediterranean",
-    "Asian Fusion",
-    "Street Food",
-    "Comfort Food",
-    "Healthy & Organic"
+    "Gluten-Free"
   ];
 
   const steps = [
@@ -145,9 +140,16 @@ const VendorSignup = () => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    const newValue = type === "checkbox" ? checked : value;
-
-    setFormData((prev) => ({ ...prev, [name]: newValue }));
+    
+    // Special handling for capacity (must be positive)
+    if (name === "capacity") {
+      const numValue = parseInt(value);
+      const newValue = numValue < 1 ? "1" : value;
+      setFormData((prev) => ({ ...prev, [name]: newValue }));
+    } else {
+      const newValue = type === "checkbox" ? checked : value;
+      setFormData((prev) => ({ ...prev, [name]: newValue }));
+    }
 
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
@@ -196,8 +198,9 @@ const VendorSignup = () => {
       if (!formData.address) newErrors.address = "Required";
       if (!formData.city) newErrors.city = "Required";
       if (!formData.state) newErrors.state = "Required";
-      if (!formData.pincode || !/^\d{6}$/.test(formData.pincode))
-        newErrors.pincode = "Valid 6-digit pincode required";
+      // Updated pincode validation: any number, not just 6 digits
+      if (!formData.pincode || !/^\d+$/.test(formData.pincode))
+        newErrors.pincode = "Valid pincode required";
     }
 
     if (step === 3) {
@@ -300,11 +303,10 @@ const VendorSignup = () => {
           ? parseInt(formData.yearsInBusiness, 10)
           : 0;
 
-      // Convert capacity to integer if provided (can be negative)
-      const capacity =
-        formData.capacity && formData.capacity.trim() !== ""
-          ? parseInt(formData.capacity, 10)
-          : null;
+      // Convert capacity to integer (minimum 1)
+      const capacity = formData.capacity && formData.capacity.trim() !== ""
+        ? Math.max(1, parseInt(formData.capacity, 10))
+        : null;
 
       // Validate required fields
       if (!formData.email || typeof formData.email !== "string") {
@@ -359,17 +361,17 @@ const VendorSignup = () => {
         alternatePhone: nullIfEmpty(formData.alternatePhone),
         yearsInBusiness: yearsInBusiness,
         cuisineType: cuisineType,
-        capacity: capacity, // Can be negative
+        capacity: capacity, // Positive number only
         description: nullIfEmpty(formData.description),
         bankName: nullIfEmpty(formData.bankName),
         accountNumber: nullIfEmpty(formData.accountNumber),
         branchName: nullIfEmpty(formData.ifscCode),
         accountHolderName: nullIfEmpty(formData.accountHolderName),
         panNumber: nullIfEmpty(formData.panNumber),
-        vatNumber: null, // Removed GST
+        vatNumber: null,
         foodLicenseNumber: trimmedFoodLicense,
         companyRegistrationNumber: null,
-        ...uploadedDocumentUrls, // Spread the document URLs
+        ...uploadedDocumentUrls,
       };
 
       console.log("Submitting vendor registration...");
@@ -379,18 +381,18 @@ const VendorSignup = () => {
       }, null, 2));
 
       // Send data to backend API
-      const response = await axios.post(
+      await axios.post(
         "http://localhost:8080/auth/signup/vendor",
         apiPayload,
         {
           headers: {
             "Content-Type": "application/json",
           },
-          timeout: 30000, // 30 second timeout
+          timeout: 30000,
         }
       );
 
-      console.log("✅ Vendor registration successful:", response.data);
+      console.log("✅ Vendor registration successful");
       setSubmitted(true);
     } catch (error) {
       console.error("Submission Error:", error);
@@ -398,7 +400,6 @@ const VendorSignup = () => {
       let errorMessage = "Failed to register. Please try again.";
 
     if (error.response) {
-      // Server responded with error status
       const status = error.response.status;
       const responseData = error.response.data;
 
@@ -544,9 +545,10 @@ const VendorSignup = () => {
         }}
       ></div>
 
+      {/* Fixed Back Button - Responsive */}
       <button
         onClick={() => navigate(-1)}
-        className="absolute top-4 left-4 z-20 p-2 rounded-lg transition-colors flex items-center gap-2 text-white"
+        className="absolute top-4 left-4 z-20 p-2 sm:p-3 rounded-lg transition-colors flex items-center gap-2 text-white text-sm sm:text-base"
         style={{
           backgroundColor: "#F5B800",
         }}
@@ -557,7 +559,7 @@ const VendorSignup = () => {
           e.currentTarget.style.backgroundColor = "#F5B800";
         }}
       >
-        <ArrowLeft size={20} />
+        <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
         <span className="font-medium">Back</span>
       </button>
 
@@ -592,12 +594,13 @@ const VendorSignup = () => {
               </div>
             )}
 
-            <div className="flex items-center justify-between mb-8">
+            {/* Restored Original Progress Steps */}
+            <div className="flex items-center justify-between mb-8 overflow-x-auto pb-2">
               {steps.map((step, index) => (
-                <div key={step.num} className="flex items-center flex-1">
+                <div key={step.num} className="flex items-center flex-1 min-w-0">
                   <div className="flex flex-col items-center flex-1">
                     <div
-                      className={`w-12 h-12 rounded-full flex items-center justify-center transition ${
+                      className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition flex-shrink-0 ${
                         currentStep >= step.num ? "text-white" : "text-gray-500"
                       }`}
                       style={{
@@ -607,10 +610,10 @@ const VendorSignup = () => {
                             : "#E9ECEF",
                       }}
                     >
-                      <step.icon className="w-5 h-5" />
+                      <step.icon className="w-5 h-5 sm:w-5 sm:h-5" />
                     </div>
                     <p
-                      className={`text-xs mt-2 font-medium ${
+                      className={`text-xs mt-2 font-medium text-center whitespace-nowrap ${
                         currentStep >= step.num ? "" : "text-gray-500"
                       }`}
                       style={{
@@ -625,7 +628,7 @@ const VendorSignup = () => {
                   </div>
                   {index < steps.length - 1 && (
                     <div
-                      className={`h-1 flex-1 mx-2 rounded transition ${
+                      className={`h-1 flex-1 mx-2 sm:mx-4 rounded transition flex-shrink ${
                         currentStep > step.num ? "" : "bg-gray-200"
                       }`}
                       style={{
@@ -709,16 +712,8 @@ const VendorSignup = () => {
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                       style={{
-                        border: `1px solid ${designTokens.colors.border.light}`,
+                        border: `1px solid ${errors.businessName ? designTokens.colors.error.red : designTokens.colors.border.light}`,
                       }}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onBlur={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     />
                     {errors.businessName && (
                       <p
@@ -744,16 +739,8 @@ const VendorSignup = () => {
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                       style={{
-                        border: `1px solid ${designTokens.colors.border.light}`,
+                        border: `1px solid ${errors.ownerName ? designTokens.colors.error.red : designTokens.colors.border.light}`,
                       }}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onBlur={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     />
                     {errors.ownerName && (
                       <p
@@ -779,16 +766,8 @@ const VendorSignup = () => {
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                       style={{
-                        border: `1px solid ${designTokens.colors.border.light}`,
+                        border: `1px solid ${errors.email ? designTokens.colors.error.red : designTokens.colors.border.light}`,
                       }}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onBlur={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     />
                     {errors.email && (
                       <p
@@ -815,16 +794,8 @@ const VendorSignup = () => {
                       placeholder="10-digit number"
                       className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                       style={{
-                        border: `1px solid ${designTokens.colors.border.light}`,
+                        border: `1px solid ${errors.phone ? designTokens.colors.error.red : designTokens.colors.border.light}`,
                       }}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onBlur={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     />
                     {errors.phone && (
                       <p
@@ -852,14 +823,6 @@ const VendorSignup = () => {
                       style={{
                         border: `1px solid ${designTokens.colors.border.light}`,
                       }}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onBlur={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     />
                   </div>
 
@@ -875,18 +838,11 @@ const VendorSignup = () => {
                       name="yearsInBusiness"
                       value={formData.yearsInBusiness}
                       onChange={handleInputChange}
+                      min="0"
                       className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                       style={{
                         border: `1px solid ${designTokens.colors.border.light}`,
                       }}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onBlur={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     />
                   </div>
                 </div>
@@ -916,16 +872,8 @@ const VendorSignup = () => {
                       rows="3"
                       className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                       style={{
-                        border: `1px solid ${designTokens.colors.border.light}`,
+                        border: `1px solid ${errors.address ? designTokens.colors.error.red : designTokens.colors.border.light}`,
                       }}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onBlur={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     />
                     {errors.address && (
                       <p
@@ -952,16 +900,8 @@ const VendorSignup = () => {
                         onChange={handleInputChange}
                         className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                         style={{
-                          border: `1px solid ${designTokens.colors.border.light}`,
+                          border: `1px solid ${errors.city ? designTokens.colors.error.red : designTokens.colors.border.light}`,
                         }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
                       />
                       {errors.city && (
                         <p
@@ -987,16 +927,8 @@ const VendorSignup = () => {
                         onChange={handleInputChange}
                         className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                         style={{
-                          border: `1px solid ${designTokens.colors.border.light}`,
+                          border: `1px solid ${errors.state ? designTokens.colors.error.red : designTokens.colors.border.light}`,
                         }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
                       />
                       {errors.state && (
                         <p
@@ -1020,19 +952,11 @@ const VendorSignup = () => {
                         name="pincode"
                         value={formData.pincode}
                         onChange={handleInputChange}
-                        placeholder="6-digit"
+                        placeholder="Enter pincode"
                         className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                         style={{
-                          border: `1px solid ${designTokens.colors.border.light}`,
+                          border: `1px solid ${errors.pincode ? designTokens.colors.error.red : designTokens.colors.border.light}`,
                         }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
                       />
                       {errors.pincode && (
                         <p
@@ -1114,20 +1038,14 @@ const VendorSignup = () => {
                       name="capacity"
                       value={formData.capacity}
                       onChange={handleInputChange}
+                      min="1"
+                      step="1"
                       className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                       style={{
                         border: `1px solid ${designTokens.colors.border.light}`,
                       }}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onBlur={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     />
-                    <p className="text-xs text-gray-500 mt-1">Can be negative for special cases</p>
+                    <p className="text-xs text-gray-500 mt-1">Minimum 1 tiffin per day</p>
                   </div>
 
                   <div>
@@ -1145,20 +1063,13 @@ const VendorSignup = () => {
                       style={{
                         border: `1px solid ${designTokens.colors.border.light}`,
                       }}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onBlur={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     >
                       <option value="">Select Range</option>
                       <option value="50-100">₹50 - ₹100</option>
                       <option value="100-150">₹100 - ₹150</option>
                       <option value="150-200">₹150 - ₹200</option>
-                      <option value="200+">₹200+</option>
+                      <option value="200-250">₹200 - ₹250</option>
+                      <option value="250+">₹250+</option>
                     </select>
                   </div>
                 </div>
@@ -1180,14 +1091,6 @@ const VendorSignup = () => {
                     style={{
                       border: `1px solid ${designTokens.colors.border.light}`,
                     }}
-                    onFocus={(e) =>
-                      (e.target.style.borderColor =
-                        designTokens.colors.primary.main)
-                    }
-                    onBlur={(e) =>
-                      (e.target.style.borderColor =
-                        designTokens.colors.border.light)
-                    }
                   />
                 </div>
               </div>
@@ -1219,14 +1122,6 @@ const VendorSignup = () => {
                         style={{
                           border: `1px solid ${designTokens.colors.border.light}`,
                         }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
                       />
                     </div>
 
@@ -1246,14 +1141,6 @@ const VendorSignup = () => {
                         style={{
                           border: `1px solid ${designTokens.colors.border.light}`,
                         }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
                       />
                     </div>
 
@@ -1273,14 +1160,6 @@ const VendorSignup = () => {
                         style={{
                           border: `1px solid ${designTokens.colors.border.light}`,
                         }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
                       />
                     </div>
 
@@ -1301,14 +1180,6 @@ const VendorSignup = () => {
                         style={{
                           border: `1px solid ${designTokens.colors.border.light}`,
                         }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
                       />
                     </div>
                   </div>
@@ -1337,16 +1208,8 @@ const VendorSignup = () => {
                         placeholder="FSSAI/Food License Number"
                         className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                         style={{
-                          border: `1px solid ${designTokens.colors.border.light}`,
+                          border: `1px solid ${errors.fssaiNumber ? designTokens.colors.error.red : designTokens.colors.border.light}`,
                         }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
                       />
                       {errors.fssaiNumber && (
                         <p
@@ -1374,14 +1237,6 @@ const VendorSignup = () => {
                         style={{
                           border: `1px solid ${designTokens.colors.border.light}`,
                         }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
                       />
                     </div>
                   </div>
@@ -1408,16 +1263,8 @@ const VendorSignup = () => {
                       key={doc.key}
                       className="border-2 border-dashed rounded-lg p-4 transition"
                       style={{
-                        borderColor: designTokens.colors.border.light,
+                        borderColor: errors[doc.key] ? designTokens.colors.error.red : designTokens.colors.border.light,
                       }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     >
                       <label
                         className="block text-sm font-medium mb-2 text-left"
@@ -1437,17 +1284,9 @@ const VendorSignup = () => {
                           htmlFor={doc.key}
                           className="flex-1 flex items-center justify-center px-4 py-2 rounded-lg cursor-pointer transition"
                           style={{
-                            backgroundColor:
-                              designTokens.colors.background.light,
+                            backgroundColor: designTokens.colors.background.light,
                             color: designTokens.colors.text.primary,
                           }}
-                          onMouseEnter={(e) =>
-                            (e.currentTarget.style.backgroundColor = "#F3F4F6")
-                          }
-                          onMouseLeave={(e) =>
-                            (e.currentTarget.style.backgroundColor =
-                              designTokens.colors.background.light)
-                          }
                         >
                           <Upload className="w-4 h-4 mr-2" />
                           Choose File
@@ -1459,7 +1298,7 @@ const VendorSignup = () => {
                           style={{ color: designTokens.colors.primary.main }}
                         >
                           <CheckCircle className="w-4 h-4 mr-1" />
-                          {documents[doc.key].name}
+                          <span className="truncate">{documents[doc.key].name}</span>
                         </span>
                       )}
                       {errors[doc.key] && (
@@ -1543,6 +1382,7 @@ const VendorSignup = () => {
               </div>
             )}
 
+            {/* Restored Original Navigation Buttons */}
             <div
               className="flex justify-between mt-8 pt-6 border-t"
               style={{ borderColor: designTokens.colors.border.light }}

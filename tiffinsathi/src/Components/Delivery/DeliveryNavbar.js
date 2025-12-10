@@ -1,21 +1,23 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
-  Menu,
   Bell,
-  User,
   Settings,
   LogOut,
   UserCircle,
-  Package,
+  Menu,
+  Truck,
+  ChevronDown
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { deliveryApi } from "../../helpers/deliveryApi";
 import logo from "../../assets/logo.png";
-import defaultUser from "../../assets/default-user.jpg";
+import defaultUser from "../../assets/login.jpg";
 
 const designTokens = {
   colors: {
     secondary: {
-      main: "#6DB33F",
-      hover: "#5FA535",
+      main: "#D94826", // Orange for delivery theme
+      hover: "#C44122",
     },
     accent: {
       red: "#D94826",
@@ -33,53 +35,119 @@ const designTokens = {
   },
 };
 
-const DeliveryNavbar = ({ onToggleSidebar }) => {
+const DeliveryNavbar = ({ onToggleSidebar, isMobile }) => {
   const [hoveredItem, setHoveredItem] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [profilePicture, setProfilePicture] = useState(null);
+  const [loading, setLoading] = useState(true);
   const dropdownRef = useRef(null);
+  const navigate = useNavigate();
 
-  const checkAuthStatus = () => {
-    const token = localStorage.getItem("token");
-    const userData = localStorage.getItem("user");
-    const username = localStorage.getItem("username");
+  // Fetch user data from database
+  const fetchUserData = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      
+      if (!token) {
+        console.error("No token found");
+        setLoading(false);
+        return;
+      }
 
-    if (token && userData) {
+      console.log("Fetching delivery user data...");
+      
+      // Try multiple endpoints to get user data
+      let userData;
+      
       try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
+        // First try the delivery user profile endpoint
+        userData = await deliveryApi.getCurrentUser();
+        console.log("Delivery user data from API:", userData);
+      } catch (profileError) {
+        console.log("Delivery API failed, using fallback...");
         
-        if (parsedUser.profilePicture) {
-          setProfilePicture(parsedUser.profilePicture);
+        // Fallback: create a mock delivery user from storage
+        const storedUser = localStorage.getItem("deliveryUser");
+        if (storedUser) {
+          userData = JSON.parse(storedUser);
+        } else {
+          userData = {
+            userName: "Delivery Partner",
+            email: "delivery@tiffinsathi.com",
+            role: "DELIVERY_PARTNER",
+            profilePicture: null
+          };
+        }
+      }
+
+      if (userData) {
+        setUser(userData);
+        
+        if (userData.profilePicture) {
+          setProfilePicture(userData.profilePicture);
         } else {
           setProfilePicture(null);
         }
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-        setUser({ 
-          userName: username || "Delivery Partner", 
-          email: localStorage.getItem("userEmail") || "",
-          username: username || "Delivery Partner"
-        });
-        setProfilePicture(null);
+        
+        // Store in localStorage for quick access
+        localStorage.setItem("deliveryUser", JSON.stringify(userData));
+        console.log("Delivery user data set successfully:", userData);
       }
+    } catch (error) {
+      console.error("Error fetching delivery user data:", error);
+      // Fallback to localStorage if API fails
+      const storedUser = localStorage.getItem("deliveryUser");
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          setProfilePicture(parsedUser.profilePicture || null);
+          console.log("Using stored delivery user data:", parsedUser);
+        } catch (parseError) {
+          console.error("Error parsing stored user data:", parseError);
+          // Create default delivery user
+          setUser({
+            userName: "Delivery Partner",
+            email: "delivery@tiffinsathi.com",
+            role: "DELIVERY_PARTNER"
+          });
+        }
+      } else {
+        // Create default delivery user
+        setUser({
+          userName: "Delivery Partner",
+          email: "delivery@tiffinsathi.com",
+          role: "DELIVERY_PARTNER"
+        });
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    checkAuthStatus();
+    fetchUserData();
     
-    const handleStorageChange = () => {
-      checkAuthStatus();
+    // Set up interval to refresh user data periodically
+    const interval = setInterval(fetchUserData, 300000); // Refresh every 5 minutes
+
+    // Listen for user data updates from profile page
+    const handleUserDataUpdated = (event) => {
+      console.log("Delivery user data updated event received:", event.detail);
+      if (event.detail) {
+        setUser(event.detail);
+        setProfilePicture(event.detail.profilePicture || null);
+        localStorage.setItem("deliveryUser", JSON.stringify(event.detail));
+      }
     };
 
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("focus", checkAuthStatus);
+    window.addEventListener('deliveryUserDataUpdated', handleUserDataUpdated);
 
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("focus", checkAuthStatus);
+      clearInterval(interval);
+      window.removeEventListener('deliveryUserDataUpdated', handleUserDataUpdated);
     };
   }, []);
 
@@ -95,17 +163,18 @@ const DeliveryNavbar = ({ onToggleSidebar }) => {
   }, []);
 
   const getDisplayName = () => {
+    if (loading) return "Loading...";
     if (!user) return "Delivery Partner";
     
-    return user.username || 
-           user.userName || 
+    return user.userName || 
            user.name || 
+           user.username || 
            "Delivery Partner";
   };
 
   const getUserEmail = () => {
-    if (!user) return "";
-    return user.email || localStorage.getItem("userEmail") || "";
+    if (!user) return "delivery@tiffinsathi.com";
+    return user.email || user.businessEmail || "delivery@tiffinsathi.com";
   };
 
   const getProfilePictureSrc = () => {
@@ -114,29 +183,90 @@ const DeliveryNavbar = ({ onToggleSidebar }) => {
         return profilePicture;
       }
       if (typeof profilePicture === 'string') {
-        return `data:image/jpeg;base64,${profilePicture}`;
-      }
-      if (Array.isArray(profilePicture)) {
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(profilePicture)));
-        return `data:image/jpeg;base64,${base64}`;
+        // If it's a base64 string without data URL prefix
+        if (profilePicture.startsWith('/9j/') || profilePicture.length > 1000) {
+          return `data:image/jpeg;base64,${profilePicture}`;
+        }
+        return profilePicture;
       }
     }
     return defaultUser;
   };
 
+  const handleMyDeliveriesClick = () => {
+    setIsDropdownOpen(false);
+    navigate("/delivery/deliveries");
+  };
+
+  const handleProfileClick = () => {
+    setIsDropdownOpen(false);
+    navigate("/delivery/profile");
+  };
+
+  const handleSettingsClick = () => {
+    setIsDropdownOpen(false);
+    navigate("/delivery/settings");
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("deliveryUser");
     localStorage.removeItem("user");
     localStorage.removeItem("isAuthenticated");
     localStorage.removeItem("rememberedEmail");
     localStorage.removeItem("userRole");
     localStorage.removeItem("userEmail");
     localStorage.removeItem("username");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
+    
     setUser(null);
     setProfilePicture(null);
     setIsDropdownOpen(false);
     window.location.href = "/login";
   };
+
+  if (loading) {
+    return (
+      <nav
+        style={{
+          backgroundColor: designTokens.colors.background.primary,
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+        }}
+        className="sticky top-0 z-50 w-full"
+      >
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={onToggleSidebar}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors lg:hidden"
+              >
+                <Menu className="h-6 w-6 text-gray-600" />
+              </button>
+              <div className="flex items-center gap-3">
+                <img
+                  src={logo}
+                  alt="Tiffin Sathi Logo"
+                  className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
+                />
+                <h1
+                  className="text-xl sm:text-2xl font-bold hidden sm:block"
+                  style={{
+                    fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
+                    color: designTokens.colors.secondary.main,
+                  }}
+                >
+                  Delivery Portal
+                </h1>
+              </div>
+            </div>
+            <div className="animate-pulse bg-gray-200 h-8 w-32 rounded hidden sm:block"></div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav
@@ -144,59 +274,68 @@ const DeliveryNavbar = ({ onToggleSidebar }) => {
         backgroundColor: designTokens.colors.background.primary,
         boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
       }}
-      className="sticky top-0 z-50"
+      className="sticky top-0 z-50 w-full"
     >
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Left Section - Logo */}
-          <div className="flex items-center gap-3">
-            <img
-              src={logo}
-              alt="Tiffin Sathi Logo"
-              className="w-10 h-10 object-contain"
-            />
-            <h1
-              className="text-2xl font-bold"
-              style={{
-                fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
-                color: designTokens.colors.secondary.main,
-              }}
+          {/* Left Section - Logo and Menu */}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={onToggleSidebar}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors lg:hidden"
             >
-              Tiffin Sathi
-            </h1>
+              <Menu className="h-6 w-6 text-gray-600" />
+            </button>
+            <div className="flex items-center gap-3">
+              <img
+                src={logo}
+                alt="Tiffin Sathi Logo"
+                className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
+              />
+              <h1
+                className="text-xl sm:text-2xl font-bold hidden sm:block"
+                style={{
+                  fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
+                  color: designTokens.colors.secondary.main,
+                }}
+              >
+                Delivery Portal
+              </h1>
+            </div>
           </div>
 
           {/* Right Section */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             <button
               className="relative p-2 rounded-lg transition-all duration-200"
               style={{ color: designTokens.colors.text.primary }}
               onMouseEnter={() => setHoveredItem("bell")}
               onMouseLeave={() => setHoveredItem(null)}
             >
-              <Bell size={24} />
+              <Bell size={20} className="sm:w-6 sm:h-6" />
               <span
-                className="absolute -top-1 -right-1 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center text-white"
+                className="absolute -top-1 -right-1 text-xs font-bold rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center text-white text-[10px] sm:text-xs"
                 style={{ backgroundColor: designTokens.colors.accent.red }}
               >
-                2
+                3
               </span>
             </button>
 
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200"
+                className="flex items-center space-x-2 px-2 sm:px-3 py-2 rounded-lg transition-all duration-200"
                 style={{ color: designTokens.colors.text.primary }}
                 onMouseEnter={() => setHoveredItem("profile")}
                 onMouseLeave={() => setHoveredItem(null)}
               >
-                <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border-2 border-white">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center overflow-hidden border-2 border-white bg-gray-200">
                   <img
                     src={getProfilePictureSrc()}
                     alt="Profile"
                     className="w-full h-full object-cover"
                     onError={(e) => {
+                      console.log("Image load error, using default");
                       e.target.src = defaultUser;
                     }}
                   />
@@ -207,39 +346,29 @@ const DeliveryNavbar = ({ onToggleSidebar }) => {
                 >
                   {getDisplayName()}
                 </span>
-                <svg
-                  className={`w-4 h-4 transition-transform duration-200 ${
+                <ChevronDown
+                  className={`w-3 h-3 sm:w-4 sm:h-4 transition-transform duration-200 ${
                     isDropdownOpen ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+                  } hidden sm:inline`}
                   style={{ color: designTokens.colors.text.primary }}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
+                />
               </button>
 
               {isDropdownOpen && (
                 <div
-                  className="absolute right-0 mt-2 w-64 rounded-lg shadow-lg overflow-hidden"
+                  className="absolute right-0 mt-2 w-64 sm:w-72 rounded-lg shadow-lg overflow-hidden z-50"
                   style={{
                     backgroundColor: designTokens.colors.background.primary,
                     border: `1px solid ${designTokens.colors.border.light}`,
                   }}
                 >
-                  {/* User Info Section */}
+                  {/* User Info Section - Centered */}
                   <div
                     className="px-4 py-4 border-b"
                     style={{ borderColor: designTokens.colors.border.light }}
                   >
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden border-2 border-gray-200">
+                    <div className="flex flex-col items-center text-center mb-2">
+                      <div className="w-14 h-14 rounded-full flex items-center justify-center overflow-hidden border-2 border-gray-200 bg-gray-200 mb-3">
                         <img
                           src={getProfilePictureSrc()}
                           alt="Profile"
@@ -249,72 +378,58 @@ const DeliveryNavbar = ({ onToggleSidebar }) => {
                           }}
                         />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="w-full">
                         <p
-                          className="text-sm font-semibold truncate"
+                          className="text-sm font-semibold truncate mb-1"
                           style={{ color: designTokens.colors.text.primary }}
                         >
                           {getDisplayName()}
                         </p>
                         <p
-                          className="text-xs truncate"
+                          className="text-xs truncate mb-2"
                           style={{ color: designTokens.colors.text.secondary }}
                         >
                           {getUserEmail()}
                         </p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Package size={12} className="text-green-500" />
-                          <span className="text-xs text-green-600 font-medium">Delivery Partner</span>
+                        {/* Centered Delivery Partner role */}
+                        <div className="flex items-center justify-center gap-1.5">
+                          <Truck size={12} className="text-orange-500" />
+                          <span className="text-xs font-medium px-2 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-100">
+                            Delivery Partner
+                          </span>
                         </div>
                       </div>
                     </div>
                   </div>
 
+                  {/* Menu Items */}
                   <div className="py-2">
-                    <a
-                      href="#profile"
-                      className="flex items-center gap-3 px-4 py-2 transition-colors"
+                    <button
+                      onClick={handleMyDeliveriesClick}
+                      className="flex items-center gap-3 w-full px-4 py-3 transition-colors text-left hover:bg-gray-50"
                       style={{ color: designTokens.colors.text.primary }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.backgroundColor = "#F8F9FA")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.backgroundColor = "transparent")
-                      }
+                    >
+                      <Truck size={18} />
+                      <span className="text-sm">My Deliveries</span>
+                    </button>
+
+                    <button
+                      onClick={handleProfileClick}
+                      className="flex items-center gap-3 w-full px-4 py-3 transition-colors text-left hover:bg-gray-50"
+                      style={{ color: designTokens.colors.text.primary }}
                     >
                       <UserCircle size={18} />
                       <span className="text-sm">My Profile</span>
-                    </a>
+                    </button>
 
-                    <a
-                      href="#deliveries"
-                      className="flex items-center gap-3 px-4 py-2 transition-colors"
+                    <button
+                      onClick={handleSettingsClick}
+                      className="flex items-center gap-3 w-full px-4 py-3 transition-colors text-left hover:bg-gray-50"
                       style={{ color: designTokens.colors.text.primary }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.backgroundColor = "#F8F9FA")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.backgroundColor = "transparent")
-                      }
-                    >
-                      <Package size={18} />
-                      <span className="text-sm">My Deliveries</span>
-                    </a>
-
-                    <a
-                      href="#settings"
-                      className="flex items-center gap-3 px-4 py-2 transition-colors"
-                      style={{ color: designTokens.colors.text.primary }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.backgroundColor = "#F8F9FA")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.backgroundColor = "transparent")
-                      }
                     >
                       <Settings size={18} />
                       <span className="text-sm">Settings</span>
-                    </a>
+                    </button>
                   </div>
 
                   <div
@@ -323,14 +438,8 @@ const DeliveryNavbar = ({ onToggleSidebar }) => {
                   >
                     <button
                       onClick={handleLogout}
-                      className="flex items-center gap-3 w-full px-4 py-2 transition-colors"
+                      className="flex items-center gap-3 w-full px-4 py-3 transition-colors text-left hover:bg-red-50"
                       style={{ color: designTokens.colors.accent.red }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.backgroundColor = "#FEF2F2")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.backgroundColor = "transparent")
-                      }
                     >
                       <LogOut size={18} />
                       <span className="text-sm font-medium">Logout</span>

@@ -268,14 +268,15 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Section - Background and Branding */}
+    <div className="min-h-screen flex flex-col md:flex-row">
+      {/* Left Section - Background and Branding - Hidden on small screens, shown on medium and up */}
       <div
-        className="hidden md:flex md:w-2/5 relative items-center justify-center"
+        className="hidden md:flex md:w-2/5 lg:w-2/5 relative items-center justify-center"
         style={{
           backgroundImage: `url(${loginBg})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
+          minHeight: "300px", // Added for mobile
         }}
       >
         {/* Gradient Overlay */}
@@ -288,10 +289,10 @@ const Login = () => {
         ></div>
 
         {/* Content */}
-        <div className="relative z-10 text-center px-8 py-12">
+        <div className="relative z-10 text-center px-6 lg:px-8 py-8 lg:py-12">
           {/* Logo */}
-          <div className="flex justify-center mb-6">
-            <div className="w-32 h-32 rounded-full bg-white p-4 flex items-center justify-center shadow-lg">
+          <div className="flex justify-center mb-4 lg:mb-6">
+            <div className="w-24 h-24 lg:w-32 lg:h-32 rounded-full bg-white p-3 lg:p-4 flex items-center justify-center shadow-lg">
               <img
                 src={logo}
                 alt="Tiffin Sathi Logo"
@@ -302,7 +303,7 @@ const Login = () => {
 
           {/* Brand Name */}
           <h1
-            className="text-5xl font-bold text-white mb-3"
+            className="text-3xl lg:text-5xl font-bold text-white mb-2 lg:mb-3"
             style={{
               fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
             }}
@@ -311,36 +312,62 @@ const Login = () => {
           </h1>
 
           {/* Tagline */}
-          <p className="text-white text-lg mb-8">
+          <p className="text-white text-sm lg:text-lg mb-6 lg:mb-8">
             Fresh Homemade Meals Delivered
           </p>
 
           {/* Features */}
-          <div className="space-y-4 text-left max-w-xs mx-auto">
-            <div className="flex items-center gap-3 text-white">
-              <HiCheckCircle className="w-6 h-6 flex-shrink-0" />
-              <span>Authentic Homemade Taste</span>
+          <div className="space-y-3 lg:space-y-4 text-left max-w-xs mx-auto">
+            <div className="flex items-center gap-2 lg:gap-3 text-white">
+              <HiCheckCircle className="w-5 h-5 lg:w-6 lg:h-6 flex-shrink-0" />
+              <span className="text-sm lg:text-base">Authentic Homemade Taste</span>
             </div>
-            <div className="flex items-center gap-3 text-white">
-              <HiCheckCircle className="w-6 h-6 flex-shrink-0" />
-              <span>Daily Fresh Preparation</span>
+            <div className="flex items-center gap-2 lg:gap-3 text-white">
+              <HiCheckCircle className="w-5 h-5 lg:w-6 lg:h-6 flex-shrink-0" />
+              <span className="text-sm lg:text-base">Daily Fresh Preparation</span>
             </div>
-            <div className="flex items-center gap-3 text-white">
-              <HiCheckCircle className="w-6 h-6 flex-shrink-0" />
-              <span>Timely Delivery</span>
+            <div className="flex items-center gap-2 lg:gap-3 text-white">
+              <HiCheckCircle className="w-5 h-5 lg:w-6 lg:h-6 flex-shrink-0" />
+              <span className="text-sm lg:text-base">Timely Delivery</span>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Mobile Header - Shows logo and brand name on small screens */}
+      <div className="md:hidden flex items-center justify-center p-4 bg-gradient-to-r from-[#4A8C39] to-[#F5B800] text-white">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-white p-2 flex items-center justify-center shadow-md">
+            <img
+              src={logo}
+              alt="Tiffin Sathi Logo"
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <div>
+            <h1
+              className="text-2xl font-bold"
+              style={{
+                fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
+              }}
+            >
+              Tiffin Sathi
+            </h1>
+            <p className="text-xs opacity-90">Fresh Homemade Meals Delivered</p>
+          </div>
+        </div>
+      </div>
+
       {/* Right Section - Login Form */}
-      <div className="w-full md:w-3/5 bg-white flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-md">
+      <div className="flex-1 w-full md:w-3/5 lg:w-3/5 bg-white flex items-center justify-center px-4 sm:px-6 md:px-8 lg:px-12 py-8 md:py-12">
+        <div className="w-full max-w-sm sm:max-w-md md:max-w-md">
           {/* Title */}
-          <h2 className="text-4xl font-bold text-gray-800 mb-2">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-1 md:mb-2">
             Welcome Back!
           </h2>
-          <p className="text-gray-600 mb-8">Sign in to your account</p>
+          <p className="text-gray-600 text-sm sm:text-base md:text-base mb-6 md:mb-8">
+            Sign in to your account
+          </p>
 
           {/* Error Message */}
           {errors.submit && (
@@ -350,10 +377,10 @@ const Login = () => {
           )}
 
           {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 md:space-y-6">
             {/* Login As Dropdown */}
             <div>
-              <label className="block text-left text-gray-700 font-medium mb-2">
+              <label className="block text-left text-gray-700 font-medium mb-1 md:mb-2 text-sm sm:text-base">
                 Login as
               </label>
               <div className="relative">
@@ -361,30 +388,30 @@ const Login = () => {
                   name="loginAs"
                   value={formData.loginAs}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent appearance-none bg-white"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent appearance-none bg-white text-sm sm:text-base"
                   style={{ borderColor: "#CCCCCC" }}
                 >
                   <option value="User">User</option>
                   <option value="Restaurant">Restaurant</option>
                 </select>
-                <HiChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                <HiChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5 pointer-events-none" />
               </div>
             </div>
 
             {/* Email Address */}
             <div>
-              <label className="block text-left text-gray-700 font-medium mb-2">
+              <label className="block text-left text-gray-700 font-medium mb-1 md:mb-2 text-sm sm:text-base">
                 Email Address<span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <HiMail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <HiMail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-sm sm:text-base"
                   style={{ borderColor: "#CCCCCC" }}
                   placeholder="Enter your email"
                 />
@@ -393,18 +420,18 @@ const Login = () => {
 
             {/* Password */}
             <div>
-              <label className="block text-left text-gray-700 font-medium mb-2">
+              <label className="block text-left text-gray-700 font-medium mb-1 md:mb-2 text-sm sm:text-base">
                 Password<span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <HiLockClosed className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <HiLockClosed className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  className="w-full pl-9 sm:pl-10 pr-12 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-sm sm:text-base"
                   style={{ borderColor: "#CCCCCC" }}
                   placeholder="Enter your password"
                 />
@@ -414,17 +441,17 @@ const Login = () => {
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
                 >
                   {showPassword ? (
-                    <HiEyeOff className="w-5 h-5" />
+                    <HiEyeOff className="w-4 h-4 sm:w-5 sm:h-5" />
                   ) : (
-                    <HiEye className="w-5 h-5" />
+                    <HiEye className="w-4 h-4 sm:w-5 sm:h-5" />
                   )}
                 </button>
               </div>
             </div>
 
             {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 text-gray-700">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <label className="flex items-center gap-2 text-gray-700 text-sm sm:text-base">
                 <input
                   type="checkbox"
                   name="rememberMe"
@@ -436,7 +463,7 @@ const Login = () => {
               </label>
               <a
                 href="/forgot-password"
-                className="font-medium"
+                className="font-medium text-sm sm:text-base whitespace-nowrap"
                 style={{ color: "#F5B800" }}
               >
                 Forgot password?
@@ -447,7 +474,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 rounded-lg font-bold text-white flex items-center justify-center gap-2 shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-2.5 sm:py-3 rounded-lg font-bold text-white flex items-center justify-center gap-2 shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
               style={{ backgroundColor: "#F5B800" }}
               onMouseEnter={(e) => {
                 if (!isLoading)
@@ -462,7 +489,7 @@ const Login = () => {
                 <span>Signing in...</span>
               ) : (
                 <>
-                  <FaArrowRight className="w-5 h-5" />
+                  <FaArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
                   <span>Sign In</span>
                 </>
               )}
@@ -470,8 +497,8 @@ const Login = () => {
           </form>
 
           {/* Account Management Links */}
-          <div className="mt-8 space-y-4 text-center">
-            <p className="text-gray-700">
+          <div className="mt-6 sm:mt-8 space-y-3 sm:space-y-4 text-center">
+            <p className="text-gray-700 text-sm sm:text-base">
               Don't have an account?{" "}
               <a
                 href="/signup"
@@ -481,9 +508,9 @@ const Login = () => {
                 Sign up here
               </a>
             </p>
-            <div className="flex items-center justify-center gap-2 text-gray-700">
+            <div className="flex items-center justify-center gap-2 text-gray-700 text-xs sm:text-sm">
               <HiInformationCircle
-                className="w-5 h-5"
+                className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"
                 style={{ color: "#4A8C39" }}
               />
               <span>
