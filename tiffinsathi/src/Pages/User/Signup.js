@@ -102,7 +102,8 @@ const Signup = () => {
 
     setIsLoading(true);
     try {
-      const response = await axios.post(
+      // Fix: Remove unused response variable assignment
+      await axios.post(
         "/auth/signup/user",
         {
           userName: formData.name,
@@ -170,8 +171,8 @@ const Signup = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="min-h-screen flex overflow-hidden">
-      {/* Left Section - Background and Branding */}
+    <form onSubmit={handleSubmit} className="min-h-screen flex flex-col md:flex-row overflow-hidden">
+      {/* Left Section - Background and Branding (Hidden on mobile, shown on md and above) */}
       <div
         className="hidden md:flex md:w-2/5 relative items-center justify-center"
         style={{
@@ -235,14 +236,41 @@ const Signup = () => {
         </div>
       </div>
 
-      {/* Right Section - Signup Form with Two Columns */}
-      <div className="w-full md:w-3/5 bg-white overflow-y-auto px-6 py-12">
+      {/* Right Section - Signup Form */}
+      <div className="w-full md:w-3/5 bg-white overflow-y-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <div className="w-full max-w-4xl mx-auto">
+          {/* Mobile Logo (Visible only on mobile) */}
+          <div className="md:hidden flex justify-center mb-6">
+            <div className="w-20 h-20 rounded-full bg-white p-2 flex items-center justify-center shadow-lg border border-gray-200">
+              <img
+                src={logo}
+                alt="Tiffin Sathi Logo"
+                className="w-full h-full object-contain"
+              />
+            </div>
+          </div>
+
+          {/* Mobile Brand Name (Visible only on mobile) */}
+          <div className="md:hidden text-center mb-6">
+            <h1
+              className="text-3xl font-bold mb-2"
+              style={{
+                fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
+                color: "#4A8C39"
+              }}
+            >
+              Tiffin Sathi
+            </h1>
+            <p className="text-gray-600 text-sm">
+              Fresh Homemade Meals Delivered
+            </p>
+          </div>
+
           {/* Title */}
-          <h2 className="text-4xl font-bold text-gray-800 mb-2">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-2">
             Create Account
           </h2>
-          <p className="text-gray-600 mb-8">Sign up to get started</p>
+          <p className="text-gray-600 text-sm sm:text-base mb-6 sm:mb-8">Sign up to get started</p>
 
           {/* Success Message */}
           {successMessage && (
@@ -261,47 +289,47 @@ const Signup = () => {
             </div>
           )}
 
-          {/* Two Column Form Layout */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-            {/* Left Column of White Section */}
-            <div className="space-y-5">
+          {/* Responsive Form Layout - Single column on mobile, two columns on md and above */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 max-w-3xl mx-auto">
+            {/* Left Column */}
+            <div className="space-y-4 sm:space-y-5">
               {/* Full Name */}
               <div>
-                <label className="block text-left text-gray-700 font-medium mb-2">
+                <label className="block text-left text-gray-700 font-medium mb-1 sm:mb-2 text-sm sm:text-base">
                   Full Name<span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <HiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <HiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
                   <input
                     type="text"
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
                     required
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                    className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-sm sm:text-base"
                     style={{ borderColor: errors.name ? "#ef4444" : "#CCCCCC" }}
                     placeholder="Enter your full name"
                   />
                 </div>
                 {errors.name && (
-                  <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+                  <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.name}</p>
                 )}
               </div>
 
               {/* Phone */}
               <div>
-                <label className="block text-left text-gray-700 font-medium mb-2">
+                <label className="block text-left text-gray-700 font-medium mb-1 sm:mb-2 text-sm sm:text-base">
                   Phone<span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <HiPhone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <HiPhone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
                   <input
                     type="tel"
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
                     required
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                    className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-sm sm:text-base"
                     style={{
                       borderColor: errors.phone ? "#ef4444" : "#CCCCCC",
                     }}
@@ -309,24 +337,24 @@ const Signup = () => {
                   />
                 </div>
                 {errors.phone && (
-                  <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
+                  <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.phone}</p>
                 )}
               </div>
 
               {/* Password */}
               <div>
-                <label className="block text-left text-gray-700 font-medium mb-2">
+                <label className="block text-left text-gray-700 font-medium mb-1 sm:mb-2 text-sm sm:text-base">
                   Password<span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <HiLockClosed className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <HiLockClosed className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
                     required
-                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                    className="w-full pl-9 sm:pl-10 pr-10 sm:pr-12 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-sm sm:text-base"
                     style={{
                       borderColor: errors.password ? "#ef4444" : "#CCCCCC",
                     }}
@@ -338,34 +366,34 @@ const Signup = () => {
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
                   >
                     {showPassword ? (
-                      <HiEyeOff className="w-5 h-5" />
+                      <HiEyeOff className="w-4 h-4 sm:w-5 sm:h-5" />
                     ) : (
-                      <HiEye className="w-5 h-5" />
+                      <HiEye className="w-4 h-4 sm:w-5 sm:h-5" />
                     )}
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+                  <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.password}</p>
                 )}
               </div>
             </div>
 
-            {/* Right Column of White Section */}
-            <div className="space-y-5">
+            {/* Right Column */}
+            <div className="space-y-4 sm:space-y-5">
               {/* Email Address */}
               <div>
-                <label className="block text-left text-gray-700 font-medium mb-2">
+                <label className="block text-left text-gray-700 font-medium mb-1 sm:mb-2 text-sm sm:text-base">
                   Email Address<span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <HiMail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <HiMail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                    className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-sm sm:text-base"
                     style={{
                       borderColor: errors.email ? "#ef4444" : "#CCCCCC",
                     }}
@@ -373,24 +401,24 @@ const Signup = () => {
                   />
                 </div>
                 {errors.email && (
-                  <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+                  <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.email}</p>
                 )}
               </div>
 
               {/* Address */}
               <div>
-                <label className="block text-left text-gray-700 font-medium mb-2">
+                <label className="block text-left text-gray-700 font-medium mb-1 sm:mb-2 text-sm sm:text-base">
                   Address<span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <HiLocationMarker className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <HiLocationMarker className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
                   <input
                     type="text"
                     name="address"
                     value={formData.address}
                     onChange={handleChange}
                     required
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                    className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-sm sm:text-base"
                     style={{
                       borderColor: errors.address ? "#ef4444" : "#CCCCCC",
                     }}
@@ -398,24 +426,24 @@ const Signup = () => {
                   />
                 </div>
                 {errors.address && (
-                  <p className="text-red-500 text-sm mt-1">{errors.address}</p>
+                  <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.address}</p>
                 )}
               </div>
 
               {/* Confirm Password */}
               <div>
-                <label className="block text-left text-gray-700 font-medium mb-2">
+                <label className="block text-left text-gray-700 font-medium mb-1 sm:mb-2 text-sm sm:text-base">
                   Confirm Password<span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <HiLockClosed className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <HiLockClosed className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     required
-                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                    className="w-full pl-9 sm:pl-10 pr-10 sm:pr-12 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-sm sm:text-base"
                     style={{
                       borderColor: errors.confirmPassword
                         ? "#ef4444"
@@ -429,14 +457,14 @@ const Signup = () => {
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
                   >
                     {showConfirmPassword ? (
-                      <HiEyeOff className="w-5 h-5" />
+                      <HiEyeOff className="w-4 h-4 sm:w-5 sm:h-5" />
                     ) : (
-                      <HiEye className="w-5 h-5" />
+                      <HiEye className="w-4 h-4 sm:w-5 sm:h-5" />
                     )}
                   </button>
                 </div>
                 {errors.confirmPassword && (
-                  <p className="text-red-500 text-sm mt-1">
+                  <p className="text-red-500 text-xs sm:text-sm mt-1">
                     {errors.confirmPassword}
                   </p>
                 )}
@@ -444,8 +472,8 @@ const Signup = () => {
             </div>
           </div>
 
-          {/* Sign Up Button - Centered with smaller width */}
-          <div className="mt-6 flex justify-center">
+          {/* Sign Up Button */}
+          <div className="mt-6 sm:mt-8 flex justify-center">
             <button
               type="submit"
               disabled={isLoading}
@@ -491,7 +519,7 @@ const Signup = () => {
               <span>
                 Want to join as a Restaurant?{" "}
                 <a
-                  href="#"
+                  href="/vendor-signup"
                   className="font-medium"
                   style={{ color: "#4A8C39" }}
                 >

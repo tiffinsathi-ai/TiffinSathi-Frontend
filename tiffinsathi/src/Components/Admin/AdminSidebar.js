@@ -5,14 +5,14 @@ import {
   Store,
   Settings,
   BarChart3,
-  Shield,
+  CreditCard
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const designTokens = {
   colors: {
     secondary: {
-      main: "#3B82F6", // Blue color for admin
+      main: "#3B82F6",
     },
     background: {
       primary: "#FFFFFF",
@@ -27,78 +27,40 @@ const designTokens = {
   },
 };
 
-const AdminSidebar = ({ isOpen }) => {
+const AdminSidebar = ({ isOpen, onItemClick }) => {
   const [hoveredItem, setHoveredItem] = useState(null);
   const location = useLocation();
 
   const menuItems = [
-    {
-      id: "dashboard",
-      icon: LayoutDashboard,
-      label: "Dashboard",
-      path: "/admin/dashboard",
-    },
-    {
-      id: "users",
-      icon: Users,
-      label: "User Management",
-      path: "/admin/users",
-    },
-    {
-      id: "vendors",
-      icon: Store,
-      label: "Vendor Management",
-      path: "/admin/vendors",
-    },
-    {
-      id: "analytics",
-      icon: BarChart3,
-      label: "Analytics",
-      path: "/admin/analytics",
-    },
-    {
-      id: "system",
-      icon: Settings,
-      label: "System Settings",
-      path: "/admin/settings",
-    },
-    {
-      id: "admin",
-      icon: Shield,
-      label: "Admin Management",
-      path: "/admin/management",
-    },
+    { id: "dashboard", icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
+    { id: "users", icon: Users, label: "User Management", path: "/admin/user-management" },
+    { id: "vendors", icon: Store, label: "Vendor Management", path: "/admin/vendor-management" },
+    { id: "payments", icon: CreditCard, label: "Payment Management", path: "/admin/payment-management" },
+    { id: "analytics", icon: BarChart3, label: "Analytics", path: "/admin/analytics" },
+    { id: "system", icon: Settings, label: "System Settings", path: "/admin/settings" },
   ];
 
   if (!isOpen) return null;
 
   return (
-    <aside
-      className="w-64 sticky top-16 border-r"
-      style={{
-        backgroundColor: designTokens.colors.background.primary,
-        borderColor: designTokens.colors.border.light,
-        height: "calc(100vh - 64px)",
-        overflow: "hidden",
-      }}
-    >
-      <nav className="p-4 overflow-hidden">
-        {menuItems.map((item, index) => {
+    // Changed h-screen to h-full so it fits inside the calculated fixed container
+    <div className="h-full w-64 bg-white border-r border-gray-200 flex flex-col">
+
+      <nav className="flex-1 p-4 overflow-y-auto custom-scrollbar">
+        {menuItems.map((item) => {
           const Icon = item.icon;
-          const isActive =
-            location.pathname === item.path ||
-            (index === 0 && location.pathname.startsWith("/admin"));
+          const isActive = location.pathname === item.path || 
+                          (item.path !== "/admin" && location.pathname.startsWith(item.path));
           const isHovered = hoveredItem === item.id;
-          const isFirst = index === 0;
-          const marginTop = isFirst ? "0" : "0.5rem";
 
           return (
             <Link
               key={item.id}
               to={item.path}
+              onClick={onItemClick}
               onMouseEnter={() => setHoveredItem(item.id)}
               onMouseLeave={() => setHoveredItem(null)}
-              className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200"
+              className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 mb-2"
               style={{
                 backgroundColor: isActive
                   ? designTokens.colors.secondary.main
@@ -109,18 +71,16 @@ const AdminSidebar = ({ isOpen }) => {
                   ? designTokens.colors.text.inverse
                   : designTokens.colors.text.primary,
                 textDecoration: "none",
-                fontWeight: isActive ? "bold" : "normal",
-                marginTop: marginTop,
-                border: isActive ? `1px solid ${designTokens.colors.secondary.main}` : "1px solid transparent",
+                fontWeight: isActive ? "600" : "500",
               }}
             >
               <Icon size={20} />
-              <span>{item.label}</span>
+              <span className="text-sm">{item.label}</span>
             </Link>
           );
         })}
       </nav>
-    </aside>
+    </div>
   );
 };
 

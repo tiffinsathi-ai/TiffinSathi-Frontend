@@ -36,11 +36,22 @@ import DeliveryPartnersPage from "./Pages/Vendor/DeliveryPartnerPage";
 import AdminLayout from "./Components/Admin/AdminLayout";
 import UserManagementTable from "./Pages/Admin/UserManagement";
 import VendorManagementTable from "./Pages/Admin/VendorManagement";
-import VendorApprovalTable from "./Pages/Admin/VendorApproval";
+import AdminDashboard from "./Pages/Admin/AdminDashboard";
+import AdminProfile from "./Pages/Admin/AdminProfile";
+import PaymentManagement from "./Pages/Admin/PaymentManagement";
+import ActivitiesPage from "./Pages/Admin/ActivitiesPage";
+import AnalyticsPage from "./Pages/Admin/Analytics";
+import AdminSetting from "./Pages/Admin/AdminSetting";
 
 // ---------- Delivery ----------
 import DeliveryLayout from "./Components/Delivery/DeliveryLayout";
 import DeliveryProfile from "./Pages/Delivery/DeliveryProfile";
+import DeliveryDashboard from "./Pages/Delivery/DeliveryDashboard";
+import OrderDeliveries from "./Pages/Delivery/OrderDeliveries";
+import DeliveryRoutes from "./Pages/Delivery/DeliveryRoutes";
+import Schedules from "./Pages/Delivery/Schedules";
+import DeliveryPerformance from "./Pages/Delivery/DeliveryPerformance";
+
 
 function App() {
   return (
@@ -76,20 +87,30 @@ function App() {
               <Route path="subscriptions" element={<Subscriptions />} />
               <Route path="profile" element={<VendorProfile />} />
               <Route path="meal" element={<MealManagement />} />
-              <Route path="delivery-partner" element={<DeliveryPartnersPage />} />
+              <Route path="delivery-partner" element={<DeliveryPartners />} />
             </Route>
 
             {/* Admin Routes - Keep as in main */}
             <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
               <Route path="user-management" element={<UserManagementTable />} />
-              <Route path="profile" element={<UserProfile />} />
-              <Route path="vendors-management" element={<VendorManagementTable />}/>
-              <Route path="vendor-approval" element={<VendorApprovalTable />} />
+              <Route path="profile" element={<AdminProfile />} />
+              <Route path="vendor-management" element={<VendorManagementTable />}/>
+              <Route path="payment-management" element={<PaymentManagement />} />
+              <Route path="activities" element={<ActivitiesPage />} />
+              <Route path="analytics" element={<AnalyticsPage />} />
+              <Route path="settings" element={<AdminSetting />} />
             </Route>
 
             {/* Delivery Routes */}
             <Route path="/delivery" element={<DeliveryLayout />}>
+              <Route index element={<OrderDeliveries />} />
               <Route path="profile" element={<DeliveryProfile />} />
+              <Route path="deliveries" element={<DeliveryDashboard />} />
+              <Route path="routes" element={<DeliveryRoutes />} />
+              <Route path="schedule" element={<Schedules />} />
+              <Route path="performance" element={<DeliveryPerformance />} />
+
             </Route>
           </Routes>
         </main>
