@@ -1,6 +1,7 @@
 import "./App.css";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Home from "./Pages/User/Home";
+import Packages from "./Pages/User/Packages";
 import Login from "./Pages/Login";
 import Signup from "./Pages/User/Signup";
 import ForgetPassword from "./Pages/User/ForgetPassword";
@@ -28,6 +29,7 @@ function App() {
             <Route path="/vendor-signup" element={<VendorSignup />} />
             <Route path="/" element={<Layout />}>
               <Route index element={<Home />} />
+              <Route path="packages" element={<Packages />} />
             </Route>
 
             <Route path="/vendor" element={<VendorLayout />}></Route>
