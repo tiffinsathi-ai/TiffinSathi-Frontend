@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { toast } from "react-toastify";
 import {
   Package,
   Truck,
@@ -46,6 +47,13 @@ const DeliveryDashboard = () => {
     fetchDeliveryProfile();
     getUserLocation();
   }, []);
+
+  useEffect(() => {
+    if (!error) return;
+    toast.error(error);
+    setError('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error]);
 
   useEffect(() => {
     if (deliveryProfile) {
@@ -363,21 +371,6 @@ const DeliveryDashboard = () => {
       </div>
 
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
-            <div className="flex items-center">
-              <AlertCircle className="h-5 w-5 mr-2" />
-              {error}
-            </div>
-            <button
-              onClick={() => setError('')}
-              className="text-red-700 hover:text-red-900"
-            >
-              ×
-            </button>
-          </div>
-        )}
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-lg p-4 shadow-sm border">
             <div className="flex items-center">

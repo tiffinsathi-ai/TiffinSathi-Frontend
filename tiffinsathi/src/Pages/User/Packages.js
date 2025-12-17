@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { HiStar, HiChevronDown } from "react-icons/hi";
 import { Heart } from "lucide-react";
 import { authStorage } from "../../helpers/api";
 import homeBg from "../../assets/home.jpg";
+import { toast } from "react-toastify";
 
 const Packages = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [packages, setPackages] = useState([]);
   const [filteredPackages, setFilteredPackages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,9 +19,36 @@ const Packages = () => {
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [favorites, setFavorites] = useState(new Set());
 
+  const vendorContext = useMemo(() => {
+    const sp = new URLSearchParams(location.search || "");
+    const vendorIdFromQuery = sp.get("vendorId");
+    const vendorIdFromState = location.state?.vendorId;
+    const vendorId = vendorIdFromState ?? (vendorIdFromQuery ? Number(vendorIdFromQuery) : null);
+    const vendorName = location.state?.vendorName;
+    return {
+      vendorId: Number.isFinite(vendorId) ? vendorId : null,
+      vendorName: vendorName || null,
+    };
+  }, [location.search, location.state]);
+
+  const getPackageVendorId = (pkg) => {
+    if (!pkg || typeof pkg !== "object") return null;
+    if (Number.isFinite(pkg.vendorId)) return pkg.vendorId;
+    if (Number.isFinite(pkg.vendorID)) return pkg.vendorID;
+    if (Number.isFinite(pkg.vendor?.vendorId)) return pkg.vendor.vendorId;
+    if (Number.isFinite(pkg.vendor?.id)) return pkg.vendor.id;
+    return null;
+  };
+
   useEffect(() => {
     fetchPackages();
   }, []);
+
+  useEffect(() => {
+    if (!error) return;
+    toast.error(error);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error]);
 
   useEffect(() => {
     filterAndSortPackages();
@@ -73,6 +102,11 @@ const Packages = () => {
 
   const filterAndSortPackages = () => {
     let filtered = [...packages];
+
+    // Optional filter by vendor (coming from Restaurants -> View Packages)
+    if (vendorContext.vendorId != null) {
+      filtered = filtered.filter((pkg) => getPackageVendorId(pkg) === vendorContext.vendorId);
+    }
 
     // Apply filter
     if (activeFilter !== "All Packages") {
@@ -223,6 +257,23 @@ const Packages = () => {
       {/* Filter and Sort Section */}
       <section className="bg-white border-b border-gray-200 py-6 px-6">
         <div className="max-w-7xl mx-auto">
+          {vendorContext.vendorId != null && (
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="text-sm text-gray-700">
+                Showing packages for{" "}
+                <span className="font-semibold">
+                  {vendorContext.vendorName || `Restaurant #${vendorContext.vendorId}`}
+                </span>
+              </div>
+              <button
+                onClick={() => navigate("/packages")}
+                className="text-sm font-medium text-yellow-700 hover:text-yellow-800"
+                style={{ color: "#F5B800" }}
+              >
+                Clear filter
+              </button>
+            </div>
+          )}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             {/* Filter Buttons */}
             <div className="flex flex-wrap gap-3">

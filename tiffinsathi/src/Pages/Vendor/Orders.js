@@ -1,6 +1,7 @@
 // src/Pages/Vendor/Orders.js
 import React, { useState, useEffect } from "react";
 import { readData } from "../../helpers/storage";
+import { toast } from "react-toastify";
 import { 
   Search, 
   Filter,
@@ -131,7 +132,7 @@ const Orders = () => {
 
   const assignDeliveryPartner = (orderId, partnerId) => {
     if (!partnerId) {
-      alert("Please select a delivery partner");
+      toast.error("Please select a delivery partner");
       return;
     }
 

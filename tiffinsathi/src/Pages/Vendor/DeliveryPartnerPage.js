@@ -22,7 +22,7 @@ const DeliveryPartnersPage = () => {
   const [editingPartner, setEditingPartner] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCount, setActiveCount] = useState(0);
-  const [error, setError] = useState('');
+  const [, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
   const API_BASE_URL = 'http://localhost:8080/api/delivery-partners';
@@ -246,7 +246,9 @@ const DeliveryPartnersPage = () => {
         const response = await api.resetPassword(partnerId);
         toast.success('Password reset successfully');
         if (response.tempPassword) {
-          alert(`Temporary password: ${response.tempPassword}. Please share this with the delivery partner.`);
+          toast.info(
+            `Temporary password: ${response.tempPassword}. Please share this with the delivery partner.`
+          );
         }
       } catch (error) {
         toast.error('Failed to reset password');
@@ -289,13 +291,6 @@ const DeliveryPartnersPage = () => {
           <span>Refresh</span>
         </button>
       </div>
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded flex items-center">
-          <AlertCircle className="h-5 w-5 mr-2" />
-          {error}
-        </div>
-      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

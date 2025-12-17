@@ -1,12 +1,62 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { HiChevronDown, HiClock } from "react-icons/hi";
-import { MapPin, X } from "lucide-react";
+import { HiChevronDown, HiClock, HiChevronRight } from "react-icons/hi";
+import {
+  MapPin,
+  X,
+  CreditCard,
+  AlertCircle,
+  CheckCircle,
+  Navigation,
+  Locate,
+} from "lucide-react";
 import axios from "axios";
 import { authStorage } from "../../helpers/api";
-import Header from "../../Components/Users/Header";
-import Footer from "../../Components/Users/Footer";
 import homeBg from "../../assets/home.jpg";
+import { toast } from "react-toastify";
+
+// Leaflet imports
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+
+// Fix for Leaflet default icons
+import icon from "leaflet/dist/images/marker-icon.png";
+import iconShadow from "leaflet/dist/images/marker-shadow.png";
+
+let DefaultIcon = L.icon({
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
+L.Marker.prototype.options.icon = DefaultIcon;
+
+// Helper component to recenter map
+const RecenterAutomatically = ({ lat, lng }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.setView([lat, lng]);
+  }, [lat, lng, map]);
+  return null;
+};
+
+// Helper component to handle map clicks
+const LocationFinderDummy = ({ onLocationSelect }) => {
+  useMapEvents({
+    click(e) {
+      onLocationSelect(e.latlng);
+    },
+  });
+  return null;
+};
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -16,6 +66,7 @@ const Checkout = () => {
     schedule,
     deliveryDays: initialDeliveryDays,
     mealSelections: initialMealSelections,
+    pricing: initialPricing,
   } = location.state || {};
 
   // Use provided values or defaults
@@ -41,20 +92,51 @@ const Checkout = () => {
 
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [landmark, setLandmark] = useState("");
-  const [preferredDeliveryTime, setPreferredDeliveryTime] = useState("12-1");
+  const [preferredDeliveryTime, setPreferredDeliveryTime] =
+    useState("12:00 PM - 1:00 PM");
   const [startDate, setStartDate] = useState("");
   const [dietaryNotes, setDietaryNotes] = useState("");
-  const [includePackaging, setIncludePackaging] = useState(true);
-  const [includeCutlery, setIncludeCutlery] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("ESEWA");
   const [discountCode, setDiscountCode] = useState("");
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [mapModal, setMapModal] = useState({
+    open: false,
+    address: "",
+    coordinates: { lat: 27.7172, lng: 85.324 }, // Default: Kathmandu
+  });
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [pricing, setPricing] = useState(
+    initialPricing || {
+      subtotal: 0,
+      deliveryFee: 0,
+      tax: 0,
+      grandTotal: 0,
+      enabledDaysCount: 5,
+      durationWeeks: 4.29,
+      discount: 0,
+    }
+  );
 
-  // Generate time options as time slots
-  const timeOptions = ["12-1", "1-2", "2-3", "3-4", "4-5", "5-6", "6-7", "7-8"];
+  // Generate time slots in 1-hour increments from 8 AM to 8 PM
+  const generateTimeSlots = () => {
+    const slots = [];
+    for (let hour = 8; hour <= 20; hour++) {
+      const startHour = hour % 12 || 12;
+      const endHour = (hour + 1) % 12 || 12;
+      const startAmPm = hour < 12 ? "AM" : "PM";
+      const endAmPm = hour + 1 < 12 ? "AM" : "PM";
+      slots.push(`${startHour}:00 ${startAmPm} - ${endHour}:00 ${endAmPm}`);
+    }
+    return slots;
+  };
+
+  const timeOptions = generateTimeSlots();
 
   useEffect(() => {
     if (!packageData) {
@@ -67,23 +149,28 @@ const Checkout = () => {
     earliestDate.setDate(today.getDate() + 2);
     setStartDate(earliestDate.toISOString().split("T")[0]);
 
-    // Initialize deliveryDays and mealSelections if not provided
-    if (!deliveryDays) {
-      // Default: weekdays enabled
-      const defaultDays = {
-        MONDAY: true,
-        TUESDAY: true,
-        WEDNESDAY: true,
-        THURSDAY: true,
-        FRIDAY: true,
-        SATURDAY: false,
-        SUNDAY: false,
-      };
-      // This will be handled by state initialization
+    // Calculate pricing if not provided
+    if (!initialPricing) {
+      calculatePricing();
     }
   }, [packageData, navigate]);
 
-  // Close time dropdown when clicking outside
+  useEffect(() => {
+    if (success) {
+      toast.success(success);
+      setSuccess("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [success]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+      setError("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error]);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showTimeDropdown && !event.target.closest(".time-dropdown")) {
@@ -93,6 +180,170 @@ const Checkout = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showTimeDropdown]);
+
+  // Location Services
+  const getUserLocation = () => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error("Geolocation is not supported by this browser"));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          reject(error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000,
+        }
+      );
+    });
+  };
+
+  const openMapModal = async (currentAddress = "") => {
+    try {
+      setError("");
+      let coordinates = mapModal.coordinates;
+
+      if (!currentAddress) {
+        try {
+          const gps = await getUserLocation();
+          coordinates = gps;
+        } catch (e) {
+          console.log("GPS not available, using default");
+        }
+      }
+
+      setMapModal({
+        open: true,
+        address: currentAddress,
+        coordinates: coordinates,
+      });
+
+      if (!currentAddress && coordinates) {
+        handleMapClick(coordinates);
+      }
+    } catch (error) {
+      console.error("Error opening map:", error);
+      setMapModal((prev) => ({ ...prev, open: true }));
+    }
+  };
+
+  const getAddressFromCoordinates = async (lat, lng) => {
+    setIsGeocoding(true);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+      );
+      const data = await response.json();
+
+      if (data && data.display_name) {
+        let cleanAddress = data.display_name;
+        if (data.address) {
+          const parts = [];
+          if (data.address.road) parts.push(data.address.road);
+          if (data.address.suburb) parts.push(data.address.suburb);
+          if (data.address.city || data.address.town || data.address.village)
+            parts.push(
+              data.address.city || data.address.town || data.address.village
+            );
+          if (parts.length > 0) cleanAddress = parts.join(", ");
+        }
+        return cleanAddress;
+      }
+      return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    } catch (error) {
+      console.error("Geocoding error:", error);
+      return "Location selected (Address lookup failed)";
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
+  const handleMapClick = async (latlng) => {
+    setSelectedLocation(latlng);
+    setMapModal((prev) => ({ ...prev, coordinates: latlng }));
+
+    const address = await getAddressFromCoordinates(latlng.lat, latlng.lng);
+    setMapModal((prev) => ({ ...prev, address: address }));
+  };
+
+  const confirmLocation = () => {
+    if (mapModal.address) {
+      setDeliveryAddress(mapModal.address);
+      setSuccess("Delivery location set successfully!");
+      closeMapModal();
+    } else {
+      setError("Please select a location on the map");
+    }
+  };
+
+  const closeMapModal = () => {
+    setMapModal({ ...mapModal, open: false });
+    setSelectedLocation(null);
+    setError("");
+  };
+
+  const calculatePricing = () => {
+    if (!packageData) return;
+
+    const enabledDaysCount = Object.values(deliveryDays).filter(
+      (d) => d
+    ).length;
+    const durationWeeks = (packageData.durationDays || 30) / 7;
+
+    // Calculate subtotal based on meal selections
+    let subtotal = 0;
+    Object.keys(mealSelections).forEach((day) => {
+      if (deliveryDays[day]) {
+        mealSelections[day].forEach((meal) => {
+          subtotal +=
+            (meal.price || packageData.pricePerSet || 0) * meal.quantity;
+        });
+      }
+    });
+
+    subtotal = subtotal * durationWeeks;
+    const deliveryFee = 25 * enabledDaysCount * durationWeeks;
+    const discount = calculateDiscount(subtotal + deliveryFee, discountCode);
+    const taxableAmount = subtotal + deliveryFee - discount;
+    const tax = taxableAmount * 0.13;
+    const grandTotal = subtotal + deliveryFee + tax - discount;
+
+    setPricing({
+      subtotal,
+      deliveryFee,
+      tax,
+      discount,
+      grandTotal,
+      enabledDaysCount,
+      durationWeeks,
+    });
+  };
+
+  const calculateDiscount = (amount, code) => {
+    if (!code) return 0;
+    switch (code.toUpperCase()) {
+      case "SAVE10":
+        return amount * 0.1;
+      case "WELCOME15":
+        return amount * 0.15;
+      case "FIRSTORDER":
+        return Math.min(amount, 100);
+      case "TIFFIN5":
+        return Math.min(amount, 50);
+      default:
+        return 0;
+    }
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
@@ -105,41 +356,102 @@ const Checkout = () => {
     });
   };
 
-  const calculateSubtotal = () => {
-    if (!packageData) return 0;
-    // Use package price as base, can be enhanced with meal set prices later
-    return packageData.pricePerSet || 0;
+  const handleApplyDiscount = () => {
+    calculatePricing();
+    if (pricing.discount > 0) {
+      setSuccess(`Discount applied! Saved Rs. ${pricing.discount.toFixed(2)}`);
+    }
   };
 
-  const calculateDeliveryFee = () => {
-    const enabledDays = Object.values(deliveryDays || {}).filter(
-      (enabled) => enabled
-    ).length;
-    // 5 days/week = 125, adjust based on days
-    return (enabledDays / 7) * 175; // Approximate calculation
+  const handleEsewaPayment = (paymentData) => {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = paymentData.paymentUrl;
+
+    Object.entries(paymentData.paymentData).forEach(([key, value]) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = key;
+      input.value = value;
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
   };
 
-  const calculateTax = () => {
-    const subtotal = calculateSubtotal();
-    const deliveryFee = calculateDeliveryFee();
-    return (subtotal + deliveryFee) * 0.13; // 13% tax
-  };
+  const initiatePayment = async (subscriptionId) => {
+    try {
+      setProcessingPayment(true);
+      setError("");
+      const token = authStorage.getToken();
+      const amount = pricing.grandTotal;
 
-  const calculateTotal = () => {
-    return calculateSubtotal() + calculateDeliveryFee() + calculateTax();
+      // Call payment initiation endpoint
+      const response = await axios.post(
+        "http://localhost:8080/api/payments/initiate",
+        {
+          subscriptionId: subscriptionId,
+          paymentMethod: paymentMethod,
+          amount: amount,
+          successUrl: `${window.location.origin}/payment-success`,
+          failureUrl: `${window.location.origin}/payment-failure`,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const paymentData = response.data;
+
+      // Handle different payment methods
+      if (paymentMethod === "ESEWA") {
+        handleEsewaPayment(paymentData);
+      } else if (paymentMethod === "KHALTI") {
+        window.location.href = paymentData.paymentUrl;
+      } else if (paymentMethod === "CARD") {
+        setError(
+          "Card payment integration coming soon. Please use eSewa or Khalti for now."
+        );
+        setProcessingPayment(false);
+      }
+    } catch (error) {
+      console.error("Error initiating payment:", error);
+      setError(
+        "Failed to initiate payment: " +
+          (error.response?.data?.message || error.message)
+      );
+      setProcessingPayment(false);
+    }
   };
 
   const handleSubmit = async () => {
     if (!deliveryAddress.trim()) {
-      alert("Please enter delivery address");
+      setError("Please enter delivery address");
       return;
     }
     if (!startDate) {
-      alert("Please select start date");
+      setError("Please select start date");
+      return;
+    }
+
+    // Validate start date is at least 2 days from today
+    const today = new Date();
+    const startDateObj = new Date(startDate);
+    const minDate = new Date(today);
+    minDate.setDate(today.getDate() + 2);
+
+    if (startDateObj < minDate) {
+      setError("Start date must be at least 2 days from today");
       return;
     }
 
     setLoading(true);
+    setError("");
+    setSuccess("");
 
     try {
       const token = authStorage.getToken();
@@ -149,10 +461,10 @@ const Checkout = () => {
       }
 
       // Prepare schedule array for API
-      const scheduleArray = Object.keys(deliveryDays || {}).map((day) => ({
-        day,
+      const scheduleArray = Object.keys(deliveryDays).map((day) => ({
+        dayOfWeek: day,
         enabled: deliveryDays[day] || false,
-        meals: (mealSelections?.[day] || []).map((meal) => ({
+        meals: (mealSelections[day] || []).map((meal) => ({
           setId: meal.setId,
           quantity: meal.quantity || 1,
         })),
@@ -166,13 +478,12 @@ const Checkout = () => {
         preferredDeliveryTime,
         dietaryNotes,
         specialInstructions: dietaryNotes,
-        includePackaging,
-        includeCutlery,
         discountCode: discountCode || undefined,
         paymentMethod,
         startDate,
       };
 
+      // Create subscription first
       const response = await axios.post(
         "http://localhost:8080/api/subscriptions",
         payload,
@@ -184,17 +495,26 @@ const Checkout = () => {
         }
       );
 
-      if (response.status === 200 || response.status === 201) {
-        alert("Subscription created successfully!");
-        navigate("/packages");
+      const subscription = response.data;
+      const subscriptionId = subscription.subscriptionId;
+
+      // Handle payment based on method
+      if (paymentMethod === "CASH_ON_DELIVERY") {
+        setSuccess("Subscription created successfully! Pay on delivery.");
+        // Redirect to subscriptions page after 2 seconds
+        setTimeout(() => {
+          navigate("/user/subscriptions");
+        }, 2000);
+      } else {
+        // Initiate payment for online payment methods
+        await initiatePayment(subscriptionId);
       }
     } catch (error) {
       console.error("Error creating subscription:", error);
-      alert(
+      setError(
         error.response?.data?.message ||
           "Failed to create subscription. Please try again."
       );
-    } finally {
       setLoading(false);
     }
   };
@@ -209,12 +529,9 @@ const Checkout = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header />
-
       <main className="flex-1 w-full">
-        {/* Hero Section */}
+        {/* Hero Section - EXACT SAME AS BEFORE */}
         <div className="relative min-h-[300px] flex items-center justify-center overflow-hidden py-12 px-6">
-          {/* Background Image with Blur */}
           <div
             className="absolute inset-0 bg-cover bg-center bg-no-repeat"
             style={{
@@ -223,10 +540,8 @@ const Checkout = () => {
               transform: "scale(1.1)",
             }}
           ></div>
-          {/* Overlay */}
           <div className="absolute inset-0 bg-gradient-to-br from-green-400/30 via-yellow-400/20 to-green-500/30"></div>
           <div className="absolute inset-0 bg-black/20"></div>
-          {/* Content - Centered */}
           <div className="relative z-10 max-w-7xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 drop-shadow-lg">
               Checkout
@@ -247,11 +562,13 @@ const Checkout = () => {
                   schedule,
                   deliveryDays,
                   mealSelections,
+                  pricing,
                 },
               })
             }
-            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors flex items-center gap-2"
           >
+            <HiChevronRight className="rotate-180 w-4 h-4" />
             Back to Schedule
           </button>
         </div>
@@ -269,7 +586,7 @@ const Checkout = () => {
                   Package Details
                 </h3>
                 <div
-                  className="flex justify-between items-center p-4 rounded-lg"
+                  className="flex justify-between items-start p-4 rounded-lg"
                   style={{ backgroundColor: "#FFF9E6" }}
                 >
                   <div>
@@ -277,7 +594,10 @@ const Checkout = () => {
                       {packageData.name}
                     </p>
                     <p className="text-gray-600 text-sm mt-1">
-                      {packageData.durationDays || 7} days subscription
+                      {packageData.durationDays || 30} days subscription
+                    </p>
+                    <p className="text-gray-600 text-sm mt-1">
+                      Delivery days: {enabledDaysCount} days/week
                     </p>
                   </div>
                   <p className="text-gray-800 font-bold text-xl">
@@ -299,25 +619,25 @@ const Checkout = () => {
                       Delivery Address *
                     </label>
                     <div className="relative">
-                      <input
-                        type="text"
+                      <textarea
                         value={deliveryAddress}
                         onChange={(e) => setDeliveryAddress(e.target.value)}
                         placeholder="Enter your complete delivery address or click the map icon to select location"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 pr-10 transition-all"
+                        rows="3"
                         required
                       />
                       <button
                         type="button"
-                        onClick={() => setShowMapModal(true)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-yellow-500 transition-colors"
+                        onClick={() => openMapModal(deliveryAddress)}
+                        className="absolute right-3 top-3 text-gray-400 hover:text-yellow-500 transition-colors"
                       >
                         <MapPin className="w-5 h-5" />
                       </button>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
-                      Click the map icon to select your delivery location on the
-                      map
+                      Click the map icon to pinpoint your exact delivery
+                      location
                     </p>
                   </div>
 
@@ -359,7 +679,7 @@ const Checkout = () => {
                                 setPreferredDeliveryTime(time);
                                 setShowTimeDropdown(false);
                               }}
-                              className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                              className="w-full text-left px-4 py-2 hover:bg-gray-100 hover:text-yellow-600 transition-colors"
                             >
                               {time}
                             </button>
@@ -406,34 +726,6 @@ const Checkout = () => {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all"
                     />
                   </div>
-
-                  {/* Options */}
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={includePackaging}
-                        onChange={(e) => setIncludePackaging(e.target.checked)}
-                        className="w-4 h-4 rounded border-gray-300"
-                        style={{ accentColor: "#F5B800" }}
-                      />
-                      <span className="text-sm text-gray-700">
-                        Include Packaging
-                      </span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={includeCutlery}
-                        onChange={(e) => setIncludeCutlery(e.target.checked)}
-                        className="w-4 h-4 rounded border-gray-300"
-                        style={{ accentColor: "#F5B800" }}
-                      />
-                      <span className="text-sm text-gray-700">
-                        Include Cutlery
-                      </span>
-                    </label>
-                  </div>
                 </div>
               </div>
 
@@ -442,12 +734,16 @@ const Checkout = () => {
                 <h3 className="text-xl font-semibold text-gray-800 mb-4">
                   Payment Method
                 </h3>
-                <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-3">
                   {["ESEWA", "KHALTI", "CARD", "CASH_ON_DELIVERY"].map(
                     (method) => (
                       <label
                         key={method}
-                        className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-yellow-50 hover:border-yellow-300 cursor-pointer transition-all"
+                        className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-all ${
+                          paymentMethod === method
+                            ? "border-yellow-500 bg-yellow-50"
+                            : "border-gray-200 hover:border-yellow-300 hover:bg-yellow-50/50"
+                        }`}
                       >
                         <input
                           type="radio"
@@ -458,13 +754,21 @@ const Checkout = () => {
                           className="w-4 h-4"
                           style={{ accentColor: "#F5B800" }}
                         />
-                        <span className="text-gray-700">
-                          {method.replace("_", " ")}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="w-5 h-5 text-gray-600" />
+                          <span className="text-gray-700 font-medium">
+                            {method.replace("_", " ")}
+                          </span>
+                        </div>
                       </label>
                     )
                   )}
                 </div>
+                <p className="text-sm text-gray-500 mt-3">
+                  {paymentMethod === "CASH_ON_DELIVERY"
+                    ? "Pay when your meal is delivered"
+                    : "You will be redirected to the payment gateway"}
+                </p>
               </div>
             </div>
 
@@ -482,7 +786,7 @@ const Checkout = () => {
                   <div className="flex justify-between text-gray-700 py-2">
                     <span className="text-gray-600">Subtotal:</span>
                     <span className="font-medium">
-                      Rs.{calculateSubtotal().toFixed(2)}
+                      Rs.{pricing.subtotal.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between text-gray-700 py-2">
@@ -490,15 +794,23 @@ const Checkout = () => {
                       Delivery Fee ({enabledDaysCount} days/week):
                     </span>
                     <span className="font-medium">
-                      Rs.{calculateDeliveryFee().toFixed(2)}
+                      Rs.{pricing.deliveryFee.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between text-gray-700 py-2">
                     <span className="text-gray-600">Tax (13%):</span>
                     <span className="font-medium">
-                      Rs.{calculateTax().toFixed(2)}
+                      Rs.{pricing.tax.toFixed(2)}
                     </span>
                   </div>
+                  {pricing.discount > 0 && (
+                    <div className="flex justify-between text-green-600 py-2">
+                      <span>Discount:</span>
+                      <span className="font-medium">
+                        - Rs.{pricing.discount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   <div
                     className="border-t-2 pt-4 mt-4"
                     style={{ borderColor: "#F5B800" }}
@@ -511,7 +823,7 @@ const Checkout = () => {
                         className="text-2xl font-bold"
                         style={{ color: "#F5B800" }}
                       >
-                        Rs.{calculateTotal().toFixed(2)}
+                        Rs.{pricing.grandTotal.toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -531,6 +843,7 @@ const Checkout = () => {
                       className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all"
                     />
                     <button
+                      onClick={handleApplyDiscount}
                       className="px-4 py-2 rounded-lg text-white font-medium transition-colors hover:opacity-90"
                       style={{ backgroundColor: "#F5B800" }}
                       onMouseEnter={(e) => {
@@ -543,13 +856,21 @@ const Checkout = () => {
                       Apply
                     </button>
                   </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Try: SAVE10, WELCOME15, FIRSTORDER, TIFFIN5
+                  </p>
                 </div>
 
                 {/* Payment Button */}
                 <button
                   onClick={handleSubmit}
-                  disabled={loading || !deliveryAddress.trim() || !startDate}
-                  className="w-full py-3 rounded-lg text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed mb-4 transition-colors"
+                  disabled={
+                    loading ||
+                    processingPayment ||
+                    !deliveryAddress.trim() ||
+                    !startDate
+                  }
+                  className="w-full py-3 rounded-lg text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed mb-4 transition-colors flex items-center justify-center gap-2"
                   style={{ backgroundColor: "#F5B800" }}
                   onMouseEnter={(e) => {
                     if (!e.currentTarget.disabled) {
@@ -562,7 +883,21 @@ const Checkout = () => {
                     }
                   }}
                 >
-                  {loading ? "Processing..." : `Pay with ${paymentMethod}`}
+                  {loading || processingPayment ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      {processingPayment
+                        ? "Processing Payment..."
+                        : "Creating Subscription..."}
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-5 h-5" />
+                      {paymentMethod === "CASH_ON_DELIVERY"
+                        ? "Complete Subscription"
+                        : `Pay with ${paymentMethod}`}
+                    </>
+                  )}
                 </button>
 
                 {/* Subscription Start Info */}
@@ -598,72 +933,161 @@ const Checkout = () => {
         </div>
       </main>
 
-      {/* Map Modal */}
-      {showMapModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-semibold text-gray-800">
+      {/* Map Modal - Using Leaflet */}
+      {mapModal.open && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-900">
                 Select Delivery Location
               </h3>
               <button
-                onClick={() => setShowMapModal(false)}
-                className="text-gray-500 hover:text-gray-700"
+                onClick={closeMapModal}
+                className="text-gray-400 hover:text-gray-600"
               >
-                <X className="w-6 h-6" />
+                <X className="h-6 w-6" />
               </button>
             </div>
-            <div className="p-4">
-              <p className="text-sm text-gray-600 mb-3">
-                Click on the map to select your delivery location
-              </p>
-              <div className="rounded-lg overflow-hidden border border-gray-300">
-                <iframe
-                  title="Select Delivery Location"
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d56516.31625953415!2d85.29111325!3d27.70895785!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39eb198a307baabf%3A0xb5137c1bf18db1ea!2sKathmandu%2044600%2C%20Nepal!5e0!3m2!1sen!2sus!4v1234567890"
-                  width="100%"
-                  height="400"
-                  style={{ border: 0 }}
-                  allowFullScreen=""
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                ></iframe>
-              </div>
-              <div className="mt-4">
+
+            <div className="p-4 flex-1 flex flex-col overflow-y-auto">
+              <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Enter address manually:
+                  Delivery Address
                 </label>
-                <input
-                  type="text"
-                  value={deliveryAddress}
-                  onChange={(e) => setDeliveryAddress(e.target.value)}
-                  placeholder="Type your address here..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={mapModal.address}
+                    onChange={(e) =>
+                      setMapModal((prev) => ({
+                        ...prev,
+                        address: e.target.value,
+                      }))
+                    }
+                    className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    placeholder="Click on map to select..."
+                  />
+                  <button
+                    onClick={() => openMapModal("")}
+                    className="px-3 py-2 text-white rounded-md hover:opacity-90 flex items-center transition-colors"
+                    style={{ backgroundColor: "#F5B800" }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "#e0a500";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "#F5B800";
+                    }}
+                  >
+                    <Locate className="h-4 w-4 mr-1" /> My GPS
+                  </button>
+                </div>
               </div>
-            </div>
-            <div className="flex justify-end gap-3 p-4 border-t">
-              <button
-                onClick={() => setShowMapModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+
+              {/* MAP CONTAINER */}
+              <div
+                className="relative rounded-lg overflow-hidden border border-gray-300"
+                style={{ height: "400px" }}
               >
-                Cancel
-              </button>
-              <button
-                onClick={() => setShowMapModal(false)}
-                className="px-4 py-2 rounded-lg text-white font-medium"
-                style={{ backgroundColor: "#F5B800" }}
+                <MapContainer
+                  center={[mapModal.coordinates.lat, mapModal.coordinates.lng]}
+                  zoom={15}
+                  style={{ height: "100%", width: "100%" }}
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+
+                  <RecenterAutomatically
+                    lat={mapModal.coordinates.lat}
+                    lng={mapModal.coordinates.lng}
+                  />
+                  <LocationFinderDummy
+                    onLocationSelect={(latlng) => handleMapClick(latlng)}
+                  />
+
+                  {selectedLocation && (
+                    <Marker
+                      position={[selectedLocation.lat, selectedLocation.lng]}
+                    >
+                      <Popup>Selected Location</Popup>
+                    </Marker>
+                  )}
+                  {!selectedLocation && mapModal.coordinates && (
+                    <Marker
+                      position={[
+                        mapModal.coordinates.lat,
+                        mapModal.coordinates.lng,
+                      ]}
+                    >
+                      <Popup>You are here</Popup>
+                    </Marker>
+                  )}
+                </MapContainer>
+
+                {isGeocoding && (
+                  <div className="absolute top-2 right-2 bg-white px-3 py-1 rounded shadow text-xs font-bold text-yellow-600 z-[1000]">
+                    Finding address...
+                  </div>
+                )}
+              </div>
+
+              {/* Selected Location Details */}
+              <div
+                className="mt-4 p-3 rounded-lg border flex justify-between items-center"
+                style={{ backgroundColor: "#FFF9E6", borderColor: "#F5B800" }}
               >
-                Confirm Location
-              </button>
+                <div>
+                  <div className="font-bold text-gray-900 text-sm">
+                    Selected Address:
+                  </div>
+                  <div className="text-gray-800 text-sm">
+                    {mapModal.address || "No location selected"}
+                  </div>
+                  {selectedLocation && (
+                    <div className="text-xs text-gray-600 mt-1">
+                      {selectedLocation.lat.toFixed(5)},{" "}
+                      {selectedLocation.lng.toFixed(5)}
+                    </div>
+                  )}
+                </div>
+                {mapModal.address && (
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-4">
+                <button
+                  onClick={closeMapModal}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmLocation}
+                  disabled={!mapModal.address}
+                  className="px-4 py-2 text-white rounded-md hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-colors"
+                  style={{ backgroundColor: "#F5B800" }}
+                  onMouseEnter={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = "#e0a500";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = "#F5B800";
+                    }
+                  }}
+                >
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Confirm Location
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
-
-      <Footer />
     </div>
   );
 };
-
 export default Checkout;

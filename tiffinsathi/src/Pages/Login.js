@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
@@ -7,12 +7,14 @@ import {
   HiCheckCircle,
   HiInformationCircle,
   HiChevronDown,
+  HiArrowLeft,
   HiEye,
   HiEyeOff,
 } from "react-icons/hi";
 import { FaArrowRight } from "react-icons/fa";
 import loginBg from "../assets/login.jpg";
 import logo from "../assets/logo.png";
+import { toast } from "react-toastify";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -25,6 +27,13 @@ const Login = () => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (!errors.submit) return;
+    toast.error(errors.submit);
+    setErrors((prev) => ({ ...prev, submit: "" }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [errors.submit]);
 
   // Function to decode JWT token and extract role
   const decodeToken = (token) => {
@@ -268,7 +277,21 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
+    <div className="relative min-h-screen flex flex-col md:flex-row">
+      {/* Back Button */}
+      <button
+        type="button"
+        onClick={() => navigate("/")}
+        className="absolute top-4 left-4 z-50 flex items-center gap-2 text-white px-3 py-2 rounded-lg shadow-md transition-colors"
+        aria-label="Back to Home"
+        style={{ backgroundColor: "#F5B800" }}
+        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#e0a500")}
+        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#F5B800")}
+      >
+        <HiArrowLeft className="w-5 h-5" />
+        <span className="text-sm font-medium">Back</span>
+      </button>
+
       {/* Left Section - Background and Branding - Hidden on small screens, shown on medium and up */}
       <div
         className="hidden md:flex md:w-2/5 lg:w-2/5 relative items-center justify-center"
@@ -368,13 +391,6 @@ const Login = () => {
           <p className="text-gray-600 text-sm sm:text-base md:text-base mb-6 md:mb-8">
             Sign in to your account
           </p>
-
-          {/* Error Message */}
-          {errors.submit && (
-            <div className="mb-4 p-3 rounded-lg text-white text-sm bg-red-500">
-              {errors.submit}
-            </div>
-          )}
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 md:space-y-6">

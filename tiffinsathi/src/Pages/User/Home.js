@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
   HiHeart,
   HiTruck,
@@ -12,6 +13,8 @@ import { FaLeaf } from "react-icons/fa";
 import homeBg from "../../assets/home.jpg";
 
 const Home = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="flex flex-col min-h-screen w-full">
       <div className="flex-grow">
@@ -36,6 +39,7 @@ const Home = () => {
               <button
                 className="px-8 py-3 rounded-lg flex items-center gap-2 font-medium shadow-lg transition-colors text-white"
                 style={{ backgroundColor: "#F5B800" }}
+                onClick={() => navigate("/packages")}
                 onMouseEnter={(e) =>
                   (e.currentTarget.style.backgroundColor = "#e0a500")
                 }

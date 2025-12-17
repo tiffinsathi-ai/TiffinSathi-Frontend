@@ -6,7 +6,7 @@ import {
   UserCircle,
   Menu,
   Truck,
-  ChevronDown
+  ChevronDown,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { deliveryApi } from "../../helpers/deliveryApi";
@@ -48,8 +48,9 @@ const DeliveryNavbar = ({ onToggleSidebar, isMobile }) => {
   const fetchUserData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-      
+      const token =
+        localStorage.getItem("token") || sessionStorage.getItem("token");
+
       if (!token) {
         console.error("No token found");
         setLoading(false);
@@ -57,17 +58,17 @@ const DeliveryNavbar = ({ onToggleSidebar, isMobile }) => {
       }
 
       console.log("Fetching delivery user data...");
-      
+
       // Try multiple endpoints to get user data
       let userData;
-      
+
       try {
         // First try the delivery user profile endpoint
         userData = await deliveryApi.getCurrentUser();
         console.log("Delivery user data from API:", userData);
       } catch (profileError) {
         console.log("Delivery API failed, using fallback...");
-        
+
         // Fallback: create a mock delivery user from storage
         const storedUser = localStorage.getItem("deliveryUser");
         if (storedUser) {
@@ -77,20 +78,20 @@ const DeliveryNavbar = ({ onToggleSidebar, isMobile }) => {
             userName: "Delivery Partner",
             email: "delivery@tiffinsathi.com",
             role: "DELIVERY_PARTNER",
-            profilePicture: null
+            profilePicture: null,
           };
         }
       }
 
       if (userData) {
         setUser(userData);
-        
+
         if (userData.profilePicture) {
           setProfilePicture(userData.profilePicture);
         } else {
           setProfilePicture(null);
         }
-        
+
         // Store in localStorage for quick access
         localStorage.setItem("deliveryUser", JSON.stringify(userData));
         console.log("Delivery user data set successfully:", userData);
@@ -111,7 +112,7 @@ const DeliveryNavbar = ({ onToggleSidebar, isMobile }) => {
           setUser({
             userName: "Delivery Partner",
             email: "delivery@tiffinsathi.com",
-            role: "DELIVERY_PARTNER"
+            role: "DELIVERY_PARTNER",
           });
         }
       } else {
@@ -119,7 +120,7 @@ const DeliveryNavbar = ({ onToggleSidebar, isMobile }) => {
         setUser({
           userName: "Delivery Partner",
           email: "delivery@tiffinsathi.com",
-          role: "DELIVERY_PARTNER"
+          role: "DELIVERY_PARTNER",
         });
       }
     } finally {
@@ -129,7 +130,7 @@ const DeliveryNavbar = ({ onToggleSidebar, isMobile }) => {
 
   useEffect(() => {
     fetchUserData();
-    
+
     // Set up interval to refresh user data periodically
     const interval = setInterval(fetchUserData, 300000); // Refresh every 5 minutes
 
@@ -143,11 +144,14 @@ const DeliveryNavbar = ({ onToggleSidebar, isMobile }) => {
       }
     };
 
-    window.addEventListener('deliveryUserDataUpdated', handleUserDataUpdated);
+    window.addEventListener("deliveryUserDataUpdated", handleUserDataUpdated);
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener('deliveryUserDataUpdated', handleUserDataUpdated);
+      window.removeEventListener(
+        "deliveryUserDataUpdated",
+        handleUserDataUpdated
+      );
     };
   }, []);
 
@@ -165,11 +169,8 @@ const DeliveryNavbar = ({ onToggleSidebar, isMobile }) => {
   const getDisplayName = () => {
     if (loading) return "Loading...";
     if (!user) return "Delivery Partner";
-    
-    return user.userName || 
-           user.name || 
-           user.username || 
-           "Delivery Partner";
+
+    return user.userName || user.name || user.username || "Delivery Partner";
   };
 
   const getUserEmail = () => {
@@ -179,12 +180,15 @@ const DeliveryNavbar = ({ onToggleSidebar, isMobile }) => {
 
   const getProfilePictureSrc = () => {
     if (profilePicture) {
-      if (typeof profilePicture === 'string' && profilePicture.startsWith('data:')) {
+      if (
+        typeof profilePicture === "string" &&
+        profilePicture.startsWith("data:")
+      ) {
         return profilePicture;
       }
-      if (typeof profilePicture === 'string') {
+      if (typeof profilePicture === "string") {
         // If it's a base64 string without data URL prefix
-        if (profilePicture.startsWith('/9j/') || profilePicture.length > 1000) {
+        if (profilePicture.startsWith("/9j/") || profilePicture.length > 1000) {
           return `data:image/jpeg;base64,${profilePicture}`;
         }
         return profilePicture;
@@ -209,17 +213,9 @@ const DeliveryNavbar = ({ onToggleSidebar, isMobile }) => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("deliveryUser");
-    localStorage.removeItem("user");
-    localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("rememberedEmail");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("username");
-    sessionStorage.removeItem("token");
-    sessionStorage.removeItem("user");
-    
+    localStorage.clear();
+    sessionStorage.clear();
+
     setUser(null);
     setProfilePicture(null);
     setIsDropdownOpen(false);
@@ -253,7 +249,8 @@ const DeliveryNavbar = ({ onToggleSidebar, isMobile }) => {
                 <h1
                   className="text-xl sm:text-2xl font-bold hidden sm:block"
                   style={{
-                    fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
+                    fontFamily:
+                      "'Brush Script MT', 'Lucida Handwriting', cursive",
                     color: designTokens.colors.secondary.main,
                   }}
                 >
@@ -295,7 +292,8 @@ const DeliveryNavbar = ({ onToggleSidebar, isMobile }) => {
               <h1
                 className="text-xl sm:text-2xl font-bold hidden sm:block"
                 style={{
-                  fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
+                  fontFamily:
+                    "'Brush Script MT', 'Lucida Handwriting', cursive",
                   color: designTokens.colors.secondary.main,
                 }}
               >

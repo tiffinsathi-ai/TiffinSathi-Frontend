@@ -1,6 +1,7 @@
 // src/Pages/Vendor/Tiffins.js
 import React, { useState, useEffect } from "react";
 import { readData, writeData } from "../../helpers/storage";
+import { toast } from "react-toastify";
 import { 
   Plus, 
   Edit3, 
@@ -71,7 +72,7 @@ const Tiffins = () => {
   const addMeal = () => {
     const errors = validateForm();
     if (errors.length > 0) {
-      alert(errors.join("\n"));
+      toast.error(errors.join("\n"));
       return;
     }
 
@@ -102,7 +103,7 @@ const Tiffins = () => {
   const updateMeal = () => {
     const errors = validateForm();
     if (errors.length > 0) {
-      alert(errors.join("\n"));
+      toast.error(errors.join("\n"));
       return;
     }
 
@@ -182,12 +183,12 @@ const Tiffins = () => {
     const file = event.target.files[0];
     if (file) {
       if (!file.type.startsWith("image/")) {
-        alert("Please select an image file");
+        toast.error("Please select an image file");
         return;
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        alert("Image size should be less than 5MB");
+        toast.error("Image size should be less than 5MB");
         return;
       }
 

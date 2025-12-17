@@ -1,6 +1,7 @@
 // src/Pages/Vendor/Customers.js
 import React, { useState, useEffect } from "react";
 import { readData } from "../../helpers/storage";
+import { toast } from "react-toastify";
 import { 
   Search, 
   Filter,
@@ -132,10 +133,10 @@ const Customers = () => {
 
   const handleSendMessage = () => {
     if (!selectedCustomer || !messageText.trim()) {
-      alert("Please enter a message");
+      toast.error("Please enter a message");
       return;
     }
-    alert(`Message sent to ${selectedCustomer.name}: "${messageText.trim()}"`);
+    toast.success(`Message sent to ${selectedCustomer.name}`);
     setMessageText("");
     setShowMessageForm(false);
   };

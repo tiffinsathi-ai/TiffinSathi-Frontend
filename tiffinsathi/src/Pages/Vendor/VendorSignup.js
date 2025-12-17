@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { toast } from "react-toastify";
 import {
   Upload,
   CheckCircle,
@@ -233,7 +234,7 @@ const VendorSignup = () => {
 
   const handleSubmit = async () => {
     if (!validateStep(5)) {
-      alert(
+      toast.error(
         "Please fill out all required fields and upload required documents."
       );
       return;

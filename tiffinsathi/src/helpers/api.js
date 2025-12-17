@@ -20,18 +20,17 @@ async function safeJson(res) {
 export const authStorage = {
   saveAuth: (data) => {
     if (!data) return;
-    const token = data.token || data.accessToken || data.jwt || data.authToken || null;
+    const token =
+      data.token || data.accessToken || data.jwt || data.authToken || null;
     if (token) localStorage.setItem("token", token);
-    if (data.role) localStorage.setItem("role", (data.role || "").toLowerCase());
+    if (data.role)
+      localStorage.setItem("role", (data.role || "").toLowerCase());
     if (data.email) localStorage.setItem("email", data.email);
     if (data.name) localStorage.setItem("name", data.name);
   },
 
   clearAuth: () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    localStorage.removeItem("email");
-    localStorage.removeItem("name");
+    localStorage.clear();
   },
 
   getToken: () => localStorage.getItem("token"),
@@ -173,7 +172,10 @@ export const api = {
       const res = await fetch(`${BASE_URL}/vendors/${vendorId}/status`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", ...getAuthHeader() },
-        body: JSON.stringify({ status: "approved", reason: "Approved by admin" }),
+        body: JSON.stringify({
+          status: "approved",
+          reason: "Approved by admin",
+        }),
       });
       const data = await safeJson(res);
       return { ok: res.ok, status: res.status, data };
@@ -215,11 +217,14 @@ export const api = {
 
   changeVendorPassword: async (vendorId, newPassword) => {
     try {
-      const res = await fetch(`${BASE_URL}/vendors/${vendorId}/change-password`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...getAuthHeader() },
-        body: JSON.stringify({ newPassword }),
-      });
+      const res = await fetch(
+        `${BASE_URL}/vendors/${vendorId}/change-password`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...getAuthHeader() },
+          body: JSON.stringify({ newPassword }),
+        }
+      );
       const data = await safeJson(res);
       return { ok: res.ok, status: res.status, data };
     } catch (e) {
@@ -305,7 +310,11 @@ export const api = {
   fetchJson: async (path, opts = {}) => {
     try {
       const res = await fetch(`${BASE_URL}${path}`, {
-        headers: { "Content-Type": "application/json", ...getAuthHeader(), ...(opts.headers || {}) },
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeader(),
+          ...(opts.headers || {}),
+        },
         ...opts,
       });
       return { ok: res.ok, status: res.status, data: await safeJson(res) };

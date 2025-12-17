@@ -1,5 +1,6 @@
 // pages/DeliveryDashboard.js
 import React, { useState, useEffect } from 'react';
+import { toast } from "react-toastify";
 import {
   Package,
   CheckCircle,
@@ -123,7 +124,7 @@ const OrderDeliveries = () => {
       fetchDashboardData();
     } catch (error) {
       console.error('Error updating order status:', error);
-      alert('Failed to update order status');
+      toast.error('Failed to update order status');
     }
   };
 

@@ -2,8 +2,12 @@
 import React from "react";
 import "./App.css";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import ScrollToTop from "./Components/ScrollToTop";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import Home from "./Pages/User/Home";
 import Packages from "./Pages/User/Packages";
+import Restaurant from "./Pages/User/Restaurant";
 import Login from "./Pages/Login";
 import Signup from "./Pages/User/Signup";
 import ForgetPassword from "./Pages/User/ForgetPassword";
@@ -16,6 +20,10 @@ import UserProfile from "./Pages/User/UserProfile";
 import Layout from "./Components/Users/Layout";
 import ScheduleCustomization from "./Pages/User/ScheduleCustomization";
 import Checkout from "./Pages/User/Checkout";
+import MySubscription from "./Pages/User/MySubscription";
+import PaymentSuccess from "./Pages/Payment/PaymentSuccess";
+import PaymentFailure from "./Pages/Payment/PaymentFailure";
+import PaymentStatus from "./Pages/Payment/PaymentStatus";
 
 // ---------- Vendor ----------
 import VendorLayout from "./Components/Vendor/VendorLayout";
@@ -56,6 +64,8 @@ import DeliveryPerformance from "./Pages/Delivery/DeliveryPerformance";
 function App() {
   return (
     <Router>
+      <ScrollToTop />
+      <ToastContainer position="top-right" autoClose={3000} />
       <div className="App flex flex-col min-h-screen">
         <main className="flex-grow">
           <Routes>
@@ -70,13 +80,21 @@ function App() {
             {/* User Routes */}
             <Route path="/" element={<Layout />}>
               <Route index element={<Home />} />
+              <Route path="restaurants" element={<Restaurant />} />
               <Route path="packages" element={<Packages />} />
+              <Route path="checkout" element={<Checkout />} />
+              <Route path="user/subscriptions" element={<MySubscription />} />
+              <Route path="payment/success" element={<PaymentSuccess />} />
+              <Route path="payment/failure" element={<PaymentFailure />} />
+              <Route
+                path="payment/status/:paymentId"
+                element={<PaymentStatus />}
+              />
+              <Route
+                path="schedule-customization"
+                element={<ScheduleCustomization />}
+              />
             </Route>
-            <Route
-              path="/schedule-customization"
-              element={<ScheduleCustomization />}
-            />
-            <Route path="/checkout" element={<Checkout />} />
 
             {/* Vendor Routes - TEMPORARILY NO AUTH */}
             <Route path="/vendor/*" element={<VendorLayout />}>

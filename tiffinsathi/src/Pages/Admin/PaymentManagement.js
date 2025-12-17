@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { toast } from "react-toastify";
 import { 
   CreditCard, 
   BarChart3, 
@@ -86,6 +87,13 @@ const PaymentManagement = () => {
   useEffect(() => {
     loadPayments();
   }, [loadPayments]);
+
+  useEffect(() => {
+    if (!error) return;
+    toast.error(error);
+    setError('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error]);
 
   // Filter payments based on search and filter criteria
   const filteredPayments = payments.filter(payment => {
@@ -237,14 +245,6 @@ const PaymentManagement = () => {
           </button>
         </div>
       </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
-          <AlertCircle className="h-5 w-5 mr-2" />
-          {error}
-        </div>
-      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">

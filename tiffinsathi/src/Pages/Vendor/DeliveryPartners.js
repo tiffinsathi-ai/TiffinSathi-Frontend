@@ -1,6 +1,7 @@
 // src/Pages/Vendor/DeliveryPartners.js
 import React, { useState, useEffect } from "react";
 import { readData, writeData } from "../../helpers/storage";
+import { toast } from "react-toastify";
 import { 
   // Plus, 
   Search, 
@@ -83,7 +84,7 @@ const DeliveryPartners = () => {
   const addPartner = () => {
     const error = validatePartner();
     if (error) {
-      alert(error);
+      toast.error(error);
       return;
     }
 
@@ -112,12 +113,12 @@ const DeliveryPartners = () => {
     const file = event.target.files[0];
     if (file) {
       if (!file.type.startsWith("image/")) {
-        alert("Please select an image file");
+        toast.error("Please select an image file");
         return;
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        alert("Image size should be less than 5MB");
+        toast.error("Image size should be less than 5MB");
         return;
       }
 
@@ -147,7 +148,7 @@ const DeliveryPartners = () => {
   const updatePartner = () => {
     const error = validatePartner();
     if (error) {
-      alert(error);
+      toast.error(error);
       return;
     }
 

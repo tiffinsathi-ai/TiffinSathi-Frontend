@@ -20,8 +20,7 @@ import {
   ChevronUp,
   Image as ImageIcon
 } from 'lucide-react';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from 'react-toastify';
 
 const MealManagement = () => {
   const [activeTab, setActiveTab] = useState('mealPackages');
@@ -410,8 +409,6 @@ const MealManagement = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 md:p-6">
-      <ToastContainer position="top-right" autoClose={3000} />
-
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6 md:mb-8">

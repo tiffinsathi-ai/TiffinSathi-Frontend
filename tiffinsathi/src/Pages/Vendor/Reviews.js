@@ -1,6 +1,7 @@
 // src/Pages/Vendor/Reviews.js
 import React, { useState, useEffect } from "react";
 import { readData, writeData } from "../../helpers/storage";
+import { toast } from "react-toastify";
 import { 
   Search, 
   Filter,
@@ -35,6 +36,13 @@ const Reviews = () => {
   useEffect(() => {
     loadReviews();
   }, []);
+
+  useEffect(() => {
+    if (!error) return;
+    toast.error(error);
+    setError("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error]);
 
   useEffect(() => {
     filterReviews();
@@ -113,7 +121,7 @@ const Reviews = () => {
       writeData(data);
       setReviews(data.reviews);
     } catch (err) {
-      alert("Failed to delete review: " + err.message);
+      toast.error("Failed to delete review: " + err.message);
     }
   };
 
@@ -141,7 +149,7 @@ const Reviews = () => {
       setReplyText("");
       setSelectedReview(null);
     } catch (err) {
-      alert("Failed to submit reply: " + err.message);
+      toast.error("Failed to submit reply: " + err.message);
     }
   };
 
@@ -230,13 +238,6 @@ const Reviews = () => {
           <span>Refresh</span>
         </button>
       </div>
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded flex items-center">
-          <AlertCircle className="h-5 w-5 mr-2" />
-          {error}
-        </div>
-      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

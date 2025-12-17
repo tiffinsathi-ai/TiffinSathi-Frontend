@@ -1,6 +1,7 @@
 // src/Pages/Vendor/Settings.js
 import React, { useState, useEffect } from "react";
 import { readData, writeData } from "../../helpers/storage";
+import { toast } from "react-toastify";
 import { 
   Save,
   Upload,
@@ -32,6 +33,20 @@ const Settings = () => {
   useEffect(() => {
     loadSettings();
   }, []);
+
+  useEffect(() => {
+    if (!error) return;
+    toast.error(error);
+    setError("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error]);
+
+  useEffect(() => {
+    if (!saved) return;
+    toast.success("Settings saved successfully!");
+    setSaved(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saved]);
 
   const loadSettings = () => {
     setLoading(true);
@@ -104,7 +119,6 @@ const Settings = () => {
         
         setSaving(false);
         setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
       } catch (err) {
         setError("Failed to save settings: " + err.message);
         setSaving(false);
@@ -214,28 +228,6 @@ const Settings = () => {
           </button>
         </div>
       </div>
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded flex items-center justify-between">
-          <div className="flex items-center">
-            <AlertCircle className="h-5 w-5 mr-2" />
-            {error}
-          </div>
-          <button
-            onClick={() => setError("")}
-            className="text-red-700 hover:text-red-900"
-          >
-            ×
-          </button>
-        </div>
-      )}
-
-      {saved && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded flex items-center">
-          <CheckCircle className="h-5 w-5 mr-2" />
-          Settings saved successfully!
-        </div>
-      )}
 
       {/* Settings Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
