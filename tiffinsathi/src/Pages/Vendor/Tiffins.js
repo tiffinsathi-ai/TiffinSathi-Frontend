@@ -1,7 +1,5 @@
-/* eslint-disable no-unused-vars */
-// src/Pages/Vendor/Tiffins.js
-import React, { useState, useEffect } from "react";
-import { readData, writeData } from "../../helpers/storage";
+import React, { useState, useEffect, useCallback } from "react";
+import axios from "axios";
 import { 
   Plus, 
   Edit3, 
@@ -13,10 +11,17 @@ import {
   Clock,
   Search,
   Upload,
-  Package // ADD THIS MISSING IMPORT
+  Package,
+  X,
+  Trash2,
+  Utensils,
+  Filter,
+  ChevronDown,
+  ChevronUp,
+  Image as ImageIcon
 } from "lucide-react";
-// Remove Trash2, Filter, ChevronDown since they're not used
-
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const Tiffins = () => {
   const [tiffins, setTiffins] = useState([]);
@@ -25,9 +30,11 @@ const Tiffins = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [loading, setLoading] = useState(false);
+  const [imagePreview, setImagePreview] = useState("");
+  const [expandedTiffin, setExpandedTiffin] = useState(null);
 
-  // extra state from snippet (not strictly needed but added as requested)
-  const [imagePreview, setImagePreview] = useState(null);
+  const token = localStorage.getItem('token');
+  const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8080/api';
 
   const [newMeal, setNewMeal] = useState({
     name: "",
@@ -38,21 +45,61 @@ const Tiffins = () => {
     capacity: "",
     preparation_time: "",
     ingredients: "",
-    dietary_info: "",
-    spice_level: "medium",
     is_available: true,
-    image: "/src/assets/meal1.jpg"
+    image: ""
   });
 
-  useEffect(() => {
-    loadTiffins();
-  }, []);
+  // Fetch tiffins from backend
+  const fetchTiffins = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_BASE}/tiffins/vendor/my-tiffins`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTiffins(response.data || []);
+      toast.success('Tiffins loaded successfully');
+    } catch (error) {
+      console.error('Error fetching tiffins:', error);
+      toast.error('Failed to load tiffins');
+    } finally {
+      setLoading(false);
+    }
+  }, [API_BASE, token]);
 
-  const loadTiffins = () => {
-    const data = readData();
-    setTiffins(data.tiffins || []);
+  useEffect(() => {
+    fetchTiffins();
+  }, [fetchTiffins]);
+
+  // Image handling
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size should be less than 5MB');
+        return;
+      }
+
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result;
+        setNewMeal({ ...newMeal, image: base64String });
+        setImagePreview(base64String);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
+  const removeImage = () => {
+    setNewMeal({ ...newMeal, image: "" });
+    setImagePreview("");
+  };
+
+  // Form validation
   const validateForm = () => {
     const errors = [];
     
@@ -69,91 +116,115 @@ const Tiffins = () => {
     return errors;
   };
 
-  const addMeal = () => {
+  // Add new tiffin
+  const addMeal = async () => {
     const errors = validateForm();
     if (errors.length > 0) {
-      alert(errors.join("\n"));
+      errors.forEach(error => toast.error(error));
       return;
     }
 
-    setLoading(true);
-    
-    const meal = {
-      ...newMeal,
-      id: "t" + Date.now(),
-      price: parseFloat(newMeal.price),
-      capacity: parseInt(newMeal.capacity),
-      preparation_time: parseInt(newMeal.preparation_time),
-      createdAt: new Date().toISOString(),
-      orders_today: Math.floor(Math.random() * 10),
-      total_orders: Math.floor(Math.random() * 100),
-      rating: (4 + Math.random()).toFixed(1)
-    };
+    try {
+      setLoading(true);
+      
+      const payload = {
+        ...newMeal,
+        price: parseFloat(newMeal.price),
+        capacity: parseInt(newMeal.capacity),
+        preparation_time: parseInt(newMeal.preparation_time)
+      };
 
-    const data = readData();
-    data.tiffins = [...data.tiffins, meal];
-    writeData(data);
-    
-    setTiffins(data.tiffins);
-    resetForm();
-    setShowAddForm(false);
-    setLoading(false);
+      await axios.post(`${API_BASE}/tiffins`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      toast.success('Tiffin created successfully!');
+      fetchTiffins();
+      resetForm();
+      setShowAddForm(false);
+    } catch (error) {
+      console.error('Error creating tiffin:', error);
+      toast.error('Error creating tiffin: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateMeal = () => {
+  // Update tiffin
+  const updateMeal = async () => {
     const errors = validateForm();
     if (errors.length > 0) {
-      alert(errors.join("\n"));
+      errors.forEach(error => toast.error(error));
       return;
     }
 
-    setLoading(true);
-    
-    const data = readData();
-    const updatedTiffins = data.tiffins.map(t => 
-      t.id === editingTiffin.id 
-        ? { 
-            ...t, 
-            ...newMeal, 
-            price: parseFloat(newMeal.price), 
-            capacity: parseInt(newMeal.capacity),
-            preparation_time: parseInt(newMeal.preparation_time)
-          }
-        : t
-    );
-    
-    data.tiffins = updatedTiffins;
-    writeData(data);
-    
-    setTiffins(updatedTiffins);
-    setEditingTiffin(null);
-    setShowAddForm(false);
-    resetForm();
-    setLoading(false);
+    try {
+      setLoading(true);
+      
+      const payload = {
+        ...newMeal,
+        price: parseFloat(newMeal.price),
+        capacity: parseInt(newMeal.capacity),
+        preparation_time: parseInt(newMeal.preparation_time)
+      };
+
+      await axios.put(`${API_BASE}/tiffins/vendor/${editingTiffin.id}`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      toast.success('Tiffin updated successfully!');
+      fetchTiffins();
+      resetForm();
+      setEditingTiffin(null);
+      setShowAddForm(false);
+    } catch (error) {
+      console.error('Error updating tiffin:', error);
+      toast.error('Error updating tiffin: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteMeal = (id) => {
-    if (!window.confirm("Are you sure you want to delete this meal plan? This action cannot be undone.")) {
+  // Delete tiffin
+  const deleteMeal = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this meal plan? This action cannot be undone.')) {
       return;
     }
-    
-    const data = readData();
-    data.tiffins = data.tiffins.filter(t => t.id !== id);
-    writeData(data);
-    setTiffins(data.tiffins);
+
+    try {
+      await axios.delete(`${API_BASE}/tiffins/vendor/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      toast.success('Tiffin deleted successfully!');
+      fetchTiffins();
+    } catch (error) {
+      console.error('Error deleting tiffin:', error);
+      toast.error('Error deleting tiffin');
+    }
   };
 
-  const toggleAvailability = (id) => {
-    const data = readData();
-    const updatedTiffins = data.tiffins.map(t => 
-      t.id === id ? { ...t, is_available: !t.is_available } : t
-    );
-    
-    data.tiffins = updatedTiffins;
-    writeData(data);
-    setTiffins(updatedTiffins);
+  // Toggle availability
+  const toggleAvailability = async (tiffin) => {
+    try {
+      const updatedTiffins = tiffins.map(t =>
+        t.id === tiffin.id ? { ...t, is_available: !t.is_available } : t
+      );
+      setTiffins(updatedTiffins);
+
+      await axios.put(`${API_BASE}/tiffins/vendor/${tiffin.id}/toggle-availability`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      toast.success(`Tiffin ${!tiffin.is_available ? 'activated' : 'deactivated'} successfully`);
+    } catch (error) {
+      console.error('Error toggling tiffin:', error);
+      setTiffins(tiffins);
+      toast.error('Error updating tiffin availability');
+    }
   };
 
+  // Reset form
   const resetForm = () => {
     setNewMeal({
       name: "",
@@ -164,52 +235,37 @@ const Tiffins = () => {
       capacity: "",
       preparation_time: "",
       ingredients: "",
-      dietary_info: "",
-      spice_level: "medium",
       is_available: true,
-      image: "/src/assets/meal1.jpg"
+      image: ""
     });
-    setImagePreview(null);
+    setImagePreview("");
   };
 
+  // Start editing
   const startEdit = (tiffin) => {
     setEditingTiffin(tiffin);
     setNewMeal({ ...tiffin });
+    if (tiffin.image) {
+      setImagePreview(tiffin.image);
+    }
     setShowAddForm(true);
   };
 
-  // Add this function to your existing Tiffins.js
-  const handleImageUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      if (!file.type.startsWith("image/")) {
-        alert("Please select an image file");
-        return;
-      }
-
-      if (file.size > 5 * 1024 * 1024) {
-        alert("Image size should be less than 5MB");
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageDataUrl = e.target.result;
-        setNewMeal((prev) => ({ ...prev, image: imageDataUrl }));
-        setImagePreview(imageDataUrl);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
+  // Filter tiffins
   const filteredTiffins = tiffins.filter(tiffin => {
     const matchesSearch =
       tiffin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tiffin.description.toLowerCase().includes(searchTerm.toLowerCase());
+      tiffin.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tiffin.ingredients?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory =
       categoryFilter === "all" || tiffin.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
+
+  // Toggle tiffin details
+  const toggleTiffinDetails = (tiffinId) => {
+    setExpandedTiffin(expandedTiffin === tiffinId ? null : tiffinId);
+  };
 
   const categories = [
     { value: "all", label: "All Categories" },
@@ -226,480 +282,583 @@ const Tiffins = () => {
     "one-time": "One Time"
   };
 
-  const spiceLevels = [
-    { value: "mild", label: "Mild" },
-    { value: "medium", label: "Medium" },
-    { value: "hot", label: "Hot" },
-    { value: "extra_hot", label: "Extra Hot" }
-  ];
+  if (loading && !showAddForm) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-lg text-gray-600">Loading tiffins...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Meal Plans Management</h2>
-          <p className="text-gray-600">Create and manage your tiffin meal plans</p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 md:p-6">
+      <ToastContainer position="top-right" autoClose={3000} />
+      
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-800">
+            Meal Plans Management
+          </h1>
+          <p className="text-gray-600 mt-1 md:mt-2">
+            Create and manage your tiffin meal plans for customers
+          </p>
         </div>
-        <button
-          onClick={() => {
-            setShowAddForm(true);
-            setEditingTiffin(null);
-            resetForm();
-          }}
-          className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg flex items-center space-x-2 transition-colors shadow-sm"
-        >
-          <Plus size={20} />
-          <span>Add New Meal Plan</span>
-        </button>
-      </div>
 
-      {/* Search and Filter */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-              size={20}
-            />
-            <input
-              type="text"
-              placeholder="Search meal plans..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="flex gap-4">
-            <select
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              {categories.map((cat) => (
-                <option key={cat.value} value={cat.value}>
-                  {cat.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Add/Edit Form */}
-      {showAddForm && (
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <h3 className="text-lg font-semibold mb-4">
-            {editingTiffin ? "Edit Meal Plan" : "Add New Meal Plan"}
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-            {/* Basic Information */}
-            <div className="md:col-span-2 lg:col-span-3">
-              <h4 className="font-medium text-gray-900 mb-3">Basic Information</h4>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Meal Name *
-              </label>
-              <input
-                type="text"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="e.g., Veg Nepali Thali"
-                value={newMeal.name}
-                onChange={(e) =>
-                  setNewMeal({ ...newMeal, name: e.target.value })
-                }
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Price (Rs) *
-              </label>
-              <input
-                type="number"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="250"
-                value={newMeal.price}
-                onChange={(e) =>
-                  setNewMeal({ ...newMeal, price: e.target.value })
-                }
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Plan Type *
-              </label>
-              <select
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={newMeal.plan_type}
-                onChange={(e) =>
-                  setNewMeal({ ...newMeal, plan_type: e.target.value })
-                }
-              >
-                {Object.entries(planTypes).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category *
-              </label>
-              <select
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={newMeal.category}
-                onChange={(e) =>
-                  setNewMeal({ ...newMeal, category: e.target.value })
-                }
-              >
-                {categories
-                  .filter((cat) => cat.value !== "all")
-                  .map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Daily Capacity *
-              </label>
-              <input
-                type="number"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="50"
-                value={newMeal.capacity}
-                onChange={(e) =>
-                  setNewMeal({ ...newMeal, capacity: e.target.value })
-                }
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Prep Time (mins) *
-              </label>
-              <input
-                type="number"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="45"
-                value={newMeal.preparation_time}
-                onChange={(e) =>
-                  setNewMeal({
-                    ...newMeal,
-                    preparation_time: e.target.value,
-                  })
-                }
-              />
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
-            </label>
-            <textarea
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Describe the meal items, taste, and special features..."
-              rows="3"
-              value={newMeal.description}
-              onChange={(e) =>
-                setNewMeal({ ...newMeal, description: e.target.value })
-              }
-            />
-          </div>
-
-          {/* Additional Details */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Ingredients *
-              </label>
-              <textarea
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="List main ingredients (comma separated)..."
-                rows="2"
-                value={newMeal.ingredients}
-                onChange={(e) =>
-                  setNewMeal({ ...newMeal, ingredients: e.target.value })
-                }
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Dietary Information
-              </label>
-              <input
-                type="text"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="e.g., Gluten-free, No onion garlic"
-                value={newMeal.dietary_info}
-                onChange={(e) =>
-                  setNewMeal({ ...newMeal, dietary_info: e.target.value })
-                }
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Spice Level
-              </label>
-              <select
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={newMeal.spice_level}
-                onChange={(e) =>
-                  setNewMeal({ ...newMeal, spice_level: e.target.value })
-                }
-              >
-                {spiceLevels.map((level) => (
-                  <option key={level.value} value={level.value}>
-                    {level.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
             <div className="flex items-center">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                  checked={newMeal.is_available}
-                  onChange={(e) =>
-                    setNewMeal({
-                      ...newMeal,
-                      is_available: e.target.checked,
-                    })
-                  }
-                />
-                <span className="ml-2 text-sm text-gray-700">
-                  Available for orders
-                </span>
-              </label>
-            </div>
-          </div>
-
-          {/* Image Upload - updated section */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Meal Image
-            </label>
-            <div className="flex items-center space-x-4">
-              <div className="w-20 h-20 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden">
-                {newMeal.image && newMeal.image !== "/src/assets/meal1.jpg" ? (
-                  <img
-                    src={newMeal.image}
-                    alt="Meal"
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                ) : (
-                  <Upload size={24} className="text-gray-400" />
-                )}
+              <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                <Package className="text-blue-600" size={20} />
               </div>
               <div>
-                <input
-                  type="file"
-                  id="meal-image-upload"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-                <label
-                  htmlFor="meal-image-upload"
-                  className="cursor-pointer px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors inline-block"
-                >
-                  Upload Image
-                </label>
-                <p className="text-xs text-gray-500 mt-1">
-                  JPG, PNG or GIF. Max 5MB.
+                <p className="text-sm text-gray-600">Total Plans</p>
+                <p className="text-xl font-bold text-gray-900">{tiffins.length}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg mr-3">
+                <Utensils className="text-green-600" size={20} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Active Plans</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {tiffins.filter(t => t.is_available).length}
                 </p>
               </div>
             </div>
           </div>
-
-          {/* Form Actions */}
-          <div className="flex justify-end space-x-3 border-t pt-4">
-            <button
-              onClick={() => {
-                setShowAddForm(false);
-                setEditingTiffin(null);
-                resetForm();
-              }}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={editingTiffin ? updateMeal : addMeal}
-              disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-            >
-              {loading && (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              )}
-              <span>
-                {editingTiffin ? "Update Meal Plan" : "Create Meal Plan"}
-              </span>
-            </button>
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg mr-3">
+                <Eye className="text-purple-600" size={20} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Inactive Plans</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {tiffins.filter(t => !t.is_available).length}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-100 rounded-lg mr-3">
+                <Users className="text-orange-600" size={20} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Total Capacity</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {tiffins.reduce((sum, t) => sum + (parseInt(t.capacity) || 0), 0)}/day
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Meal Plans Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTiffins.map((t) => (
-          <div
-            key={t.id}
-            className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
-          >
-            <div className="relative">
-              <img
-                src={t.image}
-                className="w-full h-48 object-cover"
-                alt={t.name}
+        {/* Search and Filter */}
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                placeholder="Search meals by name, description, or ingredients..."
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
-              <div className="absolute top-3 right-3 flex space-x-2">
-                <button
-                  onClick={() => toggleAvailability(t.id)}
-                  className={`p-2 rounded-full shadow-sm ${
-                    t.is_available
-                      ? "bg-green-500 text-white hover:bg-green-600"
-                      : "bg-gray-500 text-white hover:bg-gray-600"
-                  } transition-colors`}
-                  title={t.is_available ? "Set unavailable" : "Set available"}
-                >
-                  {t.is_available ? <Eye size={16} /> : <EyeOff size={16} />}
-                </button>
-                <button
-                  onClick={() => startEdit(t)}
-                  className="p-2 bg-blue-500 text-white rounded-full shadow-sm hover:bg-blue-600 transition-colors"
-                  title="Edit meal plan"
-                >
-                  <Edit3 size={16} />
-                </button>
-              </div>
-              {!t.is_available && (
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                  <span className="text-white font-semibold bg-red-500 px-3 py-1 rounded-full text-sm">
-                    Unavailable
-                  </span>
-                </div>
-              )}
             </div>
-            
-            <div className="p-4">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-bold text-lg text-gray-900">{t.name}</h3>
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
-                  {planTypes[t.plan_type] || t.plan_type}
-                </span>
-              </div>
-              
-              <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                {t.description}
-              </p>
-              
-              <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
-                <div className="flex items-center text-gray-600">
-                  <DollarSign size={14} className="mr-1 flex-shrink-0" />
-                  <span className="truncate">Rs {t.price}</span>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <Users size={14} className="mr-1 flex-shrink-0" />
-                  <span className="truncate">{t.capacity}/day</span>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <Clock size={14} className="mr-1 flex-shrink-0" />
-                  <span className="truncate">{t.preparation_time}min</span>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <Calendar size={14} className="mr-1 flex-shrink-0" />
-                  <span className="truncate capitalize">{t.category}</span>
-                </div>
-              </div>
-
-              {t.ingredients && (
-                <div className="mb-3">
-                  <p className="text-xs text-gray-700">
-                    <strong className="text-gray-900">Ingredients:</strong>{" "}
-                    {t.ingredients}
-                  </p>
-                </div>
-              )}
-
-              {t.dietary_info && (
-                <div className="mb-3">
-                  <p className="text-xs text-gray-700">
-                    <strong className="text-gray-900">Dietary:</strong>{" "}
-                    {t.dietary_info}
-                  </p>
-                </div>
-              )}
-
-              <div className="flex justify-between items-center text-sm text-gray-500">
-                <span>{t.orders_today || 0} orders today</span>
-                <span className="flex items-center">⭐ {t.rating || "4.5"}</span>
-              </div>
-
-              <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
-                <button
-                  onClick={() => startEdit(t)}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+            <div className="flex gap-4">
+              <div className="flex items-center space-x-2">
+                <Filter size={20} className="text-gray-500" />
+                <select
+                  className="border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
                 >
-                  Edit
-                </button>
-                <button
-                  onClick={() => deleteMeal(t.id)}
-                  className="text-red-600 hover:text-red-700 text-sm font-medium"
-                >
-                  Delete
-                </button>
+                  {categories.map((cat) => (
+                    <option key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
               </div>
+              <button
+                onClick={fetchTiffins}
+                className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Refresh</span>
+              </button>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
 
-      {filteredTiffins.length === 0 && !showAddForm && (
-        <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Package size={32} className="text-gray-400" />
+        {/* Action Button */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900">Meal Plans</h2>
+            <p className="text-gray-600">
+              Individual meal configurations for your tiffin service
+            </p>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            No Meal Plans Found
-          </h3>
-          <p className="text-gray-600 mb-4 max-w-md mx-auto">
-            {searchTerm || categoryFilter !== "all"
-              ? "No meal plans match your search criteria. Try adjusting your filters."
-              : "Start by creating your first meal plan to attract customers"}
-          </p>
           <button
+            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2.5 md:px-6 md:py-3 rounded-lg flex items-center space-x-2 transition-all duration-200 shadow-sm hover:shadow-md"
             onClick={() => {
+              resetForm();
               setShowAddForm(true);
               setEditingTiffin(null);
-              resetForm();
-              setSearchTerm("");
-              setCategoryFilter("all");
             }}
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg inline-flex items-center space-x-2 transition-colors shadow-sm"
           >
             <Plus size={20} />
-            <span>Create Your First Meal Plan</span>
+            <span>Add New Meal Plan</span>
           </button>
         </div>
-      )}
+
+        {/* Tiffins Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {filteredTiffins.map(tiffin => (
+            <div 
+              key={tiffin.id} 
+              className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 ${
+                !tiffin.is_available ? 'opacity-80' : ''
+              }`}
+            >
+              {/* Image Section */}
+              {tiffin.image && (
+                <div className="relative h-48 overflow-hidden">
+                  <img
+                    src={tiffin.image.startsWith('data:') ? tiffin.image : `data:image/jpeg;base64,${tiffin.image}`}
+                    alt={tiffin.name}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute top-3 right-3 flex space-x-1">
+                    <button
+                      onClick={() => toggleAvailability(tiffin)}
+                      className={`p-1.5 rounded-full shadow-sm transition-colors ${
+                        tiffin.is_available
+                          ? "bg-green-500 text-white hover:bg-green-600"
+                          : "bg-gray-500 text-white hover:bg-gray-600"
+                      }`}
+                      title={tiffin.is_available ? "Set unavailable" : "Set available"}
+                    >
+                      {tiffin.is_available ? <Eye size={16} /> : <EyeOff size={16} />}
+                    </button>
+                    <button
+                      onClick={() => startEdit(tiffin)}
+                      className="p-1.5 bg-blue-500 text-white rounded-full shadow-sm hover:bg-blue-600 transition-colors"
+                      title="Edit meal plan"
+                    >
+                      <Edit3 size={16} />
+                    </button>
+                    <button
+                      onClick={() => toggleTiffinDetails(tiffin.id)}
+                      className="p-1.5 bg-purple-500 text-white rounded-full shadow-sm hover:bg-purple-600 transition-colors"
+                      title="View details"
+                    >
+                      {expandedTiffin === tiffin.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Card Content */}
+              <div className="p-4 md:p-5">
+                {/* Header with title and status */}
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex-1">
+                    <h3 className="font-bold text-lg text-gray-900 line-clamp-1">{tiffin.name}</h3>
+                    <p className="text-gray-600 text-sm line-clamp-2 mt-1">{tiffin.description}</p>
+                  </div>
+                  <button
+                    onClick={() => deleteMeal(tiffin.id)}
+                    className="p-1.5 ml-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+
+                {/* Badges */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                    tiffin.is_available 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {tiffin.is_available ? 'Available' : 'Unavailable'}
+                  </span>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {planTypes[tiffin.plan_type] || tiffin.plan_type}
+                  </span>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                    tiffin.category === 'veg' ? 'bg-green-100 text-green-800' :
+                    tiffin.category === 'non-veg' ? 'bg-red-100 text-red-800' :
+                    'bg-purple-100 text-purple-800'
+                  }`}>
+                    {categories.find(c => c.value === tiffin.category)?.label || tiffin.category}
+                  </span>
+                </div>
+
+                {/* Quick Stats */}
+                <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+                  <div className="flex items-center text-gray-600">
+                    <DollarSign size={14} className="mr-2 flex-shrink-0 text-gray-500" />
+                    <span className="font-medium text-gray-900">Rs {tiffin.price}</span>
+                  </div>
+                  <div className="flex items-center text-gray-600">
+                    <Users size={14} className="mr-2 flex-shrink-0 text-gray-500" />
+                    <span className="font-medium text-gray-900">{tiffin.capacity}/day</span>
+                  </div>
+                  <div className="flex items-center text-gray-600">
+                    <Clock size={14} className="mr-2 flex-shrink-0 text-gray-500" />
+                    <span className="font-medium text-gray-900">{tiffin.preparation_time} min</span>
+                  </div>
+                  <div className="flex items-center text-gray-600">
+                    <Calendar size={14} className="mr-2 flex-shrink-0 text-gray-500" />
+                    <span className="font-medium text-gray-900 capitalize">{tiffin.category}</span>
+                  </div>
+                </div>
+
+                {/* Expanded Details */}
+                {expandedTiffin === tiffin.id && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <h5 className="font-medium text-gray-700 mb-2 flex items-center">
+                      <Utensils size={16} className="mr-2" />
+                      Ingredients:
+                    </h5>
+                    <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                      {tiffin.ingredients}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Empty State */}
+        {filteredTiffins.length === 0 && (
+          <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Package size={32} className="text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No Meal Plans Found
+            </h3>
+            <p className="text-gray-600 mb-4 max-w-md mx-auto">
+              {searchTerm || categoryFilter !== "all"
+                ? "No meal plans match your search criteria. Try adjusting your filters."
+                : "Start by creating your first meal plan to attract customers"}
+            </p>
+            <button
+              onClick={() => {
+                resetForm();
+                setShowAddForm(true);
+                setEditingTiffin(null);
+              }}
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg inline-flex items-center space-x-2 transition-all duration-200 shadow-sm hover:shadow-md"
+            >
+              <Plus size={20} />
+              <span>Create Your First Meal Plan</span>
+            </button>
+          </div>
+        )}
+
+        {/* Add/Edit Modal */}
+        {showAddForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">
+                      {editingTiffin ? "Edit Meal Plan" : "Create New Meal Plan"}
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {editingTiffin
+                        ? "Update your meal plan details"
+                        : "Fill in the details to create a new meal plan"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowAddForm(false);
+                      setEditingTiffin(null);
+                      resetForm();
+                    }}
+                    className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition-colors"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  editingTiffin ? updateMeal() : addMeal();
+                }} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Meal Name *
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="e.g., Veg Nepali Thali"
+                        value={newMeal.name}
+                        onChange={(e) =>
+                          setNewMeal({ ...newMeal, name: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Price (Rs) *
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="250"
+                        value={newMeal.price}
+                        onChange={(e) =>
+                          setNewMeal({ ...newMeal, price: e.target.value })
+                        }
+                        min="0"
+                        step="0.01"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Plan Type *
+                      </label>
+                      <select
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={newMeal.plan_type}
+                        onChange={(e) =>
+                          setNewMeal({ ...newMeal, plan_type: e.target.value })
+                        }
+                      >
+                        {Object.entries(planTypes).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Category *
+                      </label>
+                      <select
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={newMeal.category}
+                        onChange={(e) =>
+                          setNewMeal({ ...newMeal, category: e.target.value })
+                        }
+                      >
+                        {categories
+                          .filter((cat) => cat.value !== "all")
+                          .map((cat) => (
+                            <option key={cat.value} value={cat.value}>
+                              {cat.label}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Daily Capacity *
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="50"
+                        value={newMeal.capacity}
+                        onChange={(e) =>
+                          setNewMeal({ ...newMeal, capacity: e.target.value })
+                        }
+                        min="1"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Prep Time (mins) *
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="45"
+                        value={newMeal.preparation_time}
+                        onChange={(e) =>
+                          setNewMeal({
+                            ...newMeal,
+                            preparation_time: e.target.value,
+                          })
+                        }
+                        min="1"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Describe the meal items, taste, and special features..."
+                      rows="3"
+                      value={newMeal.description}
+                      onChange={(e) =>
+                        setNewMeal({ ...newMeal, description: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  {/* Ingredients */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Ingredients *
+                    </label>
+                    <textarea
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="List main ingredients (comma separated)..."
+                      rows="3"
+                      value={newMeal.ingredients}
+                      onChange={(e) =>
+                        setNewMeal({ ...newMeal, ingredients: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+
+                  {/* Image Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Meal Image
+                    </label>
+                    <div className="flex items-center space-x-4">
+                      <div className="w-32 h-32 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden">
+                        {imagePreview ? (
+                          <img src={imagePreview} alt="Preview" className="w-full h-full object-cover rounded-lg" />
+                        ) : (
+                          <div className="text-center">
+                            <ImageIcon size={24} className="mx-auto text-gray-400 mb-2" />
+                            <p className="text-xs text-gray-500">No image</p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <input
+                          type="file"
+                          id="meal-image-upload"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                        <div className="space-y-2">
+                          <label
+                            htmlFor="meal-image-upload"
+                            className="cursor-pointer inline-block px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                          >
+                            Upload Image
+                          </label>
+                          <p className="text-xs text-gray-500">
+                            JPG, PNG up to 5MB. Recommended: 800×600px
+                          </p>
+                          {imagePreview && (
+                            <button
+                              type="button"
+                              onClick={removeImage}
+                              className="text-sm text-red-600 hover:text-red-800"
+                            >
+                              Remove Image
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Availability */}
+                  <div className="flex items-center space-x-4 pt-4 border-t">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={newMeal.is_available}
+                        onChange={(e) =>
+                          setNewMeal({
+                            ...newMeal,
+                            is_available: e.target.checked,
+                          })
+                        }
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        id="meal-availability"
+                      />
+                      <label htmlFor="meal-availability" className="ml-2 text-sm text-gray-700">
+                        Available for orders
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Form Actions */}
+                  <div className="flex space-x-3 pt-4 border-t">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className={`flex-1 py-2.5 px-4 rounded-lg transition-all duration-200 ${
+                        loading
+                          ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-sm hover:shadow'
+                      }`}
+                    >
+                      {loading ? (
+                        <span className="flex items-center justify-center">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                          {editingTiffin ? 'Updating...' : 'Creating...'}
+                        </span>
+                      ) : editingTiffin ? (
+                        'Update Meal Plan'
+                      ) : (
+                        'Create Meal Plan'
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddForm(false);
+                        setEditingTiffin(null);
+                        resetForm();
+                      }}
+                      className="flex-1 bg-gray-200 text-gray-700 py-2.5 px-4 rounded-lg hover:bg-gray-300 transition-colors"
+                      disabled={loading}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
