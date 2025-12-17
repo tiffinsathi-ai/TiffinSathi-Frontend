@@ -2,8 +2,8 @@
 import React from "react";
 import "./App.css";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-
-// ---------- Auth & Public ----------
+import Home from "./Pages/User/Home";
+import Packages from "./Pages/User/Packages";
 import Login from "./Pages/Login";
 import Signup from "./Pages/User/Signup";
 import ForgetPassword from "./Pages/User/ForgetPassword";
@@ -70,7 +70,7 @@ function App() {
             {/* User Routes */}
             <Route path="/" element={<Layout />}>
               <Route index element={<Home />} />
-              <Route path="/profile" element={<UserProfile />} />
+              <Route path="packages" element={<Packages />} />
             </Route>
 
             {/* Vendor Routes - TEMPORARILY NO AUTH */}

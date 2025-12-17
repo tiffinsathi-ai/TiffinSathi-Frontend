@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   HiHome,
   HiCube,
@@ -16,6 +16,7 @@ import defaultUser from "../../assets/default-user.jpg";
 
 const Header = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -176,18 +177,74 @@ const Header = () => {
         </h1>
       </div>
 
-      {/* Mobile Menu Button */}
-      <button
-        className="md:hidden text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        aria-label="Toggle menu"
-      >
-        {mobileMenuOpen ? (
-          <HiX className="w-6 h-6" />
-        ) : (
-          <HiMenu className="w-6 h-6" />
-        )}
-      </button>
+      {/* Navigation Links - Centered */}
+      <nav className="flex items-center gap-4 absolute left-1/2 transform -translate-x-1/2">
+        {/* Home */}
+        <Link
+          to="/"
+          className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm font-medium shadow-sm transition-colors ${
+            location.pathname === "/"
+              ? "text-white"
+              : "text-gray-600 hover:text-gray-800"
+          }`}
+          style={
+            location.pathname === "/" ? { backgroundColor: "#F5B800" } : {}
+          }
+          onMouseEnter={(e) => {
+            if (location.pathname !== "/") {
+              e.currentTarget.style.color = "#1f2937";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (location.pathname !== "/") {
+              e.currentTarget.style.color = "#4b5563";
+            }
+          }}
+        >
+          <HiHome className="w-4 h-4" />
+          <span>Home</span>
+        </Link>
+
+        {/* Packages */}
+        <Link
+          to="/packages"
+          className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm font-medium shadow-sm transition-colors ${
+            location.pathname === "/packages"
+              ? "text-white"
+              : "text-gray-600 hover:text-gray-800"
+          }`}
+          style={
+            location.pathname === "/packages"
+              ? { backgroundColor: "#F5B800" }
+              : {}
+          }
+          onMouseEnter={(e) => {
+            if (location.pathname !== "/packages") {
+              e.currentTarget.style.color = "#1f2937";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (location.pathname !== "/packages") {
+              e.currentTarget.style.color = "#4b5563";
+            }
+          }}
+        >
+          <HiCube className="w-4 h-4" />
+          <span>Packages</span>
+        </Link>
+
+        {/* Restaurant - Inactive */}
+        <button className="px-3 py-1.5 flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors">
+          <UtensilsCrossed className="w-4 h-4" style={{ color: "#212529" }} />
+          <span>Restaurant</span>
+        </button>
+
+        {/* My Subscription - Inactive */}
+        <button className="px-3 py-1.5 flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors">
+          <HiCalendar className="w-4 h-4" />
+          <span>My Subscription</span>
+        </button>
+      </nav>
 
       {/* Desktop Navigation Links - Centered */}
       <nav className="hidden md:flex items-center gap-2 lg:gap-4 absolute left-1/2 transform -translate-x-1/2">
