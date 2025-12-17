@@ -1,17 +1,10 @@
-// src/Pages/Vendor/Analytics.js
 import React, { useState, useEffect } from "react";
-import { toast } from "react-toastify";
 import { 
   TrendingUp, 
   Users, 
   Package, 
   DollarSign,
-  Calendar,
-  Download,
-  Filter,
   RefreshCw,
-  ShoppingBag,
-  CheckCircle,
   AlertCircle
 } from "lucide-react";
 import { readData } from "../../helpers/storage";
@@ -25,13 +18,6 @@ const Analytics = () => {
   useEffect(() => {
     loadAnalyticsData();
   }, [timeRange]);
-
-  useEffect(() => {
-    if (!error) return;
-    toast.error(error);
-    setError("");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [error]);
 
   const loadAnalyticsData = () => {
     setLoading(true);
@@ -209,6 +195,13 @@ const Analytics = () => {
           </button>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded flex items-center">
+          <AlertCircle className="h-5 w-5 mr-2" />
+          {error}
+        </div>
+      )}
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
