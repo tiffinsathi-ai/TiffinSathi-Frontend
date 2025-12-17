@@ -1,639 +1,771 @@
-import React, { useState, useMemo } from 'react';
-import { Search, ChevronUp, ChevronDown, Eye, Edit, Trash2, X } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { 
+  Store, 
+  Eye, 
+  CheckCircle, 
+  XCircle, 
+  MoreVertical,
+  UserCheck,
+  UserX,
+  Clock,
+  Download,
+  RefreshCw,
+  Mail,
+  Phone,
+  MapPin,
+  Utensils,
+  FileText,
+  ExternalLink
+} from 'lucide-react';
+import AdminApi from '../../helpers/adminApi';
+import Pagination from '../../Components/Admin/Pagination';
+import ConfirmationModal from '../../Components/Admin/ConfirmationModal';
+import Modal from '../../Components/Admin/Modal';
+import SearchFilter from '../../Components/Admin/SearchFilter';
 
-const VendorManagementTable = () => {
-  // Sample tiffin vendor data
-  const [vendors] = useState([
-    { 
-      id: 1, 
-      businessName: "Tiffin Delight Services", 
-      ownerName: "Priya Sharma", 
-      email: "priya.sharma@tiffindelights.com", 
-      phone: "9876543210",
-      alternatePhone: "9988776655",
-      status: "Active",
-      address: "12/A, Gandhi Road",
-      city: "Mumbai",
-      state: "Maharashtra",
-      pincode: "400001",
-      cuisineTypes: ["North Indian", "Gujarati"],
-      capacity: 200,
-      priceRange: "100-150",
-      yearsInBusiness: 3,
-      description: "We specialize in healthy, home-style North Indian and Gujarati meals, delivered fresh daily.",
-      bankName: "State Bank of India",
-      accountNumber: "123456789012",
-      ifscCode: "SBIN000001",
-      accountHolderName: "Priya Sharma",
-      panNumber: "ABCDE1234F",
-      gstNumber: "27ABCDE1234F1Z5",
-      fssaiNumber: "10012345678901",
-      businessImageUrl: "https://ui-avatars.com/api/?name=Tiffin+Delight&background=DC2626&color=fff&size=150",
-      registeredDate: "2024-01-15"
-    },
-    { 
-      id: 2, 
-      businessName: "Mumbai Meals Express", 
-      ownerName: "Rajesh Patel", 
-      email: "rajesh@mumbaimeals.com", 
-      phone: "9123456789",
-      alternatePhone: "9234567890",
-      status: "Active",
-      address: "45/B, Station Road",
-      city: "Pune",
-      state: "Maharashtra",
-      pincode: "411001",
-      cuisineTypes: ["South Indian", "Maharashtrian"],
-      capacity: 150,
-      priceRange: "80-120",
-      yearsInBusiness: 5,
-      description: "Traditional South Indian and Maharashtrian tiffin service with authentic flavors.",
-      bankName: "HDFC Bank",
-      accountNumber: "234567890123",
-      ifscCode: "HDFC0001234",
-      accountHolderName: "Rajesh Patel",
-      panNumber: "BCDEF2345G",
-      gstNumber: "27BCDEF2345G1Z6",
-      fssaiNumber: "10012345678902",
-      businessImageUrl: "https://ui-avatars.com/api/?name=Mumbai+Meals&background=0891B2&color=fff&size=150",
-      registeredDate: "2024-02-20"
-    },
-    { 
-      id: 3, 
-      businessName: "Healthy Bites Tiffin", 
-      ownerName: "Anjali Verma", 
-      email: "anjali@healthybites.com", 
-      phone: "9345678901",
-      alternatePhone: "9456789012",
-      status: "Inactive",
-      address: "78, Green Park",
-      city: "Delhi",
-      state: "Delhi",
-      pincode: "110016",
-      cuisineTypes: ["Continental", "Chinese"],
-      capacity: 100,
-      priceRange: "120-180",
-      yearsInBusiness: 2,
-      description: "Diet-friendly and nutritious tiffin options with international cuisines.",
-      bankName: "ICICI Bank",
-      accountNumber: "345678901234",
-      ifscCode: "ICIC0002345",
-      accountHolderName: "Anjali Verma",
-      panNumber: "CDEFG3456H",
-      gstNumber: "07CDEFG3456H1Z7",
-      fssaiNumber: "10012345678903",
-      businessImageUrl: "https://ui-avatars.com/api/?name=Healthy+Bites&background=059669&color=fff&size=150",
-      registeredDate: "2024-03-10"
-    },
-    { 
-      id: 4, 
-      businessName: "Spice Route Tiffins", 
-      ownerName: "Mohammed Khan", 
-      email: "khan@spiceroute.com", 
-      phone: "9567890123",
-      alternatePhone: "9678901234",
-      status: "Active",
-      address: "23, MG Road",
-      city: "Bangalore",
-      state: "Karnataka",
-      pincode: "560001",
-      cuisineTypes: ["North Indian", "Mughlai"],
-      capacity: 250,
-      priceRange: "90-140",
-      yearsInBusiness: 4,
-      description: "Authentic Mughlai and North Indian cuisine prepared with traditional recipes.",
-      bankName: "Axis Bank",
-      accountNumber: "456789012345",
-      ifscCode: "UTIB0003456",
-      accountHolderName: "Mohammed Khan",
-      panNumber: "DEFGH4567I",
-      gstNumber: "29DEFGH4567I1Z8",
-      fssaiNumber: "10012345678904",
-      businessImageUrl: "https://ui-avatars.com/api/?name=Spice+Route&background=7C3AED&color=fff&size=150",
-      registeredDate: "2024-04-05"
-    },
-    { 
-      id: 5, 
-      businessName: "Home Kitchen Delights", 
-      ownerName: "Lakshmi Iyer", 
-      email: "lakshmi@homekitchen.com", 
-      phone: "9789012345",
-      alternatePhone: "9890123456",
-      status: "Active",
-      address: "56, Anna Nagar",
-      city: "Chennai",
-      state: "Tamil Nadu",
-      pincode: "600040",
-      cuisineTypes: ["South Indian", "Tamil"],
-      capacity: 180,
-      priceRange: "70-110",
-      yearsInBusiness: 6,
-      description: "Homemade South Indian meals with authentic Tamil flavors and traditional cooking methods.",
-      bankName: "Canara Bank",
-      accountNumber: "567890123456",
-      ifscCode: "CNRB0004567",
-      accountHolderName: "Lakshmi Iyer",
-      panNumber: "EFGHI5678J",
-      gstNumber: "33EFGHI5678J1Z9",
-      fssaiNumber: "10012345678905",
-      businessImageUrl: "https://ui-avatars.com/api/?name=Home+Kitchen&background=DB2777&color=fff&size=150",
-      registeredDate: "2024-05-12"
-    },
-  ]);
-
+const VendorManagement = () => {
+  const [vendors, setVendors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [cuisineFilter, setCuisineFilter] = useState('All');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5);
   const [selectedVendor, setSelectedVendor] = useState(null);
-  const [modalType, setModalType] = useState(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [actionMenu, setActionMenu] = useState(null);
+  const [isLoadingAction, setIsLoadingAction] = useState(false);
+  
+  const actionMenuRefs = useRef({});
+  const itemsPerPage = 8;
 
-  // Get unique cuisines
-  const allCuisines = [...new Set(vendors.flatMap(v => v.cuisineTypes))];
+  // Status badge component
+  const StatusBadge = ({ status }) => {
+    const statusConfig = {
+      PENDING: {
+        color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        icon: Clock,
+        label: 'Pending'
+      },
+      APPROVED: {
+        color: 'bg-green-100 text-green-800 border-green-200',
+        icon: UserCheck,
+        label: 'Approved'
+      },
+      REJECTED: {
+        color: 'bg-red-100 text-red-800 border-red-200',
+        icon: UserX,
+        label: 'Rejected'
+      }
+    };
 
-  // Sorting function
-  const handleSort = (key) => {
-    let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
+    const config = statusConfig[status] || statusConfig.PENDING;
+    const Icon = config.icon;
+
+    return (
+      <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${config.color}`}>
+        <Icon className="h-3 w-3" />
+        {config.label}
+      </span>
+    );
   };
 
-  // Filter and sort data
-  const filteredAndSortedVendors = useMemo(() => {
-    let filtered = vendors.filter(vendor => {
-      const matchesSearch = 
-        vendor.businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        vendor.ownerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        vendor.email.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCuisine = cuisineFilter === 'All' || vendor.cuisineTypes.includes(cuisineFilter);
-      const matchesStatus = statusFilter === 'All' || vendor.status === statusFilter;
-      
-      return matchesSearch && matchesCuisine && matchesStatus;
-    });
+  // API functions
+  const fetchVendors = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await AdminApi.getVendors();
+      setVendors(data);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to fetch vendors');
+      console.error('Error fetching vendors:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    if (sortConfig.key) {
-      filtered.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
-        }
-        return 0;
+  const updateVendorStatus = async (vendorId, status, reason = '') => {
+    setIsLoadingAction(true);
+    try {
+      const updatedVendor = await AdminApi.updateVendorStatus(vendorId, status, reason);
+      setVendors(vendors.map(vendor => 
+        vendor.vendorId === vendorId ? updatedVendor : vendor
+      ));
+      return updatedVendor;
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update vendor status');
+      throw err;
+    } finally {
+      setIsLoadingAction(false);
+    }
+  };
+
+  const deleteVendor = async (vendorId) => {
+    setIsLoadingAction(true);
+    try {
+      await AdminApi.deleteVendor(vendorId);
+      setVendors(vendors.filter(vendor => vendor.vendorId !== vendorId));
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete vendor');
+      throw err;
+    } finally {
+      setIsLoadingAction(false);
+    }
+  };
+
+  // Fetch vendors on component mount
+  useEffect(() => {
+    fetchVendors();
+  }, []);
+
+  // Close action menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const isOutside = Object.values(actionMenuRefs.current).every(ref => {
+        return ref && !ref.contains(event.target);
       });
-    }
+      
+      if (isOutside) {
+        setActionMenu(null);
+      }
+    };
 
-    return filtered;
-  }, [vendors, searchTerm, cuisineFilter, statusFilter, sortConfig]);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredAndSortedVendors.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedVendors = filteredAndSortedVendors.slice(startIndex, startIndex + itemsPerPage);
+  // Filter and search vendors
+  const filteredVendors = useMemo(() => {
+    return vendors.filter(vendor => {
+      const matchesSearch = vendor.businessName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          vendor.ownerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          vendor.businessEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          vendor.phone?.includes(searchTerm);
+      const matchesStatus = statusFilter === 'ALL' || vendor.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [vendors, searchTerm, statusFilter]);
 
-  // Actions
+  // Paginate vendors
+  const paginatedVendors = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredVendors.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredVendors, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredVendors.length / itemsPerPage);
+
+  const statusOptions = [
+    { value: 'ALL', label: 'All Status' },
+    { value: 'PENDING', label: 'Pending' },
+    { value: 'APPROVED', label: 'Approved' },
+    { value: 'REJECTED', label: 'Rejected' }
+  ];
+
+  // Event handlers
   const handleView = (vendor) => {
+    console.log('View vendor:', vendor);
     setSelectedVendor(vendor);
-    setModalType('view');
+    setIsViewModalOpen(true);
+    setActionMenu(null);
   };
 
-  const handleEdit = (vendor) => {
+  const handleApprove = (vendor) => {
     setSelectedVendor(vendor);
-    setModalType('edit');
+    setIsApproveModalOpen(true);
+    setActionMenu(null);
+  };
+
+  const handleReject = (vendor) => {
+    setSelectedVendor(vendor);
+    setRejectionReason('');
+    setIsRejectModalOpen(true);
+    setActionMenu(null);
   };
 
   const handleDelete = (vendor) => {
     setSelectedVendor(vendor);
-    setModalType('delete');
+    setIsDeleteModalOpen(true);
+    setActionMenu(null);
   };
 
-  const closeModal = () => {
-    setSelectedVendor(null);
-    setModalType(null);
+  const confirmApprove = async () => {
+    if (selectedVendor) {
+      await updateVendorStatus(selectedVendor.vendorId, 'APPROVED');
+      setIsApproveModalOpen(false);
+      setSelectedVendor(null);
+    }
   };
 
-  const SortIcon = ({ column }) => {
-    if (sortConfig.key !== column) return <ChevronUp className="w-4 h-4 opacity-30" />;
-    return sortConfig.direction === 'asc' ? 
-      <ChevronUp className="w-4 h-4" /> : 
-      <ChevronDown className="w-4 h-4" />;
+  const confirmReject = async () => {
+    if (selectedVendor && rejectionReason.trim()) {
+      await updateVendorStatus(selectedVendor.vendorId, 'REJECTED', rejectionReason);
+      setIsRejectModalOpen(false);
+      setSelectedVendor(null);
+      setRejectionReason('');
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (selectedVendor) {
+      await deleteVendor(selectedVendor.vendorId);
+      setIsDeleteModalOpen(false);
+      setSelectedVendor(null);
+    }
+  };
+
+  const exportVendors = () => {
+    const csvContent = [
+      ['Business Name', 'Owner', 'Email', 'Phone', 'Status', 'Cuisine Type', 'Registered Date'],
+      ...filteredVendors.map(vendor => [
+        vendor.businessName,
+        vendor.ownerName,
+        vendor.businessEmail,
+        vendor.phone,
+        vendor.status,
+        vendor.cuisineType || 'N/A',
+        new Date(vendor.createdAt).toLocaleDateString()
+      ])
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `vendors-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
+  // Stats calculation
+  const stats = useMemo(() => {
+    const total = vendors.length;
+    const pending = vendors.filter(v => v.status === 'PENDING').length;
+    const approved = vendors.filter(v => v.status === 'APPROVED').length;
+    const rejected = vendors.filter(v => v.status === 'REJECTED').length;
+    
+    return { total, pending, approved, rejected };
+  }, [vendors]);
+
+  // Document viewer component
+  const DocumentViewer = ({ title, documentUrl }) => {
+    if (!documentUrl) return null;
+
+    return (
+      <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+        <div className="flex items-center gap-3">
+          <FileText className="h-5 w-5 text-gray-400" />
+          <span className="text-sm font-medium text-gray-700">{title}</span>
+        </div>
+        <a
+          href={documentUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 px-3 py-1 text-sm text-blue-600 hover:text-blue-700 border border-blue-200 rounded-md hover:bg-blue-50 transition-colors"
+        >
+          <ExternalLink className="h-4 w-4" />
+          View
+        </a>
+      </div>
+    );
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Tiffin Vendor Management</h1>
+    <div className="p-6 space-y-6">
+      {/* Header Section */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-blue-100 rounded-xl">
+            <Store className="h-8 w-8 text-blue-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Vendor Management</h1>
+            <p className="text-gray-600 mt-1">Manage and approve vendor applications</p>
+          </div>
+        </div>
         
-        {/* Filters and Search */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search by business, owner or email..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Cuisine Filter */}
-            <select
-              value={cuisineFilter}
-              onChange={(e) => {
-                setCuisineFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="All">All Cuisines</option>
-              {allCuisines.map(cuisine => (
-                <option key={cuisine} value={cuisine}>{cuisine}</option>
-              ))}
-            </select>
-
-            {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="All">All Status</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-          </div>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={exportVendors}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </button>
+          <button
+            onClick={fetchVendors}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </button>
         </div>
+      </div>
 
-        {/* Table */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th 
-                    onClick={() => handleSort('businessName')}
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  >
-                    <div className="flex items-center gap-2">
-                      Business Name
-                      <SortIcon column="businessName" />
-                    </div>
-                  </th>
-                  <th 
-                    onClick={() => handleSort('ownerName')}
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  >
-                    <div className="flex items-center gap-2">
-                      Owner
-                      <SortIcon column="ownerName" />
-                    </div>
-                  </th>
-                  <th 
-                    onClick={() => handleSort('city')}
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  >
-                    <div className="flex items-center gap-2">
-                      Location
-                      <SortIcon column="city" />
-                    </div>
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cuisines
-                  </th>
-                  <th 
-                    onClick={() => handleSort('capacity')}
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  >
-                    <div className="flex items-center gap-2">
-                      Capacity
-                      <SortIcon column="capacity" />
-                    </div>
-                  </th>
-                  <th 
-                    onClick={() => handleSort('status')}
-                    className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  >
-                    <div className="flex items-center gap-2">
-                      Status
-                      <SortIcon column="status" />
-                    </div>
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedVendors.map((vendor) => (
-                  <tr key={vendor.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      <div className="flex items-center gap-3">
-                        <img 
-                          src={vendor.businessImageUrl} 
-                          alt={vendor.businessName}
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
-                        <span>{vendor.businessName}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {vendor.ownerName}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {vendor.city}, {vendor.state}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      <div className="flex flex-wrap gap-1">
-                        {vendor.cuisineTypes.map((cuisine, idx) => (
-                          <span key={idx} className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                            {cuisine}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {vendor.capacity} meals/day
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        vendor.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {vendor.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleView(vendor)}
-                          className="p-1 hover:bg-blue-50 rounded text-blue-600"
-                          title="View"
-                        >
-                          <Eye className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleEdit(vendor)}
-                          className="p-1 hover:bg-green-50 rounded text-green-600"
-                          title="Edit"
-                        >
-                          <Edit className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(vendor)}
-                          className="p-1 hover:bg-red-50 rounded text-red-600"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredAndSortedVendors.length)} of {filteredAndSortedVendors.length} results
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Vendors</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              {[...Array(totalPages)].map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`px-4 py-2 border rounded-lg text-sm font-medium ${
-                    currentPage === i + 1
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <Store className="h-6 w-6 text-blue-600" />
             </div>
           </div>
         </div>
+        
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Pending Approval</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.pending}</p>
+            </div>
+            <div className="p-3 bg-yellow-100 rounded-lg">
+              <Clock className="h-6 w-6 text-yellow-600" />
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Approved</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.approved}</p>
+            </div>
+            <div className="p-3 bg-green-100 rounded-lg">
+              <UserCheck className="h-6 w-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Rejected</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.rejected}</p>
+            </div>
+            <div className="p-3 bg-red-100 rounded-lg">
+              <UserX className="h-6 w-6 text-red-600" />
+            </div>
+          </div>
+        </div>
+      </div>
 
-        {/* Modal */}
-        {selectedVendor && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white p-6 border-b flex justify-between items-center">
-                <h2 className="text-xl font-bold text-gray-900">
-                  {modalType === 'view' && 'Vendor Details'}
-                  {modalType === 'edit' && 'Edit Vendor'}
-                  {modalType === 'delete' && 'Delete Vendor'}
-                </h2>
-                <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
-                  <X className="w-6 h-6" />
-                </button>
+      {/* Search and Filter Section */}
+      <SearchFilter
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filterValue={statusFilter}
+        onFilterChange={setStatusFilter}
+        filterOptions={statusOptions}
+        searchPlaceholder="Search vendors by business name, owner, email, or phone..."
+      />
+
+      {/* Vendors Table */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <div className="rounded-md bg-red-50 p-4 mx-6">
+              <div className="flex">
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">Error Loading Vendors</h3>
+                  <div className="mt-2 text-sm text-red-700">
+                    <p>{error}</p>
+                  </div>
+                </div>
               </div>
-
-              <div className="p-6">
-                {modalType === 'view' && (
-                  <div className="space-y-6">
-                    {/* Business Image */}
-                    <div className="flex justify-center">
-                      <img 
-                        src={selectedVendor.businessImageUrl} 
-                        alt={selectedVendor.businessName}
-                        className="w-32 h-32 rounded-full object-cover"
-                      />
-                    </div>
-
-                    {/* Business Information */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Business Information</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Business Name</span>
-                          <p className="text-gray-900">{selectedVendor.businessName}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Owner Name</span>
-                          <p className="text-gray-900">{selectedVendor.ownerName}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Email</span>
-                          <p className="text-gray-900">{selectedVendor.email}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Phone</span>
-                          <p className="text-gray-900">{selectedVendor.phone}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Alternate Phone</span>
-                          <p className="text-gray-900">{selectedVendor.alternatePhone}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Years in Business</span>
-                          <p className="text-gray-900">{selectedVendor.yearsInBusiness} years</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Address Information */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Address</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="col-span-2">
-                          <span className="text-sm font-medium text-gray-500">Street Address</span>
-                          <p className="text-gray-900">{selectedVendor.address}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">City</span>
-                          <p className="text-gray-900">{selectedVendor.city}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">State</span>
-                          <p className="text-gray-900">{selectedVendor.state}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Pincode</span>
-                          <p className="text-gray-900">{selectedVendor.pincode}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Service Details */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Service Details</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Cuisine Types</span>
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            {selectedVendor.cuisineTypes.map((cuisine, idx) => (
-                              <span key={idx} className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                                {cuisine}
-                              </span>
-                            ))}
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Business
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Contact
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Details
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Registered
+                    </th>
+                    <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {paginatedVendors.map((vendor) => (
+                    <tr key={vendor.vendorId} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 flex-shrink-0">
+                            {vendor.profilePicture ? (
+                              <img
+                                className="h-10 w-10 rounded-full object-cover border border-gray-200"
+                                src={vendor.profilePicture}
+                                alt={vendor.businessName}
+                              />
+                            ) : (
+                              <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200">
+                                <Store className="h-5 w-5 text-gray-400" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {vendor.businessName}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {vendor.ownerName}
+                            </div>
                           </div>
                         </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Daily Capacity</span>
-                          <p className="text-gray-900">{selectedVendor.capacity} meals/day</p>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1 text-sm text-gray-900">
+                            <Mail className="h-4 w-4 text-gray-400" />
+                            {vendor.businessEmail}
+                          </div>
+                          <div className="flex items-center gap-1 text-sm text-gray-900">
+                            <Phone className="h-4 w-4 text-gray-400" />
+                            {vendor.phone}
+                          </div>
                         </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Price Range</span>
-                          <p className="text-gray-900">₹{selectedVendor.priceRange}</p>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1">
+                            <Utensils className="h-4 w-4 text-gray-400" />
+                            {vendor.cuisineType || 'N/A'}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-4 w-4 text-gray-400" />
+                            {vendor.businessAddress ? `${vendor.businessAddress.substring(0, 30)}...` : 'N/A'}
+                          </div>
                         </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Status</span>
-                          <p className="text-gray-900">{selectedVendor.status}</p>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <StatusBadge status={vendor.status} />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(vendor.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex justify-end">
+                          <div 
+                            ref={el => actionMenuRefs.current[vendor.vendorId] = el}
+                            className="relative"
+                          >
+                            <button
+                              onClick={() => setActionMenu(actionMenu === vendor.vendorId ? null : vendor.vendorId)}
+                              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                            >
+                              <MoreVertical className="h-4 w-4 text-gray-600" />
+                            </button>
+                            
+                            {actionMenu === vendor.vendorId && (
+                              <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50 py-1">
+                                <button
+                                  onClick={() => handleView(vendor)}
+                                  className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  View Details
+                                </button>
+                                
+                                {vendor.status === 'PENDING' && (
+                                  <>
+                                    <button
+                                      onClick={() => handleApprove(vendor)}
+                                      className="flex items-center gap-3 w-full px-4 py-2 text-sm text-green-600 hover:bg-green-50 transition-colors"
+                                    >
+                                      <CheckCircle className="h-4 w-4" />
+                                      Approve
+                                    </button>
+                                    <button
+                                      onClick={() => handleReject(vendor)}
+                                      className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                    >
+                                      <XCircle className="h-4 w-4" />
+                                      Reject
+                                    </button>
+                                  </>
+                                )}
+                                
+                                <div className="border-t border-gray-100 my-1"></div>
+                                <button
+                                  onClick={() => handleDelete(vendor)}
+                                  className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                  Delete Vendor
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <div className="col-span-2">
-                          <span className="text-sm font-medium text-gray-500">Description</span>
-                          <p className="text-gray-900">{selectedVendor.description}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Bank Details */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Bank Details</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Bank Name</span>
-                          <p className="text-gray-900">{selectedVendor.bankName}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Account Holder</span>
-                          <p className="text-gray-900">{selectedVendor.accountHolderName}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">Account Number</span>
-                          <p className="text-gray-900">{selectedVendor.accountNumber}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">IFSC Code</span>
-                          <p className="text-gray-900">{selectedVendor.ifscCode}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Legal Documents */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Legal Documents</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">PAN Number</span>
-                          <p className="text-gray-900">{selectedVendor.panNumber}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">GST Number</span>
-                          <p className="text-gray-900">{selectedVendor.gstNumber}</p>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-sm font-medium text-gray-500">FSSAI Number</span>
-                          <p className="text-gray-900">{selectedVendor.fssaiNumber}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {modalType === 'edit' && (
-                  <div className="space-y-4">
-                    <p className="text-gray-600">Edit functionality would be implemented here with form fields for all vendor information.</p>
-                    <button className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                      Save Changes
-                    </button>
-                  </div>
-                )}
-
-                {modalType === 'delete' && (
-                  <div>
-                    <p className="text-gray-600 mb-4">
-                      Are you sure you want to delete vendor "{selectedVendor.businessName}"? This action cannot be undone.
-                    </p>
-                    <div className="flex gap-3">
-                      <button
-                        onClick={closeModal}
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                      >
-                        Cancel
-                      </button>
-                      <button className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            {paginatedVendors.length === 0 && (
+              <div className="text-center py-12">
+                <Store className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No vendors found</h3>
+                <p className="text-gray-500">
+                  {searchTerm || statusFilter !== 'ALL' 
+                    ? 'Try adjusting your search or filters'
+                    : 'No vendors in the system yet'
+                  }
+                </p>
               </div>
+            )}
+            
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              totalItems={filteredVendors.length}
+              currentItemsCount={paginatedVendors.length}
+            />
+          </>
+        )}
+      </div>
+
+      {/* View Vendor Modal */}
+      <Modal
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        title="Vendor Details"
+        size="lg"
+      >
+        {selectedVendor && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+              {selectedVendor.profilePicture ? (
+                <img
+                  src={selectedVendor.profilePicture}
+                  alt={selectedVendor.businessName}
+                  className="h-16 w-16 rounded-full object-cover border-2 border-white shadow-sm"
+                />
+              ) : (
+                <div className="h-16 w-16 rounded-full bg-gray-200 flex items-center justify-center border-2 border-white shadow-sm">
+                  <Store className="h-8 w-8 text-gray-400" />
+                </div>
+              )}
+              <div>
+                <h4 className="text-lg font-semibold text-gray-900">{selectedVendor.businessName}</h4>
+                <p className="text-gray-600">{selectedVendor.ownerName}</p>
+                <div className="flex gap-2 mt-2">
+                  <StatusBadge status={selectedVendor.status} />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h5 className="text-sm font-medium text-gray-700 mb-3">Business Information</h5>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500">Business Email</label>
+                    <p className="text-sm text-gray-900">{selectedVendor.businessEmail}</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500">Phone</label>
+                    <p className="text-sm text-gray-900">{selectedVendor.phone}</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500">Address</label>
+                    <p className="text-sm text-gray-900">{selectedVendor.businessAddress || 'Not provided'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h5 className="text-sm font-medium text-gray-700 mb-3">Business Details</h5>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500">Cuisine Type</label>
+                    <p className="text-sm text-gray-900">{selectedVendor.cuisineType || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500">Capacity</label>
+                    <p className="text-sm text-gray-900">{selectedVendor.capacity || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500">Years in Business</label>
+                    <p className="text-sm text-gray-900">{selectedVendor.yearsInBusiness || 'Not specified'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Documents Section */}
+            <div>
+              <h5 className="text-sm font-medium text-gray-700 mb-3">Uploaded Documents</h5>
+              <div className="space-y-3">
+                <DocumentViewer 
+                  title="FSSAI License" 
+                  documentUrl={selectedVendor.fssaiLicenseUrl} 
+                />
+                <DocumentViewer 
+                  title="PAN Card" 
+                  documentUrl={selectedVendor.panCardUrl} 
+                />
+                <DocumentViewer 
+                  title="Bank Proof" 
+                  documentUrl={selectedVendor.bankProofUrl} 
+                />
+                <DocumentViewer 
+                  title="Menu Card" 
+                  documentUrl={selectedVendor.menuCardUrl} 
+                />
+              </div>
+            </div>
+
+            {selectedVendor.description && (
+              <div>
+                <h5 className="text-sm font-medium text-gray-700 mb-2">Description</h5>
+                <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                  {selectedVendor.description}
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={() => setIsViewModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Close
+              </button>
+              {selectedVendor.status === 'PENDING' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsViewModalOpen(false);
+                      handleReject(selectedVendor);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsViewModalOpen(false);
+                      handleApprove(selectedVendor);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    Approve
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
-      </div>
+      </Modal>
+
+      {/* Approve Confirmation */}
+      <ConfirmationModal
+        isOpen={isApproveModalOpen}
+        onClose={() => setIsApproveModalOpen(false)}
+        onConfirm={confirmApprove}
+        title="Approve Vendor"
+        message={`Are you sure you want to approve ${selectedVendor?.businessName}? This vendor will be activated and can start receiving orders.`}
+        confirmText="Approve Vendor"
+        type="success"
+        isLoading={isLoadingAction}
+      />
+
+      {/* Reject Modal */}
+      <Modal
+        isOpen={isRejectModalOpen}
+        onClose={() => {
+          setIsRejectModalOpen(false);
+          setRejectionReason('');
+        }}
+        title="Reject Vendor Application"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div>
+            <p className="text-gray-700 mb-3">
+              Please provide a reason for rejecting <span className="font-semibold">{selectedVendor?.businessName}</span>:
+            </p>
+            <textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Enter reason for rejection (e.g., Missing documents, incomplete information, failed verification)..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+              rows="4"
+            />
+          </div>
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setIsRejectModalOpen(false);
+                setRejectionReason('');
+              }}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={confirmReject}
+              disabled={!rejectionReason.trim() || isLoadingAction}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+            >
+              {isLoadingAction ? 'Rejecting...' : 'Reject Vendor'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation */}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Vendor"
+        message={`Are you sure you want to delete ${selectedVendor?.businessName}? This action cannot be undone and all vendor data will be permanently removed.`}
+        confirmText="Delete Vendor"
+        type="delete"
+        isLoading={isLoadingAction}
+      />
     </div>
   );
 };
 
-export default VendorManagementTable;
+export default VendorManagement;

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
@@ -13,7 +13,6 @@ import {
   FileText,
   ChefHat,
   ArrowLeft,
-  Lock,
 } from "lucide-react";
 import loginBg from "../../assets/login.jpg";
 
@@ -46,6 +45,16 @@ const uploadFileToCloudinary = async (file) => {
       "File upload service failed. Please check network and file size."
     );
   }
+};
+
+// Convert file to base64
+const convertToBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
 };
 
 const designTokens = {
@@ -84,8 +93,6 @@ const VendorSignup = () => {
     email: "",
     phone: "",
     alternatePhone: "",
-    password: "",
-    confirmPassword: "",
     address: "",
     city: "",
     state: "",
@@ -100,7 +107,6 @@ const VendorSignup = () => {
     ifscCode: "",
     accountHolderName: "",
     panNumber: "",
-    gstNumber: "",
     fssaiNumber: "",
     termsAccepted: false,
     businessImage: null,
@@ -108,8 +114,6 @@ const VendorSignup = () => {
   const [documents, setDocuments] = useState({
     fssaiLicense: null,
     panCard: null,
-    gstCertificate: null,
-    addressProof: null,
     bankProof: null,
     menuCard: null,
   });
@@ -118,15 +122,12 @@ const VendorSignup = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
+  // Simplified cuisine options as requested
   const cuisineOptions = [
-    "North Indian",
-    "South Indian",
-    "Chinese",
-    "Continental",
-    "Gujarati",
-    "Punjabi",
-    "Bengali",
-    "Maharashtrian",
+    "Vegetarian",
+    "Non-Vegetarian", 
+    "Vegan",
+    "Gluten-Free"
   ];
 
   const steps = [
@@ -139,24 +140,16 @@ const VendorSignup = () => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    const newValue = type === "checkbox" ? checked : value;
-
-    setFormData((prev) => {
-      const updated = { ...prev, [name]: newValue };
-      // Clear confirmPassword error when passwords match
-      if (name === "password" && updated.confirmPassword) {
-        if (newValue === updated.confirmPassword && errors.confirmPassword) {
-          setErrors((prevErrors) => ({ ...prevErrors, confirmPassword: "" }));
-        }
-      }
-      // Clear confirmPassword error when confirmPassword changes and they match
-      if (name === "confirmPassword" && updated.password) {
-        if (newValue === updated.password && errors.confirmPassword) {
-          setErrors((prevErrors) => ({ ...prevErrors, confirmPassword: "" }));
-        }
-      }
-      return updated;
-    });
+    
+    // Special handling for capacity (must be positive)
+    if (name === "capacity") {
+      const numValue = parseInt(value);
+      const newValue = numValue < 1 ? "1" : value;
+      setFormData((prev) => ({ ...prev, [name]: newValue }));
+    } else {
+      const newValue = type === "checkbox" ? checked : value;
+      setFormData((prev) => ({ ...prev, [name]: newValue }));
+    }
 
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
@@ -182,7 +175,7 @@ const VendorSignup = () => {
     }
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
       setFormData((prev) => ({ ...prev, businessImage: file }));
@@ -199,24 +192,15 @@ const VendorSignup = () => {
         newErrors.email = "Valid email required";
       if (!formData.phone || !/^\d{10}$/.test(formData.phone))
         newErrors.phone = "Valid 10-digit phone required";
-      if (!formData.password) {
-        newErrors.password = "Password is required";
-      } else if (formData.password.length < 6) {
-        newErrors.password = "Password must be at least 6 characters";
-      }
-      if (!formData.confirmPassword) {
-        newErrors.confirmPassword = "Please confirm your password";
-      } else if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = "Passwords do not match";
-      }
     }
 
     if (step === 2) {
       if (!formData.address) newErrors.address = "Required";
       if (!formData.city) newErrors.city = "Required";
       if (!formData.state) newErrors.state = "Required";
-      if (!formData.pincode || !/^\d{6}$/.test(formData.pincode))
-        newErrors.pincode = "Valid 6-digit pincode required";
+      // Updated pincode validation: any number, not just 6 digits
+      if (!formData.pincode || !/^\d+$/.test(formData.pincode))
+        newErrors.pincode = "Valid pincode required";
     }
 
     if (step === 3) {
@@ -231,7 +215,6 @@ const VendorSignup = () => {
     if (step === 5) {
       if (!documents.fssaiLicense) newErrors.fssaiLicense = "Required";
       if (!documents.panCard) newErrors.panCard = "Required";
-      if (!documents.addressProof) newErrors.addressProof = "Required";
       if (!formData.termsAccepted) newErrors.terms = "You must accept terms";
     }
     setErrors(newErrors);
@@ -261,10 +244,10 @@ const VendorSignup = () => {
     setSubmitError("");
 
     try {
-      // Upload business image to Cloudinary
-      let businessImageUrl = null;
+      // Convert business image to base64
+      let profilePictureBase64 = null;
       if (formData.businessImage instanceof File) {
-        businessImageUrl = await uploadFileToCloudinary(formData.businessImage);
+        profilePictureBase64 = await convertToBase64(formData.businessImage);
       }
 
       // Upload documents to Cloudinary
@@ -281,11 +264,20 @@ const VendorSignup = () => {
         uploadPromises.filter((p) => p !== null)
       );
       results.forEach((result) => {
-        uploadedDocumentUrls[result.key] = result.url;
+        // Map frontend document keys to backend field names
+        const backendFieldName = {
+          fssaiLicense: "fssaiLicenseUrl",
+          panCard: "panCardUrl", 
+          bankProof: "bankProofUrl",
+          menuCard: "menuCardUrl"
+        }[result.key];
+        
+        if (backendFieldName) {
+          uploadedDocumentUrls[backendFieldName] = result.url;
+        }
       });
 
-      // Prepare data for API submission (matching backend entity field names)
-      // Helper function to convert empty strings to null
+      // Prepare data for API submission
       const nullIfEmpty = (value) =>
         value && value.trim() !== "" ? value.trim() : null;
 
@@ -311,43 +303,25 @@ const VendorSignup = () => {
           ? parseInt(formData.yearsInBusiness, 10)
           : 0;
 
-      // Convert capacity to integer if provided
-      const capacity =
-        formData.capacity && formData.capacity.trim() !== ""
-          ? parseInt(formData.capacity, 10)
-          : null;
+      // Convert capacity to integer (minimum 1)
+      const capacity = formData.capacity && formData.capacity.trim() !== ""
+        ? Math.max(1, parseInt(formData.capacity, 10))
+        : null;
 
-      // Ensure required fields are not empty (double-check before sending)
-      // Check email first - this is critical
+      // Validate required fields
       if (!formData.email || typeof formData.email !== "string") {
-        console.error("Email is missing or invalid:", formData.email);
-        throw new Error(
-          "Business email is required. Please fill in the email field."
-        );
+        throw new Error("Business email is required");
       }
-
       const trimmedEmail = formData.email.trim();
-
-      if (!trimmedEmail || trimmedEmail.length === 0) {
-        console.error("Email is empty after trimming:", formData.email);
-        throw new Error(
-          "Business email cannot be empty. Please enter a valid email address."
-        );
+      if (!trimmedEmail || !/\S+@\S+\.\S+/.test(trimmedEmail)) {
+        throw new Error("Please enter a valid business email address");
       }
 
-      if (!/\S+@\S+\.\S+/.test(trimmedEmail)) {
-        console.error("Email format is invalid:", trimmedEmail);
-        throw new Error(
-          "Please enter a valid business email address (e.g., example@domain.com)"
-        );
-      }
-
-      // Validate other required fields
       if (!formData.ownerName || typeof formData.ownerName !== "string") {
         throw new Error("Owner name is required");
       }
       const trimmedOwnerName = formData.ownerName.trim();
-      if (!trimmedOwnerName || trimmedOwnerName.length === 0) {
+      if (!trimmedOwnerName) {
         throw new Error("Owner name cannot be empty");
       }
 
@@ -355,7 +329,7 @@ const VendorSignup = () => {
         throw new Error("Business name is required");
       }
       const trimmedBusinessName = formData.businessName.trim();
-      if (!trimmedBusinessName || trimmedBusinessName.length === 0) {
+      if (!trimmedBusinessName) {
         throw new Error("Business name cannot be empty");
       }
 
@@ -371,145 +345,87 @@ const VendorSignup = () => {
         throw new Error("Food license number is required");
       }
       const trimmedFoodLicense = formData.fssaiNumber.trim();
-      if (!trimmedFoodLicense || trimmedFoodLicense.length === 0) {
+      if (!trimmedFoodLicense) {
         throw new Error("Food license number cannot be empty");
       }
 
       // Build the payload with validated data
-      // NOTE: Backend DTO expects camelCase field names (matching VendorSignupRequest)
       const apiPayload = {
-        userName: trimmedOwnerName, // Backend expects userName for owner name
+        userName: trimmedOwnerName,
         businessName: trimmedBusinessName,
-        phoneNumber: trimmedPhone, // Backend expects phoneNumber
-        email: trimmedEmail, // Backend expects email (not business_email)
+        phoneNumber: trimmedPhone,
+        email: trimmedEmail,
+        password: "defaultPassword123", // Set a default password
+        profilePicture: profilePictureBase64, // Base64 string
         businessAddress: businessAddress,
         alternatePhone: nullIfEmpty(formData.alternatePhone),
         yearsInBusiness: yearsInBusiness,
         cuisineType: cuisineType,
-        capacity: capacity,
+        capacity: capacity, // Positive number only
         description: nullIfEmpty(formData.description),
         bankName: nullIfEmpty(formData.bankName),
         accountNumber: nullIfEmpty(formData.accountNumber),
-        branchName: nullIfEmpty(formData.ifscCode), // Using ifscCode field for branchName
+        branchName: nullIfEmpty(formData.ifscCode),
         accountHolderName: nullIfEmpty(formData.accountHolderName),
         panNumber: nullIfEmpty(formData.panNumber),
-        vatNumber: nullIfEmpty(formData.gstNumber), // GST number maps to VAT number
+        vatNumber: null,
         foodLicenseNumber: trimmedFoodLicense,
-        companyRegistrationNumber: null, // Not in form, but backend accepts it
-        licenseDocument: null, // Documents are uploaded to Cloudinary, not sent as bytes
-        password: formData.password,
-        role: "VENDOR", // Backend sets this, but include for clarity
+        companyRegistrationNumber: null,
+        ...uploadedDocumentUrls,
       };
 
-      // Final verification - ensure email is definitely set
-      if (!apiPayload.email || apiPayload.email.length === 0) {
-        console.error("CRITICAL: email is missing in payload!", apiPayload);
-        throw new Error(
-          "Internal error: Business email is missing. Please try again."
-        );
-      }
-
-      console.log("✅ All files uploaded successfully to Cloudinary.");
-      console.log("=== FORM DATA DEBUG ===");
-      console.log("Form Data (email):", formData.email);
-      console.log("Form Data (email type):", typeof formData.email);
-      console.log("Trimmed Email:", trimmedEmail);
-      console.log("Trimmed Email length:", trimmedEmail?.length);
-      console.log("=== PAYLOAD DEBUG ===");
-      console.log("Full API Payload:", JSON.stringify(apiPayload, null, 2));
-      console.log("Email in payload:", apiPayload.email);
-      console.log("Email type:", typeof apiPayload.email);
-      console.log("Email is null?", apiPayload.email === null);
-      console.log("Email is undefined?", apiPayload.email === undefined);
-      console.log("Email is empty?", apiPayload.email === "");
+      console.log("Submitting vendor registration...");
+      console.log("API Payload:", JSON.stringify({
+        ...apiPayload,
+        profilePicture: profilePictureBase64 ? "base64_image_data" : null
+      }, null, 2));
 
       // Send data to backend API
-      const response = await axios.post(
+      await axios.post(
         "http://localhost:8080/auth/signup/vendor",
         apiPayload,
         {
           headers: {
             "Content-Type": "application/json",
           },
+          timeout: 30000,
         }
       );
 
-      console.log("✅ Vendor registration successful:", response.data);
+      console.log("✅ Vendor registration successful");
       setSubmitted(true);
     } catch (error) {
       console.error("Submission Error:", error);
-      console.error("Error details:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
-
+      
       let errorMessage = "Failed to register. Please try again.";
 
-      // Check if it's a validation error (thrown by our code)
-      if (
-        error.message &&
-        (error.message.includes("required") ||
-          error.message.includes("cannot be empty") ||
-          error.message.includes("invalid") ||
-          error.message.includes("Internal error"))
-      ) {
-        errorMessage = error.message;
-      } else if (
-        error.code === "ERR_NETWORK" ||
-        error.message === "Network Error"
-      ) {
-        errorMessage =
-          "Network error: Cannot connect to server. Please ensure the backend is running on http://localhost:8080";
-      } else if (error.code === "ECONNREFUSED") {
-        errorMessage =
-          "Connection refused: The backend server is not running or not accessible on http://localhost:8080";
-      } else if (error.response) {
-        // Server responded with error status
-        const status = error.response.status;
-        const responseData = error.response.data;
+    if (error.response) {
+      const status = error.response.status;
+      const responseData = error.response.data;
 
-        if (status === 400) {
-          // Check for specific backend validation errors
-          if (
-            responseData?.message?.includes("business_email") ||
-            responseData?.message?.includes("email") ||
-            responseData?.message?.includes("cannot be null")
-          ) {
-            errorMessage =
-              "Business email is required. Please ensure you have filled in the email field correctly.";
-          } else if (responseData?.message?.includes("already in use")) {
-            errorMessage = responseData.message;
-          } else {
-            errorMessage =
-              responseData?.message ||
-              responseData?.error ||
-              "Invalid data. Please check all fields and try again.";
-          }
-        } else if (status === 409) {
-          errorMessage =
-            responseData?.message ||
-            "Email or phone number already registered. Please use different credentials.";
-        } else if (status === 404) {
-          errorMessage =
-            "Endpoint not found. Please verify the backend API endpoint is correct.";
-        } else {
-          errorMessage =
-            responseData?.message ||
-            responseData?.error ||
-            `Server error: ${status}. Please try again later.`;
-        }
-      } else if (error.request) {
-        errorMessage =
-          "No response from server. Please check if the backend is running and CORS is configured correctly.";
+      if (status === 403) {
+        errorMessage = "Access forbidden. Please check CORS configuration on the server.";
+      } else if (status === 400) {
+        errorMessage = responseData?.message || "Invalid data. Please check all fields.";
+      } else if (status === 409) {
+        errorMessage = responseData?.message || "Email or phone number already registered.";
+      } else if (status === 500) {
+        errorMessage = "Server error. Please try again later.";
       } else {
-        errorMessage = error.message || errorMessage;
+        errorMessage = `Server error (${status}). Please try again.`;
       }
-
-      setSubmitError(errorMessage);
-    } finally {
-      setIsSubmitting(false);
+    } else if (error.code === "ERR_NETWORK") {
+      errorMessage = "Cannot connect to server. Please ensure the backend is running on http://localhost:8080";
+    } else if (error.code === "ECONNREFUSED") {
+      errorMessage = "Connection refused. Please check if the backend server is running.";
+    } else if (error.message) {
+      errorMessage = error.message;
     }
+
+    setSubmitError(errorMessage);
+  } finally {
+    setIsSubmitting(false);
+  }
   };
 
   const previewImageUrl = useMemo(() => {
@@ -529,8 +445,6 @@ const VendorSignup = () => {
       email: "",
       phone: "",
       alternatePhone: "",
-      password: "",
-      confirmPassword: "",
       address: "",
       city: "",
       state: "",
@@ -545,7 +459,6 @@ const VendorSignup = () => {
       ifscCode: "",
       accountHolderName: "",
       panNumber: "",
-      gstNumber: "",
       fssaiNumber: "",
       termsAccepted: false,
       businessImage: null,
@@ -553,8 +466,6 @@ const VendorSignup = () => {
     setDocuments({
       fssaiLicense: null,
       panCard: null,
-      gstCertificate: null,
-      addressProof: null,
       bankProof: null,
       menuCard: null,
     });
@@ -572,7 +483,6 @@ const VendorSignup = () => {
           backgroundRepeat: "no-repeat",
         }}
       >
-        {/* Overlay with reduced opacity */}
         <div
           className="absolute inset-0"
           style={{
@@ -628,7 +538,6 @@ const VendorSignup = () => {
         backgroundRepeat: "no-repeat",
       }}
     >
-      {/* Overlay with reduced opacity */}
       <div
         className="absolute inset-0"
         style={{
@@ -636,10 +545,10 @@ const VendorSignup = () => {
         }}
       ></div>
 
-      {/* Back Button */}
+      {/* Fixed Back Button - Responsive */}
       <button
         onClick={() => navigate(-1)}
-        className="absolute top-4 left-4 z-20 p-2 rounded-lg transition-colors flex items-center gap-2 text-white"
+        className="absolute top-4 left-4 z-20 p-2 sm:p-3 rounded-lg transition-colors flex items-center gap-2 text-white text-sm sm:text-base"
         style={{
           backgroundColor: "#F5B800",
         }}
@@ -650,7 +559,7 @@ const VendorSignup = () => {
           e.currentTarget.style.backgroundColor = "#F5B800";
         }}
       >
-        <ArrowLeft size={20} />
+        <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
         <span className="font-medium">Back</span>
       </button>
 
@@ -670,7 +579,6 @@ const VendorSignup = () => {
           </div>
 
           <div className="px-8 py-6">
-            {/* Error Message */}
             {submitError && (
               <div
                 className="mb-6 p-4 rounded-lg text-white text-sm"
@@ -686,12 +594,13 @@ const VendorSignup = () => {
               </div>
             )}
 
-            <div className="flex items-center justify-between mb-8">
+            {/* Restored Original Progress Steps */}
+            <div className="flex items-center justify-between mb-8 overflow-x-auto pb-2">
               {steps.map((step, index) => (
-                <div key={step.num} className="flex items-center flex-1">
+                <div key={step.num} className="flex items-center flex-1 min-w-0">
                   <div className="flex flex-col items-center flex-1">
                     <div
-                      className={`w-12 h-12 rounded-full flex items-center justify-center transition ${
+                      className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition flex-shrink-0 ${
                         currentStep >= step.num ? "text-white" : "text-gray-500"
                       }`}
                       style={{
@@ -701,10 +610,10 @@ const VendorSignup = () => {
                             : "#E9ECEF",
                       }}
                     >
-                      <step.icon className="w-5 h-5" />
+                      <step.icon className="w-5 h-5 sm:w-5 sm:h-5" />
                     </div>
                     <p
-                      className={`text-xs mt-2 font-medium ${
+                      className={`text-xs mt-2 font-medium text-center whitespace-nowrap ${
                         currentStep >= step.num ? "" : "text-gray-500"
                       }`}
                       style={{
@@ -719,7 +628,7 @@ const VendorSignup = () => {
                   </div>
                   {index < steps.length - 1 && (
                     <div
-                      className={`h-1 flex-1 mx-2 rounded transition ${
+                      className={`h-1 flex-1 mx-2 sm:mx-4 rounded transition flex-shrink ${
                         currentStep > step.num ? "" : "bg-gray-200"
                       }`}
                       style={{
@@ -803,16 +712,8 @@ const VendorSignup = () => {
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                       style={{
-                        border: `1px solid ${designTokens.colors.border.light}`,
+                        border: `1px solid ${errors.businessName ? designTokens.colors.error.red : designTokens.colors.border.light}`,
                       }}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onBlur={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     />
                     {errors.businessName && (
                       <p
@@ -838,16 +739,8 @@ const VendorSignup = () => {
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                       style={{
-                        border: `1px solid ${designTokens.colors.border.light}`,
+                        border: `1px solid ${errors.ownerName ? designTokens.colors.error.red : designTokens.colors.border.light}`,
                       }}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onBlur={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     />
                     {errors.ownerName && (
                       <p
@@ -873,16 +766,8 @@ const VendorSignup = () => {
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                       style={{
-                        border: `1px solid ${designTokens.colors.border.light}`,
+                        border: `1px solid ${errors.email ? designTokens.colors.error.red : designTokens.colors.border.light}`,
                       }}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onBlur={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     />
                     {errors.email && (
                       <p
@@ -909,16 +794,8 @@ const VendorSignup = () => {
                       placeholder="10-digit number"
                       className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                       style={{
-                        border: `1px solid ${designTokens.colors.border.light}`,
+                        border: `1px solid ${errors.phone ? designTokens.colors.error.red : designTokens.colors.border.light}`,
                       }}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onBlur={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     />
                     {errors.phone && (
                       <p
@@ -926,102 +803,6 @@ const VendorSignup = () => {
                         style={{ color: designTokens.colors.error.red }}
                       >
                         {errors.phone}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-1 text-left"
-                      style={{ color: designTokens.colors.text.primary }}
-                    >
-                      Password *
-                    </label>
-                    <div className="relative">
-                      <Lock
-                        className="absolute left-3 top-1/2 transform -translate-y-1/2"
-                        style={{ color: designTokens.colors.text.secondary }}
-                        size={18}
-                      />
-                      <input
-                        type="password"
-                        name="password"
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        placeholder="Enter password (min 6 characters)"
-                        className="w-full pl-10 pr-3 py-2 rounded-lg focus:outline-none focus:ring-2"
-                        style={{
-                          border: `1px solid ${
-                            errors.password
-                              ? designTokens.colors.error.red
-                              : designTokens.colors.border.light
-                          }`,
-                        }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor = errors.password
-                            ? designTokens.colors.error.red
-                            : designTokens.colors.border.light)
-                        }
-                      />
-                    </div>
-                    {errors.password && (
-                      <p
-                        className="text-xs mt-1"
-                        style={{ color: designTokens.colors.error.red }}
-                      >
-                        {errors.password}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      className="block text-sm font-medium mb-1 text-left"
-                      style={{ color: designTokens.colors.text.primary }}
-                    >
-                      Confirm Password *
-                    </label>
-                    <div className="relative">
-                      <Lock
-                        className="absolute left-3 top-1/2 transform -translate-y-1/2"
-                        style={{ color: designTokens.colors.text.secondary }}
-                        size={18}
-                      />
-                      <input
-                        type="password"
-                        name="confirmPassword"
-                        value={formData.confirmPassword}
-                        onChange={handleInputChange}
-                        placeholder="Confirm your password"
-                        className="w-full pl-10 pr-3 py-2 rounded-lg focus:outline-none focus:ring-2"
-                        style={{
-                          border: `1px solid ${
-                            errors.confirmPassword
-                              ? designTokens.colors.error.red
-                              : designTokens.colors.border.light
-                          }`,
-                        }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor = errors.confirmPassword
-                            ? designTokens.colors.error.red
-                            : designTokens.colors.border.light)
-                        }
-                      />
-                    </div>
-                    {errors.confirmPassword && (
-                      <p
-                        className="text-xs mt-1"
-                        style={{ color: designTokens.colors.error.red }}
-                      >
-                        {errors.confirmPassword}
                       </p>
                     )}
                   </div>
@@ -1042,14 +823,6 @@ const VendorSignup = () => {
                       style={{
                         border: `1px solid ${designTokens.colors.border.light}`,
                       }}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onBlur={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     />
                   </div>
 
@@ -1065,18 +838,11 @@ const VendorSignup = () => {
                       name="yearsInBusiness"
                       value={formData.yearsInBusiness}
                       onChange={handleInputChange}
+                      min="0"
                       className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                       style={{
                         border: `1px solid ${designTokens.colors.border.light}`,
                       }}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onBlur={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     />
                   </div>
                 </div>
@@ -1106,16 +872,8 @@ const VendorSignup = () => {
                       rows="3"
                       className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                       style={{
-                        border: `1px solid ${designTokens.colors.border.light}`,
+                        border: `1px solid ${errors.address ? designTokens.colors.error.red : designTokens.colors.border.light}`,
                       }}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onBlur={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     />
                     {errors.address && (
                       <p
@@ -1142,16 +900,8 @@ const VendorSignup = () => {
                         onChange={handleInputChange}
                         className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                         style={{
-                          border: `1px solid ${designTokens.colors.border.light}`,
+                          border: `1px solid ${errors.city ? designTokens.colors.error.red : designTokens.colors.border.light}`,
                         }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
                       />
                       {errors.city && (
                         <p
@@ -1177,16 +927,8 @@ const VendorSignup = () => {
                         onChange={handleInputChange}
                         className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                         style={{
-                          border: `1px solid ${designTokens.colors.border.light}`,
+                          border: `1px solid ${errors.state ? designTokens.colors.error.red : designTokens.colors.border.light}`,
                         }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
                       />
                       {errors.state && (
                         <p
@@ -1210,19 +952,11 @@ const VendorSignup = () => {
                         name="pincode"
                         value={formData.pincode}
                         onChange={handleInputChange}
-                        placeholder="6-digit"
+                        placeholder="Enter pincode"
                         className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                         style={{
-                          border: `1px solid ${designTokens.colors.border.light}`,
+                          border: `1px solid ${errors.pincode ? designTokens.colors.error.red : designTokens.colors.border.light}`,
                         }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
                       />
                       {errors.pincode && (
                         <p
@@ -1304,19 +1038,14 @@ const VendorSignup = () => {
                       name="capacity"
                       value={formData.capacity}
                       onChange={handleInputChange}
+                      min="1"
+                      step="1"
                       className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                       style={{
                         border: `1px solid ${designTokens.colors.border.light}`,
                       }}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onBlur={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     />
+                    <p className="text-xs text-gray-500 mt-1">Minimum 1 tiffin per day</p>
                   </div>
 
                   <div>
@@ -1334,20 +1063,13 @@ const VendorSignup = () => {
                       style={{
                         border: `1px solid ${designTokens.colors.border.light}`,
                       }}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onBlur={(e) =>
-                        (e.target.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     >
                       <option value="">Select Range</option>
                       <option value="50-100">₹50 - ₹100</option>
                       <option value="100-150">₹100 - ₹150</option>
                       <option value="150-200">₹150 - ₹200</option>
-                      <option value="200+">₹200+</option>
+                      <option value="200-250">₹200 - ₹250</option>
+                      <option value="250+">₹250+</option>
                     </select>
                   </div>
                 </div>
@@ -1369,14 +1091,6 @@ const VendorSignup = () => {
                     style={{
                       border: `1px solid ${designTokens.colors.border.light}`,
                     }}
-                    onFocus={(e) =>
-                      (e.target.style.borderColor =
-                        designTokens.colors.primary.main)
-                    }
-                    onBlur={(e) =>
-                      (e.target.style.borderColor =
-                        designTokens.colors.border.light)
-                    }
                   />
                 </div>
               </div>
@@ -1408,14 +1122,6 @@ const VendorSignup = () => {
                         style={{
                           border: `1px solid ${designTokens.colors.border.light}`,
                         }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
                       />
                     </div>
 
@@ -1435,14 +1141,6 @@ const VendorSignup = () => {
                         style={{
                           border: `1px solid ${designTokens.colors.border.light}`,
                         }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
                       />
                     </div>
 
@@ -1462,14 +1160,6 @@ const VendorSignup = () => {
                         style={{
                           border: `1px solid ${designTokens.colors.border.light}`,
                         }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
                       />
                     </div>
 
@@ -1490,14 +1180,6 @@ const VendorSignup = () => {
                         style={{
                           border: `1px solid ${designTokens.colors.border.light}`,
                         }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
                       />
                     </div>
                   </div>
@@ -1526,16 +1208,8 @@ const VendorSignup = () => {
                         placeholder="FSSAI/Food License Number"
                         className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                         style={{
-                          border: `1px solid ${designTokens.colors.border.light}`,
+                          border: `1px solid ${errors.fssaiNumber ? designTokens.colors.error.red : designTokens.colors.border.light}`,
                         }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
                       />
                       {errors.fssaiNumber && (
                         <p
@@ -1563,42 +1237,6 @@ const VendorSignup = () => {
                         style={{
                           border: `1px solid ${designTokens.colors.border.light}`,
                         }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
-                      />
-                    </div>
-
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-1 text-left"
-                        style={{ color: designTokens.colors.text.primary }}
-                      >
-                        VAT Number (if applicable)
-                      </label>
-                      <input
-                        type="text"
-                        name="gstNumber"
-                        value={formData.gstNumber}
-                        onChange={handleInputChange}
-                        placeholder="GST/VAT Number"
-                        className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
-                        style={{
-                          border: `1px solid ${designTokens.colors.border.light}`,
-                        }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.primary.main)
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor =
-                            designTokens.colors.border.light)
-                        }
                       />
                     </div>
                   </div>
@@ -1618,28 +1256,15 @@ const VendorSignup = () => {
                   {[
                     { key: "fssaiLicense", label: "FSSAI License *" },
                     { key: "panCard", label: "PAN Card *" },
-                    { key: "gstCertificate", label: "GST Certificate" },
-                    { key: "addressProof", label: "Address Proof *" },
-                    {
-                      key: "bankProof",
-                      label: "Cancelled Cheque/Bank Statement",
-                    },
+                    { key: "bankProof", label: "Cancelled Cheque/Bank Statement" },
                     { key: "menuCard", label: "Sample Menu Card" },
                   ].map((doc) => (
                     <div
                       key={doc.key}
                       className="border-2 border-dashed rounded-lg p-4 transition"
                       style={{
-                        borderColor: designTokens.colors.border.light,
+                        borderColor: errors[doc.key] ? designTokens.colors.error.red : designTokens.colors.border.light,
                       }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.borderColor =
-                          designTokens.colors.primary.main)
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.borderColor =
-                          designTokens.colors.border.light)
-                      }
                     >
                       <label
                         className="block text-sm font-medium mb-2 text-left"
@@ -1659,17 +1284,9 @@ const VendorSignup = () => {
                           htmlFor={doc.key}
                           className="flex-1 flex items-center justify-center px-4 py-2 rounded-lg cursor-pointer transition"
                           style={{
-                            backgroundColor:
-                              designTokens.colors.background.light,
+                            backgroundColor: designTokens.colors.background.light,
                             color: designTokens.colors.text.primary,
                           }}
-                          onMouseEnter={(e) =>
-                            (e.currentTarget.style.backgroundColor = "#F3F4F6")
-                          }
-                          onMouseLeave={(e) =>
-                            (e.currentTarget.style.backgroundColor =
-                              designTokens.colors.background.light)
-                          }
                         >
                           <Upload className="w-4 h-4 mr-2" />
                           Choose File
@@ -1681,7 +1298,7 @@ const VendorSignup = () => {
                           style={{ color: designTokens.colors.primary.main }}
                         >
                           <CheckCircle className="w-4 h-4 mr-1" />
-                          {documents[doc.key].name}
+                          <span className="truncate">{documents[doc.key].name}</span>
                         </span>
                       )}
                       {errors[doc.key] && (
@@ -1765,6 +1382,7 @@ const VendorSignup = () => {
               </div>
             )}
 
+            {/* Restored Original Navigation Buttons */}
             <div
               className="flex justify-between mt-8 pt-6 border-t"
               style={{ borderColor: designTokens.colors.border.light }}
