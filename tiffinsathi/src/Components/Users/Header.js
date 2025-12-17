@@ -568,12 +568,6 @@ const Header = () => {
             >
               <span>Login</span>
             </Link>
-            <Link
-              to="/register"
-              className="text-gray-700 px-4 py-2 rounded-lg inline-flex items-center gap-1.5 text-sm font-medium hover:bg-gray-100 transition-colors"
-            >
-              <span>Register</span>
-            </Link>
           </div>
         )}
       </div>
@@ -710,32 +704,20 @@ const Header = () => {
                 </p>
               </>
             ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="w-full block text-center text-white px-4 py-3 rounded-lg font-medium shadow-sm transition-colors mb-3"
-                  style={{ backgroundColor: "#F5B800" }}
-                  onClick={() => setMobileMenuOpen(false)}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.backgroundColor = "#e0a500")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.backgroundColor = "#F5B800")
-                  }
-                >
-                  Login to Your Account
-                </Link>
-                <p className="text-xs text-gray-500 text-center">
-                  Don't have an account?{" "}
-                  <Link
-                    to="/register"
-                    className="text-yellow-600 hover:underline font-medium"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Sign up
-                  </Link>
-                </p>
-              </>
+              <Link
+                to="/login"
+                className="w-full block text-center text-white px-4 py-3 rounded-lg font-medium shadow-sm transition-colors"
+                style={{ backgroundColor: "#F5B800" }}
+                onClick={() => setMobileMenuOpen(false)}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.backgroundColor = "#e0a500")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.backgroundColor = "#F5B800")
+                }
+              >
+                Login to Your Account
+              </Link>
             )}
           </div>
         </div>

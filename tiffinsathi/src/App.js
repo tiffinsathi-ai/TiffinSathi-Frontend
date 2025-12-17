@@ -83,6 +83,7 @@ function App() {
               <Route path="restaurants" element={<Restaurant />} />
               <Route path="packages" element={<Packages />} />
               <Route path="checkout" element={<Checkout />} />
+              <Route path="user/profile" element={<UserProfile />} />
               <Route path="user/subscriptions" element={<MySubscription />} />
               <Route path="payment/success" element={<PaymentSuccess />} />
               <Route path="payment/failure" element={<PaymentFailure />} />
