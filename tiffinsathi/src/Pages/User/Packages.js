@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import { HiStar, HiChevronDown } from "react-icons/hi";
 import { Heart } from "lucide-react";
+import { authStorage } from "../../helpers/api";
+import homeBg from "../../assets/home.jpg";
 
 const Packages = () => {
+  const navigate = useNavigate();
   const [packages, setPackages] = useState([]);
   const [filteredPackages, setFilteredPackages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,8 +45,24 @@ const Packages = () => {
       const response = await axios.get(
         "http://localhost:8080/api/meal-packages"
       );
-      setPackages(response.data);
-      setFilteredPackages(response.data);
+
+      // Ensure response.data is an array and normalize the data structure
+      const packagesData = Array.isArray(response.data) ? response.data : [];
+
+      // Normalize features to always be an array
+      const normalizedPackages = packagesData.map((pkg) => ({
+        ...pkg,
+        features: Array.isArray(pkg.features)
+          ? pkg.features
+          : pkg.features
+          ? [pkg.features]
+          : [],
+        packageSets: Array.isArray(pkg.packageSets) ? pkg.packageSets : [],
+      }));
+
+      console.log("Fetched packages:", normalizedPackages);
+      setPackages(normalizedPackages);
+      setFilteredPackages(normalizedPackages);
     } catch (err) {
       console.error("Error fetching packages:", err);
       setError("Failed to load packages. Please try again later.");
@@ -174,15 +194,26 @@ const Packages = () => {
   return (
     <div className="flex flex-col min-h-screen w-full bg-gray-50">
       {/* Hero Section */}
-      <section className="relative min-h-[400px] flex items-center justify-center bg-cover bg-center bg-no-repeat overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-green-400/20 via-yellow-400/20 to-green-500/20 backdrop-blur-sm"></div>
-        <div className="absolute inset-0 bg-black/10"></div>
+      <section className="relative min-h-[400px] flex items-center justify-center overflow-hidden">
+        {/* Background Image with Blur */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: `url(${homeBg})`,
+            filter: "blur(8px)",
+            transform: "scale(1.1)",
+          }}
+        ></div>
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-green-400/30 via-yellow-400/20 to-green-500/30"></div>
+        <div className="absolute inset-0 bg-black/20"></div>
+        {/* Content */}
         <div className="relative z-10 text-center px-6 max-w-4xl mx-auto py-20">
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-800 mb-6 leading-tight">
+          <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight drop-shadow-lg">
             Choose Your Perfect{" "}
-            <span style={{ color: "#4A8C39" }}>Meal Package</span>
+            <span style={{ color: "#F5B800" }}>Meal Package</span>
           </h1>
-          <p className="text-lg md:text-xl text-gray-700 mb-8 max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-white mb-8 max-w-2xl mx-auto drop-shadow-md">
             From daily fresh tiffins to monthly premium plans, find the perfect
             meal solution for your lifestyle.
           </p>
@@ -361,7 +392,9 @@ const Packages = () => {
                       {/* Features/Inclusions */}
                       <div className="mb-4">
                         <div className="text-sm text-gray-700">
-                          {pkg.features && pkg.features.length > 0 ? (
+                          {pkg.features &&
+                          Array.isArray(pkg.features) &&
+                          pkg.features.length > 0 ? (
                             <div className="space-y-1">
                               {pkg.features.slice(0, 3).map((feature, idx) => (
                                 <div
@@ -369,7 +402,11 @@ const Packages = () => {
                                   className="flex items-center gap-2"
                                 >
                                   <span className="text-green-600">•</span>
-                                  <span>{feature}</span>
+                                  <span>
+                                    {typeof feature === "string"
+                                      ? feature
+                                      : JSON.stringify(feature)}
+                                  </span>
                                 </div>
                               ))}
                               {pkg.features.length > 3 && (
@@ -380,7 +417,9 @@ const Packages = () => {
                             </div>
                           ) : (
                             <div className="text-gray-500">
-                              {pkg.packageSets && pkg.packageSets.length > 0
+                              {pkg.packageSets &&
+                              Array.isArray(pkg.packageSets) &&
+                              pkg.packageSets.length > 0
                                 ? `${pkg.packageSets.length} meal sets available`
                                 : "Check details for inclusions"}
                             </div>
@@ -393,10 +432,10 @@ const Packages = () => {
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="text-2xl font-bold text-gray-800">
-                              ₹{pkg.pricePerSet || 0}
+                              Rs.{pkg.pricePerSet || 0}
                             </span>
                             <span className="text-lg text-gray-500 line-through">
-                              ₹{originalPrice}
+                              Rs.{originalPrice}
                             </span>
                           </div>
                           <div className="text-xs text-gray-500 mt-1">
@@ -404,6 +443,18 @@ const Packages = () => {
                           </div>
                         </div>
                         <button
+                          onClick={() => {
+                            const token = authStorage.getToken();
+                            if (!token) {
+                              navigate("/login", {
+                                state: { from: "/packages", packageData: pkg },
+                              });
+                            } else {
+                              navigate("/schedule-customization", {
+                                state: { packageData: pkg },
+                              });
+                            }
+                          }}
                           className="px-6 py-2 rounded-lg font-medium text-white transition-colors flex items-center gap-2"
                           style={{ backgroundColor: "#F5B800" }}
                           onMouseEnter={(e) =>

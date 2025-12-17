@@ -12,9 +12,10 @@ import ResetPassword from "./Pages/User/ResetPassword";
 import VendorSignup from "./Pages/Vendor/VendorSignup";
 
 // ---------- User ----------
-import Home from "./Pages/User/Home";
 import UserProfile from "./Pages/User/UserProfile";
 import Layout from "./Components/Users/Layout";
+import ScheduleCustomization from "./Pages/User/ScheduleCustomization";
+import Checkout from "./Pages/User/Checkout";
 
 // ---------- Vendor ----------
 import VendorLayout from "./Components/Vendor/VendorLayout";
@@ -52,7 +53,6 @@ import DeliveryRoutes from "./Pages/Delivery/DeliveryRoutes";
 import Schedules from "./Pages/Delivery/Schedules";
 import DeliveryPerformance from "./Pages/Delivery/DeliveryPerformance";
 
-
 function App() {
   return (
     <Router>
@@ -72,6 +72,11 @@ function App() {
               <Route index element={<Home />} />
               <Route path="packages" element={<Packages />} />
             </Route>
+            <Route
+              path="/schedule-customization"
+              element={<ScheduleCustomization />}
+            />
+            <Route path="/checkout" element={<Checkout />} />
 
             {/* Vendor Routes - TEMPORARILY NO AUTH */}
             <Route path="/vendor/*" element={<VendorLayout />}>
@@ -79,7 +84,10 @@ function App() {
               <Route path="tiffins" element={<Tiffins />} />
               <Route path="orders" element={<Orders />} />
               <Route path="customers" element={<Customers />} />
-              <Route path="delivery-partners" element={<DeliveryPartnersPage />} />
+              <Route
+                path="delivery-partners"
+                element={<DeliveryPartnersPage />}
+              />
               <Route path="reviews" element={<Reviews />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="earnings" element={<Earnings />} />
@@ -95,8 +103,14 @@ function App() {
               <Route index element={<AdminDashboard />} />
               <Route path="user-management" element={<UserManagementTable />} />
               <Route path="profile" element={<AdminProfile />} />
-              <Route path="vendor-management" element={<VendorManagementTable />}/>
-              <Route path="payment-management" element={<PaymentManagement />} />
+              <Route
+                path="vendor-management"
+                element={<VendorManagementTable />}
+              />
+              <Route
+                path="payment-management"
+                element={<PaymentManagement />}
+              />
               <Route path="activities" element={<ActivitiesPage />} />
               <Route path="analytics" element={<AnalyticsPage />} />
               <Route path="settings" element={<AdminSetting />} />
@@ -110,7 +124,6 @@ function App() {
               <Route path="routes" element={<DeliveryRoutes />} />
               <Route path="schedule" element={<Schedules />} />
               <Route path="performance" element={<DeliveryPerformance />} />
-
             </Route>
           </Routes>
         </main>

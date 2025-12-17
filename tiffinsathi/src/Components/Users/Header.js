@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   HiHome,
@@ -36,27 +36,31 @@ const Header = () => {
         try {
           const parsedUser = JSON.parse(userData);
           console.log("Header - Parsed user data:", parsedUser);
-          
+
           // Use consistent field names - only check userName and email
           setUser({
-            userName: parsedUser.userName || parsedUser.name || parsedUser.username || "User",
+            userName:
+              parsedUser.userName ||
+              parsedUser.name ||
+              parsedUser.username ||
+              "User",
             email: parsedUser.email || "",
-            role: parsedUser.role 
+            role: parsedUser.role,
           });
-          
+
           setProfilePicture(parsedUser.profilePicture || null);
         } catch (error) {
           console.error("Error parsing user data:", error);
-          setUser({ 
-            userName: "User", 
-            email: ""
+          setUser({
+            userName: "User",
+            email: "",
           });
           setProfilePicture(null);
         }
       } else {
-        setUser({ 
-          userName: "User", 
-          email: ""
+        setUser({
+          userName: "User",
+          email: "",
         });
         setProfilePicture(null);
       }
@@ -102,8 +106,8 @@ const Header = () => {
       }
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   useEffect(() => {
@@ -129,16 +133,21 @@ const Header = () => {
     return user.email || "";
   };
 
-
   const getProfilePictureSrc = () => {
     if (profilePicture) {
-      if (typeof profilePicture === 'string' && profilePicture.startsWith('data:')) {
+      if (
+        typeof profilePicture === "string" &&
+        profilePicture.startsWith("data:")
+      ) {
         return profilePicture;
       }
-      if (typeof profilePicture === 'string' && (profilePicture.startsWith('/9j/') || profilePicture.length > 1000)) {
+      if (
+        typeof profilePicture === "string" &&
+        (profilePicture.startsWith("/9j/") || profilePicture.length > 1000)
+      ) {
         return `data:image/jpeg;base64,${profilePicture}`;
       }
-      if (typeof profilePicture === 'string') {
+      if (typeof profilePicture === "string") {
         return profilePicture;
       }
     }
@@ -146,15 +155,45 @@ const Header = () => {
   };
 
   const navItems = [
-    { id: 'home', label: 'Home', icon: <HiHome className="w-5 h-5" />, active: true },
-    { id: 'packages', label: 'Packages', icon: <HiCube className="w-5 h-5" /> },
-    { id: 'restaurant', label: 'Restaurant', icon: <UtensilsCrossed className="w-5 h-5" /> },
-    { id: 'subscription', label: 'My Subscription', icon: <HiCalendar className="w-5 h-5" /> },
+    {
+      id: "home",
+      label: "Home",
+      icon: <HiHome className="w-5 h-5" />,
+      path: "/",
+    },
+    {
+      id: "packages",
+      label: "Packages",
+      icon: <HiCube className="w-5 h-5" />,
+      path: "/packages",
+    },
+    {
+      id: "restaurant",
+      label: "Restaurant",
+      icon: <UtensilsCrossed className="w-5 h-5" />,
+      path: "#",
+    },
+    {
+      id: "subscription",
+      label: "My Subscription",
+      icon: <HiCalendar className="w-5 h-5" />,
+      path: "#",
+    },
   ];
 
   const profileMenuItems = [
-    { id: 'profile', label: 'My Profile', icon: <HiUserCircle className="w-5 h-5" />, action: () => navigate("/profile") },
-    { id: 'settings', label: 'Settings', icon: <Settings className="w-5 h-5" />, action: () => navigate("/settings") },
+    {
+      id: "profile",
+      label: "My Profile",
+      icon: <HiUserCircle className="w-5 h-5" />,
+      action: () => navigate("/profile"),
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      icon: <Settings className="w-5 h-5" />,
+      action: () => navigate("/settings"),
+    },
   ];
 
   return (
@@ -178,93 +217,54 @@ const Header = () => {
       </div>
 
       {/* Navigation Links - Centered */}
-      <nav className="flex items-center gap-4 absolute left-1/2 transform -translate-x-1/2">
-        {/* Home */}
-        <Link
-          to="/"
-          className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm font-medium shadow-sm transition-colors ${
-            location.pathname === "/"
-              ? "text-white"
-              : "text-gray-600 hover:text-gray-800"
-          }`}
-          style={
-            location.pathname === "/" ? { backgroundColor: "#F5B800" } : {}
-          }
-          onMouseEnter={(e) => {
-            if (location.pathname !== "/") {
-              e.currentTarget.style.color = "#1f2937";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (location.pathname !== "/") {
-              e.currentTarget.style.color = "#4b5563";
-            }
-          }}
-        >
-          <HiHome className="w-4 h-4" />
-          <span>Home</span>
-        </Link>
-
-        {/* Packages */}
-        <Link
-          to="/packages"
-          className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm font-medium shadow-sm transition-colors ${
-            location.pathname === "/packages"
-              ? "text-white"
-              : "text-gray-600 hover:text-gray-800"
-          }`}
-          style={
-            location.pathname === "/packages"
-              ? { backgroundColor: "#F5B800" }
-              : {}
-          }
-          onMouseEnter={(e) => {
-            if (location.pathname !== "/packages") {
-              e.currentTarget.style.color = "#1f2937";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (location.pathname !== "/packages") {
-              e.currentTarget.style.color = "#4b5563";
-            }
-          }}
-        >
-          <HiCube className="w-4 h-4" />
-          <span>Packages</span>
-        </Link>
-
-        {/* Restaurant - Inactive */}
-        <button className="px-3 py-1.5 flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors">
-          <UtensilsCrossed className="w-4 h-4" style={{ color: "#212529" }} />
-          <span>Restaurant</span>
-        </button>
-
-        {/* My Subscription - Inactive */}
-        <button className="px-3 py-1.5 flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors">
-          <HiCalendar className="w-4 h-4" />
-          <span>My Subscription</span>
-        </button>
-      </nav>
-
-      {/* Desktop Navigation Links - Centered */}
       <nav className="hidden md:flex items-center gap-2 lg:gap-4 absolute left-1/2 transform -translate-x-1/2">
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm font-medium shadow-sm transition-colors ${
-              item.active 
-                ? 'text-white' 
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-            style={item.active ? { backgroundColor: "#F5B800" } : {}}
-            onMouseEnter={(e) => item.active && (e.currentTarget.style.backgroundColor = "#e0a500")}
-            onMouseLeave={(e) => item.active && (e.currentTarget.style.backgroundColor = "#F5B800")}
-          >
-            {item.icon}
-            <span className="hidden lg:inline">{item.label}</span>
-          </button>
-        ))}
+        {navItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          const Component = item.path === "#" ? "button" : Link;
+          const props = item.path === "#" ? {} : { to: item.path };
+
+          return (
+            <Component
+              key={item.id}
+              {...props}
+              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm font-medium shadow-sm transition-colors ${
+                isActive ? "text-white" : "text-gray-600 hover:text-gray-800"
+              }`}
+              style={isActive ? { backgroundColor: "#F5B800" } : {}}
+              onMouseEnter={(e) => {
+                if (isActive) {
+                  e.currentTarget.style.backgroundColor = "#e0a500";
+                } else {
+                  e.currentTarget.style.color = "#1f2937";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (isActive) {
+                  e.currentTarget.style.backgroundColor = "#F5B800";
+                } else {
+                  e.currentTarget.style.color = "#4b5563";
+                }
+              }}
+            >
+              {item.icon}
+              <span className="hidden lg:inline">{item.label}</span>
+            </Component>
+          );
+        })}
       </nav>
+
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        className="md:hidden p-2 rounded-lg text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+        aria-label="Toggle menu"
+      >
+        {mobileMenuOpen ? (
+          <HiX className="w-6 h-6" />
+        ) : (
+          <HiMenu className="w-6 h-6" />
+        )}
+      </button>
 
       {/* Desktop Login Button or Profile Dropdown */}
       <div className="hidden md:block">
@@ -288,7 +288,11 @@ const Header = () => {
               <span className="text-sm font-medium text-gray-800 hidden lg:inline">
                 {getDisplayName()}
               </span>
-              <HiChevronDown className={`w-4 h-4 text-gray-800 transition-transform ${showDropdown ? "rotate-180" : ""}`} />
+              <HiChevronDown
+                className={`w-4 h-4 text-gray-800 transition-transform ${
+                  showDropdown ? "rotate-180" : ""
+                }`}
+              />
             </button>
 
             {/* Dropdown Menu */}
@@ -368,17 +372,19 @@ const Header = () => {
 
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
-        <div 
-          className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity" 
+        <div
+          className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       {/* Mobile Menu Sidebar */}
-      <div className={`
+      <div
+        className={`
         md:hidden fixed top-0 left-0 h-full w-full max-w-sm bg-white z-50 transform transition-transform duration-300 ease-in-out
-        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
+        ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
+      `}
+      >
         <div className="flex flex-col h-full">
           {/* Profile Section at the Top */}
           <div className="bg-white p-6 border-b border-gray-200">
@@ -394,7 +400,7 @@ const Header = () => {
                   }}
                 />
               </div>
-              
+
               {/* User Info */}
               <div className="flex-1 min-w-0">
                 <div className="font-bold text-lg text-gray-900 truncate">
@@ -405,7 +411,6 @@ const Header = () => {
                     <div className="text-sm text-gray-600 truncate mt-1">
                       {getUserEmail()}
                     </div>
-                    
                   </>
                 )}
               </div>
@@ -417,23 +422,30 @@ const Header = () => {
             {/* Main Navigation */}
             <div className="p-4 border-b border-gray-100">
               <div className="space-y-2">
-                {navItems.map((item) => (
-                  <button
-                    key={item.id}
-                    className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors ${
-                      item.active
-                        ? 'text-white hover:bg-yellow-600'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                    style={item.active ? { backgroundColor: "#F5B800" } : {}}
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                    }}
-                  >
-                    {item.icon}
-                    <span className="font-medium">{item.label}</span>
-                  </button>
-                ))}
+                {navItems.map((item) => {
+                  const isActive = location.pathname === item.path;
+                  const Component = item.path === "#" ? "button" : Link;
+                  const props = item.path === "#" ? {} : { to: item.path };
+
+                  return (
+                    <Component
+                      key={item.id}
+                      {...props}
+                      className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors ${
+                        isActive
+                          ? "text-white hover:bg-yellow-600"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
+                      style={isActive ? { backgroundColor: "#F5B800" } : {}}
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                      }}
+                    >
+                      {item.icon}
+                      <span className="font-medium">{item.label}</span>
+                    </Component>
+                  );
+                })}
               </div>
             </div>
 
@@ -488,9 +500,9 @@ const Header = () => {
                   Login to Your Account
                 </Link>
                 <p className="text-xs text-gray-500 text-center">
-                  Don't have an account?{' '}
-                  <Link 
-                    to="/register" 
+                  Don't have an account?{" "}
+                  <Link
+                    to="/register"
                     className="text-yellow-600 hover:underline font-medium"
                     onClick={() => setMobileMenuOpen(false)}
                   >
