@@ -15,6 +15,8 @@ import {
   Shield,
   Wifi,
   WifiOff,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { deliveryApi } from '../../helpers/deliveryApi';
 import Modal from '../../Components/Delivery/Modal';
@@ -40,6 +42,12 @@ const DeliveryProfile = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [availabilityStatus, setAvailabilityStatus] = useState('AVAILABLE');
+  // Add state for password visibility
+  const [showPassword, setShowPassword] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
 
   useEffect(() => {
     fetchDeliveryProfile();
@@ -109,6 +117,12 @@ const DeliveryProfile = () => {
         newPassword: "",
         confirmPassword: "",
       });
+      // Reset password visibility
+      setShowPassword({
+        current: false,
+        new: false,
+        confirm: false,
+      });
       setTimeout(() => setMessage(""), 3000);
     } catch (error) {
       console.error("Error changing password:", error);
@@ -127,6 +141,14 @@ const DeliveryProfile = () => {
       console.error("Error toggling availability:", error);
       setMessage("Failed to update availability");
     }
+  };
+
+  // Function to toggle password visibility
+  const togglePasswordVisibility = (field) => {
+    setShowPassword(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
   };
 
   const getAvailabilityColor = () => {
@@ -468,59 +490,106 @@ const DeliveryProfile = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Current Password
             </label>
-            <input
-              type="password"
-              value={passwordData.currentPassword}
-              onChange={(e) =>
-                setPasswordData({
-                  ...passwordData,
-                  currentPassword: e.target.value,
-                })
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-              placeholder="Enter current password"
-            />
+            <div className="relative">
+              <input
+                type={showPassword.current ? "text" : "password"}
+                value={passwordData.currentPassword}
+                onChange={(e) =>
+                  setPasswordData({
+                    ...passwordData,
+                    currentPassword: e.target.value,
+                  })
+                }
+                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                placeholder="Enter current password"
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('current')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+              >
+                {showPassword.current ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               New Password
             </label>
-            <input
-              type="password"
-              value={passwordData.newPassword}
-              onChange={(e) =>
-                setPasswordData({
-                  ...passwordData,
-                  newPassword: e.target.value,
-                })
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-              placeholder="Enter new password"
-            />
+            <div className="relative">
+              <input
+                type={showPassword.new ? "text" : "password"}
+                value={passwordData.newPassword}
+                onChange={(e) =>
+                  setPasswordData({
+                    ...passwordData,
+                    newPassword: e.target.value,
+                  })
+                }
+                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                placeholder="Enter new password"
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('new')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+              >
+                {showPassword.new ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Confirm New Password
             </label>
-            <input
-              type="password"
-              value={passwordData.confirmPassword}
-              onChange={(e) =>
-                setPasswordData({
-                  ...passwordData,
-                  confirmPassword: e.target.value,
-                })
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-              placeholder="Confirm new password"
-            />
+            <div className="relative">
+              <input
+                type={showPassword.confirm ? "text" : "password"}
+                value={passwordData.confirmPassword}
+                onChange={(e) =>
+                  setPasswordData({
+                    ...passwordData,
+                    confirmPassword: e.target.value,
+                  })
+                }
+                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                placeholder="Confirm new password"
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('confirm')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+              >
+                {showPassword.confirm ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-4">
             <button
-              onClick={() => setIsChangePasswordOpen(false)}
+              onClick={() => {
+                setIsChangePasswordOpen(false);
+                // Reset password visibility when closing modal
+                setShowPassword({
+                  current: false,
+                  new: false,
+                  confirm: false,
+                });
+              }}
               className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
             >
               Cancel

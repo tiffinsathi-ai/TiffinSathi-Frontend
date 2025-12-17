@@ -99,14 +99,11 @@ function App() {
 
             {/* Vendor Routes - TEMPORARILY NO AUTH */}
             <Route path="/vendor/*" element={<VendorLayout />}>
-              <Route path="dashboard" element={<Dashboard />} />
+              <Route index element={<Dashboard />} />
               <Route path="tiffins" element={<Tiffins />} />
               <Route path="orders" element={<Orders />} />
               <Route path="customers" element={<Customers />} />
-              <Route
-                path="delivery-partners"
-                element={<DeliveryPartnersPage />}
-              />
+              <Route path="delivery-partners" element={<DeliveryPartnersPage />} />
               <Route path="reviews" element={<Reviews />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="earnings" element={<Earnings />} />

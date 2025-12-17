@@ -1,4 +1,4 @@
-
+/* eslint-disable no-unused-vars */
 import React from "react";
 import Modal from "./Modal";
 import {
@@ -9,22 +9,48 @@ import {
   Navigation,
   UserCircle,
   Map,
+  Calendar,
+  Package,
+  Home,
+  MessageCircle,
 } from "lucide-react";
 
 const MapModal = ({ isOpen, onClose, order, userLocation }) => {
   const getMapUrl = (address) => {
-    if (!address) return null;
-    const encodedAddress = encodeURIComponent(address);
-    return `https://maps.google.com/maps?q=${encodedAddress}&output=embed`;
-};
+    if (!address) return null;
+    const encodedAddress = encodeURIComponent(address);
+    return `https://maps.google.com/maps?q=${encodedAddress}&output=embed`;
+  };
 
   const formatPhoneNumber = (phone) => {
     if (!phone) return "N/A";
-    return phone.replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3");
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 10) {
+      return cleaned.replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3");
+    }
+    if (cleaned.length === 11 && cleaned.startsWith('1')) {
+      return cleaned.replace(/(\d{1})(\d{3})(\d{3})(\d{4})/, "+$1 ($2) $3-$4");
+    }
+    return phone;
   };
 
-  return (
+  // Safe extraction of customer data
+  const getCustomerInfo = () => {
+    if (!order) return null;
     
+    const customer = order.customer || {};
+    
+    return {
+      name: customer.userName || customer.name || "Customer",
+      phone: customer.phoneNumber || order.phoneNumber || "N/A",
+      email: customer.email || order.email || "N/A",
+      profilePicture: customer.profilePicture || customer.avatar || null
+    };
+  };
+
+  const customerInfo = getCustomerInfo();
+
+  return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
@@ -40,7 +66,7 @@ const MapModal = ({ isOpen, onClose, order, userLocation }) => {
           <div className="space-y-4">
             {/* -------------------- CUSTOMER INFO -------------------- */}
             <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-              <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+              <h4 className="font-semibold text-blue-900 mb-4 flex items-center gap-2">
                 <User className="w-5 h-5" />
                 Customer Information
               </h4>
@@ -49,15 +75,25 @@ const MapModal = ({ isOpen, onClose, order, userLocation }) => {
                 {/* Profile Avatar */}
                 <div className="flex-shrink-0">
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
-                    {order.customer?.profilePicture ? (
+                    {customerInfo.profilePicture ? (
                       <img
-                        src={order.customer.profilePicture}
+                        src={customerInfo.profilePicture}
                         alt="Profile"
                         className="w-full h-full rounded-full object-cover"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.parentElement.innerHTML = `
+                            <div class="w-full h-full bg-blue-100 rounded-full flex items-center justify-center">
+                              <span class="text-blue-600 font-bold text-lg">
+                                ${customerInfo.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          `;
+                        }}
                       />
-                    ) : order.customer?.userName ? (
+                    ) : customerInfo.name ? (
                       <span className="text-blue-600 font-bold text-lg">
-                        {order.customer.userName.charAt(0).toUpperCase()}
+                        {customerInfo.name.charAt(0).toUpperCase()}
                       </span>
                     ) : (
                       <UserCircle className="w-8 h-8 text-blue-400" />
@@ -65,34 +101,26 @@ const MapModal = ({ isOpen, onClose, order, userLocation }) => {
                   </div>
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-medium text-blue-700 uppercase tracking-wide">
-                        Name
-                      </label>
-                      <p className="font-semibold text-gray-900 truncate">
-                        {order.customer?.userName || "Customer"}
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-medium text-blue-700 uppercase tracking-wide">
-                        Phone
-                      </label>
-                      <p className="font-medium text-gray-900">
-                        {formatPhoneNumber(order.customer?.phoneNumber)}
-                      </p>
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <label className="text-xs font-medium text-blue-700 uppercase tracking-wide">
-                        Email
-                      </label>
-                      <p className="text-gray-700 truncate">
-                        {order.customer?.email || "N/A"}
-                      </p>
-                    </div>
+                <div className="flex-1 min-w-0 space-y-3">
+                  <div className="flex items-center">
+                    <span className="text-sm font-medium text-gray-700 w-20">Name:</span>
+                    <span className="font-semibold text-gray-900 ml-2">
+                      {customerInfo.name}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <span className="text-sm font-medium text-gray-700 w-20">Phone:</span>
+                    <span className="font-medium text-gray-900 ml-2">
+                      {formatPhoneNumber(customerInfo.phone)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <span className="text-sm font-medium text-gray-700 w-20">Email:</span>
+                    <span className="text-gray-700 ml-2 truncate">
+                      {customerInfo.email}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -100,32 +128,40 @@ const MapModal = ({ isOpen, onClose, order, userLocation }) => {
 
             {/* -------------------- ORDER DETAILS -------------------- */}
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Map className="w-5 h-5" />
+              <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Package className="w-5 h-5" />
                 Order Details
               </h4>
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium text-gray-600">Order ID:</span>
-                  <p className="font-semibold">#{order.orderId}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center">
+                  <span className="text-sm font-medium text-gray-600 w-24">Order ID:</span>
+                  <span className="font-semibold ml-2">#{order.orderId}</span>
                 </div>
 
-                <div>
-                  <span className="font-medium text-gray-600">Status:</span>
-                  <p className="font-semibold capitalize">
-                    {order.status?.toLowerCase()}
-                  </p>
+                <div className="flex items-center">
+                  <span className="text-sm font-medium text-gray-600 w-24">Status:</span>
+                  <span className="font-semibold capitalize ml-2">
+                    {order.status?.toLowerCase().replace('_', ' ') || 'N/A'}
+                  </span>
                 </div>
 
                 {order.preferredDeliveryTime && (
-                  <div className="col-span-2">
-                    <span className="font-medium text-gray-600">
-                      Preferred Time:
-                    </span>
-                    <p className="font-semibold">
+                  <div className="flex items-center md:col-span-2">
+                    <span className="text-sm font-medium text-gray-600 w-24">Preferred Time:</span>
+                    <span className="font-semibold ml-2">
                       {order.preferredDeliveryTime}
-                    </p>
+                    </span>
+                  </div>
+                )}
+
+                {order.deliveryDate && (
+                  <div className="flex items-center md:col-span-2">
+                    <span className="text-sm font-medium text-gray-600 w-24">Delivery Date:</span>
+                    <span className="font-semibold ml-2 flex items-center gap-1">
+                      <Calendar className="w-4 h-4" />
+                      {new Date(order.deliveryDate).toLocaleDateString()}
+                    </span>
                   </div>
                 )}
               </div>
@@ -133,8 +169,8 @@ const MapModal = ({ isOpen, onClose, order, userLocation }) => {
 
             {/* -------------------- DELIVERY ADDRESS -------------------- */}
             <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-              <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
-                <MapPin className="w-5 h-5" />
+              <h4 className="font-semibold text-green-900 mb-4 flex items-center gap-2">
+                <Home className="w-5 h-5" />
                 Delivery Address
               </h4>
 
@@ -146,15 +182,20 @@ const MapModal = ({ isOpen, onClose, order, userLocation }) => {
                 </div>
 
                 <div className="flex-1">
-                  <p className="text-gray-800 leading-relaxed">
-                    {order.deliveryAddress}
-                  </p>
+                  <div className="flex items-start">
+                    <span className="text-sm font-medium text-gray-700 mt-0.5">Address:</span>
+                    <p className="text-gray-800 ml-2 leading-relaxed">
+                      {order.deliveryAddress || 'No address provided'}
+                    </p>
+                  </div>
 
                   {order.specialInstructions && (
-                    <div className="mt-2 p-2 bg-yellow-50 rounded border border-yellow-200">
-                      <span className="text-sm font-medium text-yellow-800">
-                        Special Instructions:
-                      </span>
+                    <div className="mt-3 p-3 bg-yellow-50 rounded border border-yellow-200">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-medium text-yellow-800">
+                          Special Instructions:
+                        </span>
+                      </div>
                       <p className="text-sm text-yellow-700 mt-1">
                         {order.specialInstructions}
                       </p>
@@ -175,10 +216,12 @@ const MapModal = ({ isOpen, onClose, order, userLocation }) => {
                   className="border-0"
                   loading="lazy"
                   allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
                 ></iframe>
               ) : (
                 <div className="h-48 bg-gray-200 flex items-center justify-center text-gray-500">
                   <MapPin className="w-10 h-10" />
+                  <p className="ml-2">No map available</p>
                 </div>
               )}
             </div>
@@ -187,24 +230,36 @@ const MapModal = ({ isOpen, onClose, order, userLocation }) => {
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <a
                 href={`https://maps.google.com/?q=${encodeURIComponent(
-                  order.deliveryAddress
+                  order.deliveryAddress || ''
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 transition-colors font-medium"
+                className="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!order.deliveryAddress}
               >
                 <Navigation className="w-5 h-5" />
                 Open in Maps
               </a>
 
-              {order.customer?.phoneNumber && (
-                <a
-                  href={`tel:${order.customer.phoneNumber}`}
-                  className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2 transition-colors font-medium"
-                >
-                  <Phone className="w-5 h-5" />
-                  Call Customer
-                </a>
+              {customerInfo.phone && customerInfo.phone !== "N/A" && (
+                <>
+                  <a
+                    href={`tel:${customerInfo.phone.replace(/\D/g, '')}`}
+                    className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2 transition-colors font-medium"
+                  >
+                    <Phone className="w-5 h-5" />
+                    Call Customer
+                  </a>
+                  <a
+                    href={`https://wa.me/${customerInfo.phone.replace(/\D/g, '').replace(/^1/, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 bg-green-500 text-white px-4 py-3 rounded-lg hover:bg-green-600 flex items-center justify-center gap-2 transition-colors font-medium"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    WhatsApp
+                  </a>
+                </>
               )}
             </div>
           </div>

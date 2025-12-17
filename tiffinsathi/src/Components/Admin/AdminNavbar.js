@@ -1,5 +1,13 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useRef, useEffect } from "react";
-import { Bell, Settings, LogOut, UserCircle, Shield, Menu } from "lucide-react";
+import {
+  Bell,
+  Settings,
+  LogOut,
+  UserCircle,
+  Shield,
+  Menu,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AdminApi from "../../helpers/adminApi";
 import logo from "../../assets/logo.png";
@@ -40,9 +48,8 @@ const AdminNavbar = ({ onToggleSidebar, isMobile }) => {
   const fetchUserData = async () => {
     try {
       setLoading(true);
-      const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
-
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      
       if (!token) {
         console.error("No token found");
         setLoading(false);
@@ -50,28 +57,26 @@ const AdminNavbar = ({ onToggleSidebar, isMobile }) => {
       }
 
       console.log("Fetching user data...");
-
+      
       // Try multiple endpoints to get user data
       let userData;
-
+      
       try {
         // First try the current user profile endpoint
         userData = await AdminApi.getCurrentUserProfile();
         console.log("User data from profile endpoint:", userData);
       } catch (profileError) {
         console.log("Profile endpoint failed, trying users list...");
-
+        
         // If profile endpoint fails, try to get the current user from the users list
         const allUsers = await AdminApi.getUsers();
-        const userEmail =
-          localStorage.getItem("userEmail") ||
-          JSON.parse(localStorage.getItem("user") || "{}").email;
-
+        const userEmail = localStorage.getItem("userEmail") || JSON.parse(localStorage.getItem("user") || "{}").email;
+        
         if (userEmail) {
-          userData = allUsers.find((u) => u.email === userEmail);
+          userData = allUsers.find(u => u.email === userEmail);
           console.log("Found user in users list:", userData);
         }
-
+        
         if (!userData) {
           // Fallback: create a mock admin user from token data
           const storedUser = localStorage.getItem("user");
@@ -81,7 +86,7 @@ const AdminNavbar = ({ onToggleSidebar, isMobile }) => {
             userData = {
               userName: "Admin User",
               email: userEmail || "admin@tiffinsathi.com",
-              role: "ADMIN",
+              role: "ADMIN"
             };
           }
         }
@@ -89,13 +94,13 @@ const AdminNavbar = ({ onToggleSidebar, isMobile }) => {
 
       if (userData) {
         setUser(userData);
-
+        
         if (userData.profilePicture) {
           setProfilePicture(userData.profilePicture);
         } else {
           setProfilePicture(null);
         }
-
+        
         // Store in localStorage for quick access
         localStorage.setItem("user", JSON.stringify(userData));
         console.log("User data set successfully:", userData);
@@ -116,7 +121,7 @@ const AdminNavbar = ({ onToggleSidebar, isMobile }) => {
           setUser({
             userName: "Admin User",
             email: "admin@tiffinsathi.com",
-            role: "ADMIN",
+            role: "ADMIN"
           });
         }
       } else {
@@ -124,7 +129,7 @@ const AdminNavbar = ({ onToggleSidebar, isMobile }) => {
         setUser({
           userName: "Admin User",
           email: "admin@tiffinsathi.com",
-          role: "ADMIN",
+          role: "ADMIN"
         });
       }
     } finally {
@@ -134,7 +139,7 @@ const AdminNavbar = ({ onToggleSidebar, isMobile }) => {
 
   useEffect(() => {
     fetchUserData();
-
+    
     // Set up interval to refresh user data periodically
     const interval = setInterval(fetchUserData, 300000); // Refresh every 5 minutes
 
@@ -148,11 +153,11 @@ const AdminNavbar = ({ onToggleSidebar, isMobile }) => {
       }
     };
 
-    window.addEventListener("userDataUpdated", handleUserDataUpdated);
+    window.addEventListener('userDataUpdated', handleUserDataUpdated);
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener("userDataUpdated", handleUserDataUpdated);
+      window.removeEventListener('userDataUpdated', handleUserDataUpdated);
     };
   }, []);
 
@@ -170,8 +175,11 @@ const AdminNavbar = ({ onToggleSidebar, isMobile }) => {
   const getDisplayName = () => {
     if (loading) return "Loading...";
     if (!user) return "Admin";
-
-    return user.userName || user.name || user.username || "Admin User";
+    
+    return user.userName || 
+           user.name || 
+           user.username || 
+           "Admin User";
   };
 
   const getUserEmail = () => {
@@ -181,15 +189,12 @@ const AdminNavbar = ({ onToggleSidebar, isMobile }) => {
 
   const getProfilePictureSrc = () => {
     if (profilePicture) {
-      if (
-        typeof profilePicture === "string" &&
-        profilePicture.startsWith("data:")
-      ) {
+      if (typeof profilePicture === 'string' && profilePicture.startsWith('data:')) {
         return profilePicture;
       }
-      if (typeof profilePicture === "string") {
+      if (typeof profilePicture === 'string') {
         // If it's a base64 string without data URL prefix
-        if (profilePicture.startsWith("/9j/") || profilePicture.length > 1000) {
+        if (profilePicture.startsWith('/9j/') || profilePicture.length > 1000) {
           return `data:image/jpeg;base64,${profilePicture}`;
         }
         return profilePicture;
@@ -209,9 +214,16 @@ const AdminNavbar = ({ onToggleSidebar, isMobile }) => {
   };
 
   const handleLogout = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("rememberedEmail");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("username");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
+    
     setUser(null);
     setProfilePicture(null);
     setIsDropdownOpen(false);
@@ -245,8 +257,7 @@ const AdminNavbar = ({ onToggleSidebar, isMobile }) => {
                 <h1
                   className="text-xl sm:text-2xl font-bold hidden sm:block"
                   style={{
-                    fontFamily:
-                      "'Brush Script MT', 'Lucida Handwriting', cursive",
+                    fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
                     color: designTokens.colors.secondary.main,
                   }}
                 >
@@ -288,8 +299,7 @@ const AdminNavbar = ({ onToggleSidebar, isMobile }) => {
               <h1
                 className="text-xl sm:text-2xl font-bold hidden sm:block"
                 style={{
-                  fontFamily:
-                    "'Brush Script MT', 'Lucida Handwriting', cursive",
+                  fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
                   color: designTokens.colors.secondary.main,
                 }}
               >

@@ -1,6 +1,6 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 // pages/DeliveryDashboard.js
 import React, { useState, useEffect } from 'react';
-import { toast } from "react-toastify";
 import {
   Package,
   CheckCircle,
@@ -124,7 +124,7 @@ const OrderDeliveries = () => {
       fetchDashboardData();
     } catch (error) {
       console.error('Error updating order status:', error);
-      toast.error('Failed to update order status');
+      alert('Failed to update order status');
     }
   };
 
