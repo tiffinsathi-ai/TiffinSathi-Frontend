@@ -5,20 +5,14 @@ import {
   Search, 
   Filter,
   Star,
-  Calendar,
   MessageCircle,
-  ThumbsUp,
-  ThumbsDown,
-  MoreVertical,
   Trash2,
   Reply,
-  Flag,
   XCircle,
   RefreshCw,
   AlertCircle,
   Users,
-  TrendingUp,
-  Clock
+  TrendingUp
 } from "lucide-react";
 
 const Reviews = () => {

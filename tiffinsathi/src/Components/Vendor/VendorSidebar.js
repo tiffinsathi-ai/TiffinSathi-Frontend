@@ -33,7 +33,7 @@ const designTokens = {
 };
 
 const menu = [
-  { id: "dashboard", icon: BarChart3, label: "Dashboard", to: "/vendor/dashboard" },
+  { id: "dashboard", icon: BarChart3, label: "Dashboard", to: "/vendor/" },
   { id: "tiffins", icon: UtensilsCrossed, label: "My Tiffins", to: "/vendor/tiffins" },
   { id: "orders", icon: Package, label: "Orders", to: "/vendor/orders" },
   { id: "analytics", icon: BarChart3, label: "Analytics", to: "/vendor/analytics" },

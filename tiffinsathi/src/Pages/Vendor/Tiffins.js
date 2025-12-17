@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // src/Pages/Vendor/Tiffins.js
 import React, { useState, useEffect } from "react";
 import { readData, writeData } from "../../helpers/storage";

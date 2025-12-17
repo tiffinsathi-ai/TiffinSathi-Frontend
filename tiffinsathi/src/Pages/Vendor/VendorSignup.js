@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -1065,11 +1066,11 @@ const VendorSignup = () => {
                       }}
                     >
                       <option value="">Select Range</option>
-                      <option value="50-100">₹50 - ₹100</option>
-                      <option value="100-150">₹100 - ₹150</option>
-                      <option value="150-200">₹150 - ₹200</option>
-                      <option value="200-250">₹200 - ₹250</option>
-                      <option value="250+">₹250+</option>
+                      <option value="50-100">Rs.50 - Rs.100</option>
+                      <option value="100-150">Rs.100 - Rs.150</option>
+                      <option value="150-200">Rs.150 - Rs.200</option>
+                      <option value="200-250">Rs.200 - Rs.250</option>
+                      <option value="250+">Rs.250+</option>
                     </select>
                   </div>
                 </div>

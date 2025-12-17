@@ -1,25 +1,15 @@
 // src/Pages/Vendor/Dashboard.js
 import React, { useEffect, useState } from "react";
 import {
-  TrendingUp,
   Package,
   Users,
-  Star,
-  AlertCircle,
-  Calendar,
-  DollarSign,
-  ShoppingCart,
   RefreshCw,
   UserCheck,
   Clock,
   Truck,
   BarChart3,
-  MessageSquare,
-  Home,
-  ChefHat,
   ShoppingBag,
-  CheckCircle,
-  ArrowUpRight,
+
 } from "lucide-react";
 import { readData } from "../../helpers/storage";
 import { useNavigate } from "react-router-dom";

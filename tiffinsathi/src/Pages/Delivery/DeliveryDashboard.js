@@ -1,4 +1,5 @@
-
+/* eslint-disable no-unused-vars */
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect } from 'react';
 import {
   Package,
@@ -25,6 +26,7 @@ import {
   Mail
 } from 'lucide-react';
 import { deliveryApi } from '../../helpers/deliveryApi';
+import MapModal from '../../Components/Delivery/MapModal'; // Import the fixed MapModal
 
 const DeliveryDashboard = () => {
   const [orders, setOrders] = useState([]);
@@ -248,8 +250,8 @@ const DeliveryDashboard = () => {
       'PICKED_UP': { label: 'Picked Up', color: 'orange', step: 2, action: 'Start Delivery' },
       'OUT_FOR_DELIVERY': { label: 'Out for Delivery', color: 'purple', step: 3, action: 'Mark Arrived' },
       'ARRIVED': { label: 'Arrived', color: 'yellow', step: 4, action: 'Mark Delivered' },
-      'DELIVERED': { label: 'Delivered', color: 'green', step: 5, action: 'Completed' },
-      'COMPLETED': { label: 'Completed', color: 'emerald', step: 6, action: 'Completed' }
+      'DELIVERED': { label: 'Delivered', color: 'green', step: 5, action: 'Delivered' },
+      'COMPLETED': { label: 'Completed', color: 'emerald', step: 5, action: 'Completed' }
     };
     return statusMap[status] || { label: status, color: 'gray', step: 0, action: '' };
   };
@@ -275,26 +277,28 @@ const DeliveryDashboard = () => {
     });
   };
 
+  // Updated DeliveryProgress with only 5 steps (removed Completed)
   const DeliveryProgress = ({ order }) => {
     const steps = [
       { number: 1, label: 'Assigned', status: 'ASSIGNED', icon: ShieldCheck },
       { number: 2, label: 'Picked Up', status: 'PICKED_UP', icon: Package },
       { number: 3, label: 'Out for Delivery', status: 'OUT_FOR_DELIVERY', icon: Truck },
       { number: 4, label: 'Arrived', status: 'ARRIVED', icon: Flag },
-      { number: 5, label: 'Delivered', status: 'DELIVERED', icon: CheckCircle },
-      { number: 6, label: 'Completed', status: 'COMPLETED', icon: Award }
+      { number: 5, label: 'Delivered', status: 'DELIVERED', icon: CheckCircle }
     ];
 
     const currentStep = getStatusInfo(order.status).step;
+    // For COMPLETED status, show as Delivered step
+    const displayStep = order.status === 'COMPLETED' ? 5 : currentStep;
 
     return (
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           {steps.map((step, index) => {
             const Icon = step.icon;
-            const isCompleted = currentStep > step.number;
-            const isCurrent = currentStep === step.number;
-            const isUpcoming = currentStep < step.number;
+            const isCompleted = displayStep > step.number;
+            const isCurrent = displayStep === step.number;
+            const isUpcoming = displayStep < step.number;
 
             return (
               <div key={step.number} className="flex items-center">
@@ -310,7 +314,7 @@ const DeliveryDashboard = () => {
                   <span className="text-xs mt-1 text-center hidden sm:block">{step.label}</span>
                 </div>
                 {index < steps.length - 1 && (
-                  <div className={`w-8 sm:w-12 h-1 mx-1 ${currentStep > step.number ? 'bg-green-500' : 'bg-gray-200'
+                  <div className={`w-8 sm:w-12 h-1 mx-1 ${displayStep > step.number ? 'bg-green-500' : 'bg-gray-200'
                     }`} />
                 )}
               </div>
@@ -569,15 +573,24 @@ const DeliveryDashboard = () => {
 
                         {activeTab === 'active' && <DeliveryProgress order={order} />}
 
+                        {/* Customer Info in format: name: john */}
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
                               <User className="h-4 w-4 text-gray-600" />
                             </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{order.customer?.userName || order.customer?.name || 'Customer'}</p>
+                            <div className="space-y-1">
+                              <div className="flex items-center">
+                                <span className="text-sm text-gray-600 mr-2">Name:</span>
+                                <p className="font-medium text-gray-900">
+                                  {order.customer?.userName || order.customer?.name || 'Customer'}
+                                </p>
+                              </div>
                               {order.customer?.phoneNumber && (
-                                <p className="text-sm text-gray-600">{order.customer.phoneNumber}</p>
+                                <div className="flex items-center">
+                                  <span className="text-sm text-gray-600 mr-2">Phone:</span>
+                                  <p className="text-sm text-gray-600">{order.customer.phoneNumber}</p>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -660,7 +673,7 @@ const DeliveryDashboard = () => {
                             <div className="flex items-start gap-2">
                               <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
                               <div>
-                                <p className="text-sm font-medium text-gray-900">Delivery Address</p>
+                                <p className="text-sm font-medium text-gray-900 mb-1">Delivery Address</p>
                                 <p className="text-sm text-gray-600">{order.deliveryAddress}</p>
                               </div>
                             </div>
@@ -706,13 +719,13 @@ const DeliveryDashboard = () => {
         isOpen={showMapModal}
         onClose={() => setShowMapModal(false)}
         order={selectedOrderForMap}
-        formatDate={formatDate}
+        userLocation={userLocation}
       />
     </div>
   );
 };
 
-// Separate component for completed order card
+// Separate component for completed order card with formatted data
 const CompletedOrderCard = ({ order, expandedOrder, toggleOrderExpand, openMapModal, getStatusInfo, formatTime }) => {
   return (
     <div className="border border-gray-200 rounded-xl p-4 bg-white hover:shadow-md transition-shadow">
@@ -758,10 +771,16 @@ const CompletedOrderCard = ({ order, expandedOrder, toggleOrderExpand, openMapMo
           <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
             <User className="h-4 w-4 text-gray-600" />
           </div>
-          <div>
-            <p className="font-medium text-gray-900">{order.customer?.userName || order.customer?.name || 'Customer'}</p>
+          <div className="space-y-1">
+            <div className="flex items-center">
+              <span className="text-sm text-gray-600 mr-2">Name:</span>
+              <p className="font-medium text-gray-900">{order.customer?.userName || order.customer?.name || 'Customer'}</p>
+            </div>
             {order.customer?.phoneNumber && (
-              <p className="text-sm text-gray-600">{order.customer.phoneNumber}</p>
+              <div className="flex items-center">
+                <span className="text-sm text-gray-600 mr-2">Phone:</span>
+                <p className="text-sm text-gray-600">{order.customer.phoneNumber}</p>
+              </div>
             )}
           </div>
         </div>
@@ -781,7 +800,7 @@ const CompletedOrderCard = ({ order, expandedOrder, toggleOrderExpand, openMapMo
           <div className="flex items-start gap-2">
             <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-gray-900">Delivery Address</p>
+              <p className="text-sm font-medium text-gray-900 mb-1">Delivery Address</p>
               <p className="text-sm text-gray-600">{order.deliveryAddress}</p>
             </div>
           </div>
@@ -817,327 +836,4 @@ const CompletedOrderCard = ({ order, expandedOrder, toggleOrderExpand, openMapMo
   );
 };
 
-const MapModal = ({ isOpen, onClose, order, formatDate }) => {
-  if (!isOpen) return null;
-
-  const getMapUrl = (address) => {
-    if (!address) return null;
-    const encodedAddress = encodeURIComponent(address);
-    return `https://maps.google.com/maps?q=${encodedAddress}&output=embed`;
-  };
-
-  // Extract customer info safely
-  const customerName = order?.customer?.userName ||
-    order?.customer?.name ||
-    order?.customerName ||
-    'Customer';
-
-  const customerPhone = order?.customer?.phoneNumber ||
-    order?.customerPhone ||
-    order?.phoneNumber;
-
-  const customerEmail = order?.customer?.email;
-
-  const deliveryAddress = order?.deliveryAddress ||
-    order?.address ||
-    'No address provided';
-
-  // Get customer profile picture with fallbacks
-  const getCustomerProfilePicture = () => {
-    // Check multiple possible locations for profile picture
-    const profilePic = order?.customer?.profilePicture ||
-      order?.customer?.avatar ||
-      order?.customer?.image ||
-      order?.profilePicture;
-
-    if (!profilePic) return null;
-
-    // Handle different formats
-    if (profilePic.startsWith("data:image/")) {
-      return profilePic;
-    } else if (profilePic.startsWith("http")) {
-      return profilePic;
-    } else if (profilePic.startsWith("/9j/") || profilePic.startsWith("iVBORw")) {
-      return `data:image/jpeg;base64,${profilePic}`;
-    } else {
-      // Assume it's a base64 string
-      return `data:image/jpeg;base64,${profilePic}`;
-    }
-  };
-
-  const customerProfilePicture = getCustomerProfilePicture();
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-xl font-bold text-gray-900">
-            Delivery Location - Order #{order?.orderId}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors text-2xl"
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Customer Info Section with Profile Picture */}
-          <div className="bg-blue-50 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              {/* Profile Picture */}
-              <div className="w-16 h-16 rounded-full overflow-hidden border-4 border-white shadow-md flex-shrink-0">
-                {customerProfilePicture ? (
-                  <img
-                    src={customerProfilePicture}
-                    alt={customerName}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.style.display = 'none';
-                      e.target.parentElement.innerHTML = `
-                        <div class="w-full h-full bg-blue-100 flex items-center justify-center">
-                          <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                        </div>
-                      `;
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-blue-100 flex items-center justify-center">
-                    <User className="h-8 w-8 text-blue-600" />
-                  </div>
-                )}
-              </div>
-
-              {/* Customer Details */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-semibold text-gray-900 text-lg">{customerName}</p>
-
-                    {/* Customer Status Badge */}
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-xs text-gray-600">Customer</span>
-                    </div>
-                  </div>
-
-                  {/* Order Status */}
-                  {order?.status && (
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${order.status === 'DELIVERED' || order.status === 'COMPLETED'
-                        ? 'bg-green-100 text-green-800'
-                        : order.status === 'OUT_FOR_DELIVERY'
-                          ? 'bg-purple-100 text-purple-800'
-                          : order.status === 'ARRIVED'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : order.status === 'PICKED_UP'
-                              ? 'bg-orange-100 text-orange-800'
-                              : 'bg-blue-100 text-blue-800'
-                      }`}>
-                      {order.status.replace('_', ' ')}
-                    </span>
-                  )}
-                </div>
-
-                {/* Contact Information */}
-                <div className="mt-3 space-y-2">
-                  {customerPhone && (
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Phone className="h-3 w-3 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Phone</p>
-                        <a
-                          href={`tel:${customerPhone}`}
-                          className="text-gray-700 hover:text-green-600 transition-colors"
-                        >
-                          {customerPhone}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-
-                  {customerEmail && (
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Mail className="h-3 w-3 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Email</p>
-                        <a
-                          href={`mailto:${customerEmail}`}
-                          className="text-gray-700 hover:text-blue-600 transition-colors text-sm"
-                        >
-                          {customerEmail}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Delivery Address Info */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex items-start gap-2">
-              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <Home className="h-5 w-5 text-orange-600" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="font-semibold text-gray-900">Delivery Address</p>
-                  {order?.deliveryDate && (
-                    <div className="flex items-center gap-1 text-sm text-gray-600">
-                      <Calendar className="h-3 w-3" />
-                      <span>{formatDate(order.deliveryDate)}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="bg-white p-3 rounded border">
-                  <div className="flex items-start gap-2">
-                    <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                    <p className="text-gray-700">{deliveryAddress}</p>
-                  </div>
-
-                  {/* Special Instructions */}
-                  {order?.specialInstructions && (
-                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-100 rounded">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="w-5 h-5 bg-yellow-100 rounded-full flex items-center justify-center">
-                          <svg className="h-3 w-3 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </div>
-                        <p className="text-sm font-medium text-yellow-800">Special Instructions:</p>
-                      </div>
-                      <p className="text-sm text-yellow-700 ml-7">{order.specialInstructions}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Map Section */}
-          <div className="bg-gray-100 rounded-lg overflow-hidden">
-            {deliveryAddress && deliveryAddress !== 'No address provided' ? (
-              <div className="h-80 w-full">
-                <iframe
-                  src={getMapUrl(deliveryAddress)}
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  allowFullScreen=""
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  title="Delivery Location Map"
-                />
-              </div>
-            ) : (
-              <div className="h-64 flex flex-col items-center justify-center text-gray-500">
-                <Map className="h-12 w-12 mb-3 text-gray-400" />
-                <p className="text-gray-600">No address available for mapping</p>
-                <p className="text-sm text-gray-500 mt-1">Please check the delivery address</p>
-              </div>
-            )}
-          </div>
-
-          {/* Order Details Summary */}
-          {order?.orderMeals?.length > 0 && (
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Package className="h-5 w-5 text-gray-600" />
-                <p className="font-semibold text-gray-900">Order Summary</p>
-                <span className="ml-auto text-sm text-gray-600">
-                  {order.orderMeals.reduce((total, meal) => total + (meal.quantity || 1), 0)} items
-                </span>
-              </div>
-              <div className="space-y-2">
-                {order.orderMeals.map((meal, index) => (
-                  <div key={index} className="flex items-center justify-between bg-white p-3 rounded border">
-                    <div>
-                      <p className="font-medium text-gray-900">{meal.mealSetName}</p>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <span className="capitalize">{meal.mealSetType?.toLowerCase()}</span>
-                        {meal.mealSetCategory && (
-                          <>
-                            <span className="text-gray-400">•</span>
-                            <span className="capitalize">{meal.mealSetCategory}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-gray-900 font-medium">
-                        Qty: {meal.quantity || 1}
-                      </span>
-                      {meal.price && (
-                        <span className="text-green-600 font-medium">
-                          ₹{(meal.price * (meal.quantity || 1)).toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Order Total */}
-                {order.totalAmount && (
-                  <div className="flex items-center justify-between bg-green-50 p-3 rounded border border-green-100">
-                    <span className="font-semibold text-gray-900">Order Total</span>
-                    <span className="text-lg font-bold text-green-600">
-                      ₹{order.totalAmount.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {deliveryAddress && deliveryAddress !== 'No address provided' && (
-              <a
-                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(deliveryAddress)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 transition-colors"
-              >
-                <Navigation className="h-5 w-5" />
-                Get Directions
-              </a>
-            )}
-
-            {customerPhone && (
-              <>
-                <a
-                  href={`tel:${customerPhone}`}
-                  className="bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2 transition-colors"
-                >
-                  <Phone className="h-5 w-5" />
-                  Call Customer
-                </a>
-
-                <a
-                  href={`https://wa.me/${customerPhone.replace('+', '').replace(/\D/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-green-500 text-white px-4 py-3 rounded-lg hover:bg-green-600 flex items-center justify-center gap-2 transition-colors"
-                >
-                  <MessageCircle className="h-5 w-5" />
-                  WhatsApp
-                </a>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default DeliveryDashboard;
+export default DeliveryDashboard; 

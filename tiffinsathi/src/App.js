@@ -75,7 +75,7 @@ function App() {
 
             {/* Vendor Routes - TEMPORARILY NO AUTH */}
             <Route path="/vendor/*" element={<VendorLayout />}>
-              <Route path="dashboard" element={<Dashboard />} />
+              <Route index element={<Dashboard />} />
               <Route path="tiffins" element={<Tiffins />} />
               <Route path="orders" element={<Orders />} />
               <Route path="customers" element={<Customers />} />

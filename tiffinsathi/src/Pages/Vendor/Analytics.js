@@ -5,12 +5,7 @@ import {
   Users, 
   Package, 
   DollarSign,
-  Calendar,
-  Download,
-  Filter,
   RefreshCw,
-  ShoppingBag,
-  CheckCircle,
   AlertCircle
 } from "lucide-react";
 import { readData } from "../../helpers/storage";

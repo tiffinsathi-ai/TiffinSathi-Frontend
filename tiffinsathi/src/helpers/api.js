@@ -25,6 +25,8 @@ export const authStorage = {
     if (data.role) localStorage.setItem("role", (data.role || "").toLowerCase());
     if (data.email) localStorage.setItem("email", data.email);
     if (data.name) localStorage.setItem("name", data.name);
+    if (data.businessName) localStorage.setItem("businessName", data.businessName);
+    if (data.vendorId) localStorage.setItem("vendorId", data.vendorId);
   },
 
   clearAuth: () => {
@@ -32,6 +34,8 @@ export const authStorage = {
     localStorage.removeItem("role");
     localStorage.removeItem("email");
     localStorage.removeItem("name");
+    localStorage.removeItem("businessName");
+    localStorage.removeItem("vendorId");
   },
 
   getToken: () => localStorage.getItem("token"),
@@ -39,11 +43,399 @@ export const authStorage = {
   getUser: () => ({
     email: localStorage.getItem("email"),
     name: localStorage.getItem("name"),
+    businessName: localStorage.getItem("businessName"),
+    vendorId: localStorage.getItem("vendorId")
   }),
 };
 
 // ============================
-// MAIN API
+// VENDOR SPECIFIC API
+// ============================
+export const vendorApi = {
+  // -----------------------
+  // ORDERS
+  // -----------------------
+  getVendorOrders: async (date) => {
+    try {
+      const url = `${BASE_URL}/orders/vendor${date ? `?date=${date}` : ''}`;
+      const res = await fetch(url, {
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("getVendorOrders error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  getOrdersByDateRange: async (startDate, endDate) => {
+    try {
+      const url = `${BASE_URL}/orders/vendor/date-range?startDate=${startDate}&endDate=${endDate}`;
+      const res = await fetch(url, {
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("getOrdersByDateRange error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  getUpcomingOrders: async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/orders/vendor/upcoming`, {
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("getUpcomingOrders error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  updateOrderStatus: async (orderId, status, deliveryPersonId = null) => {
+    try {
+      let url = `${BASE_URL}/orders/${orderId}/status?status=${status}`;
+      if (deliveryPersonId) {
+        url += `&deliveryPersonId=${deliveryPersonId}`;
+      }
+      
+      const res = await fetch(url, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("updateOrderStatus error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  getTodayStats: async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/orders/today`, {
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("getTodayStats error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  // -----------------------
+  // CUSTOMERS
+  // -----------------------
+  getVendorCustomers: async (search = "") => {
+    try {
+      let url = `${BASE_URL}/vendors/customers`;
+      if (search) {
+        url = `${BASE_URL}/vendors/customers/search?search=${encodeURIComponent(search)}`;
+      }
+      
+      const res = await fetch(url, {
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("getVendorCustomers error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  getCustomerDetails: async (customerId) => {
+    try {
+      const res = await fetch(`${BASE_URL}/vendors/customers/${customerId}`, {
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("getCustomerDetails error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  // -----------------------
+  // SUBSCRIPTIONS
+  // -----------------------
+  getVendorSubscriptions: async (filter = "ALL") => {
+    try {
+      let url = `${BASE_URL}/subscriptions/vendor/all`;
+      if (filter !== "ALL") {
+        url = `${BASE_URL}/subscriptions/vendor/status/${filter.toLowerCase()}`;
+      }
+      
+      const res = await fetch(url, {
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("getVendorSubscriptions error", e);
+      return { ok: false, error: e };
+    }
+  },
+  
+  getSubscriptionDetails: async (subscriptionId) => {
+    try {
+      const res = await fetch(`${BASE_URL}/subscriptions/${subscriptionId}`, {
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("getSubscriptionDetails error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  updateSubscriptionStatus: async (subscriptionId, status, reason = "") => {
+    try {
+      const body = { status };
+      if (reason) body.reason = reason;
+      
+      const res = await fetch(`${BASE_URL}/subscriptions/${subscriptionId}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+        body: JSON.stringify(body),
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("updateSubscriptionStatus error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  pauseSubscription: async (subscriptionId, pauseReason = "") => {
+    try {
+      const body = { status: "PAUSED" };
+      if (pauseReason) body.reason = pauseReason;
+      
+      const res = await fetch(`${BASE_URL}/subscriptions/${subscriptionId}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+        body: JSON.stringify(body),
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("pauseSubscription error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  resumeSubscription: async (subscriptionId) => {
+    try {
+      const res = await fetch(`${BASE_URL}/subscriptions/${subscriptionId}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+        body: JSON.stringify({ status: "ACTIVE" }),
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("resumeSubscription error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  cancelSubscription: async (subscriptionId, cancelReason = "") => {
+    try {
+      const body = { status: "CANCELLED" };
+      if (cancelReason) body.reason = cancelReason;
+      
+      const res = await fetch(`${BASE_URL}/subscriptions/${subscriptionId}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+        body: JSON.stringify(body),
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("cancelSubscription error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  // -----------------------
+  // DELIVERY PARTNERS
+  // -----------------------
+  getDeliveryPartners: async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/delivery-partners/vendor/my-partners`, {
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("getDeliveryPartners error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  // -----------------------
+  // DASHBOARD STATS
+  // -----------------------
+  getDashboardStats: async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/vendors/dashboard-stats`, {
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("getDashboardStats error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  // -----------------------
+  // VENDOR PAYMENTS & EARNINGS (Enhanced)
+  // -----------------------
+  getVendorPayments: async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/payments/vendor`, {
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+      });
+      const data = await safeJson(res);
+      return { ok: res.ok, data: data, status: res.status };
+    } catch (e) {
+      console.error("getVendorPayments error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  getVendorEarnings: async (timeRange = "30days") => {
+    try {
+      const res = await fetch(`${BASE_URL}/vendors/earnings?period=${timeRange}`, {
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+      });
+      const data = await safeJson(res);
+      
+      if (res.ok && data) {
+        return { ok: true, data: data.payments || data, status: res.status };
+      }
+      
+      // Fallback to orders and subscriptions if earnings endpoint fails
+      return await vendorApi.getVendorEarningsFallback(timeRange);
+    } catch (e) {
+      console.error("getVendorEarnings error", e);
+      return await vendorApi.getVendorEarningsFallback(timeRange);
+    }
+  },
+
+  getVendorEarningsFallback: async (timeRange = "30days") => {
+    try {
+      // Calculate date range
+      const endDate = new Date();
+      const startDate = new Date();
+      
+      switch (timeRange) {
+        case "7days":
+          startDate.setDate(startDate.getDate() - 7);
+          break;
+        case "30days":
+          startDate.setDate(startDate.getDate() - 30);
+          break;
+        case "90days":
+          startDate.setDate(startDate.getDate() - 90);
+          break;
+        case "year":
+          startDate.setFullYear(startDate.getFullYear() - 1);
+          break;
+        default:
+          startDate.setDate(startDate.getDate() - 30);
+      }
+
+      const startDateStr = startDate.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
+
+      // Fetch orders for the time range
+      const ordersRes = await vendorApi.getOrdersByDateRange(startDateStr, endDateStr);
+      
+      // Fetch all subscriptions
+      const subsRes = await vendorApi.getVendorSubscriptions("ALL");
+      
+      const orders = ordersRes.ok ? (ordersRes.data || []) : [];
+      const subscriptions = subsRes.ok ? (subsRes.data || []) : [];
+      
+      // Transform orders to payment format
+      const payments = [];
+      
+      orders.forEach(order => {
+        if (order.totalAmount && (order.paymentStatus || order.status === 'DELIVERED' || order.status === 'COMPLETED')) {
+          payments.push({
+            paymentId: `ORD-${order.orderId}`,
+            amount: order.totalAmount,
+            type: 'ORDER',
+            status: order.paymentStatus || (order.status === 'DELIVERED' ? 'COMPLETED' : 'PENDING'),
+            date: order.createdAt || order.orderDate || new Date().toISOString(),
+            customerName: order.customer?.userName || order.customerName || 'Customer',
+            customerEmail: order.customer?.email || order.customerEmail || '',
+            transactionId: order.transactionId || order.payment?.transactionId || `TXN-ORD-${order.orderId}`,
+            description: `Order #${order.orderId}`,
+            category: order.category || 'Meal',
+            paymentMethod: order.payment?.paymentMethod || (order.status === 'DELIVERED' ? 'COD' : 'CARD')
+          });
+        }
+      });
+      
+      // Transform subscriptions to payment format
+      subscriptions.forEach(subscription => {
+        if (subscription.totalAmount || subscription.packagePrice) {
+          const amount = subscription.totalAmount || subscription.packagePrice;
+          payments.push({
+            paymentId: `SUB-${subscription.subscriptionId}`,
+            amount: amount,
+            type: 'SUBSCRIPTION',
+            status: subscription.payment?.paymentStatus || subscription.status || 'COMPLETED',
+            date: subscription.startDate || subscription.createdAt || new Date().toISOString(),
+            customerName: subscription.customer?.userName || subscription.customerName || 'Customer',
+            customerEmail: subscription.customer?.email || subscription.customerEmail || '',
+            transactionId: subscription.payment?.transactionId || `TXN-SUB-${subscription.subscriptionId}`,
+            description: `Subscription #${subscription.subscriptionId}`,
+            category: 'Subscription',
+            paymentMethod: subscription.payment?.paymentMethod || 'CARD'
+          });
+        }
+      });
+      
+      return { 
+        ok: true, 
+        data: payments,
+        usingFallback: true
+      };
+    } catch (e) {
+      console.error("getVendorEarningsFallback error", e);
+      return { ok: false, error: e, data: [] };
+    }
+  },
+
+  // -----------------------
+  // VENDOR PROFILE
+  // -----------------------
+  getVendorProfile: async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/vendors/profile`, {
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("getVendorProfile error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  updateVendorProfile: async (profileData) => {
+    try {
+      const res = await fetch(`${BASE_URL}/vendors/profile`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+        body: JSON.stringify(profileData),
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("updateVendorProfile error", e);
+      return { ok: false, error: e };
+    }
+  },
+};
+
+// ============================
+// MAIN API (Keep existing for compatibility)
 // ============================
 export const api = {
   // -----------------------
@@ -57,6 +449,11 @@ export const api = {
         body: JSON.stringify({ email, password }),
       });
       const data = await safeJson(res);
+      
+      if (res.ok && data) {
+        authStorage.saveAuth(data);
+      }
+      
       return { ok: res.ok, status: res.status, data };
     } catch (e) {
       console.error("login error", e);
@@ -130,7 +527,7 @@ export const api = {
   },
 
   // -----------------------
-  // VENDORS - (match backend '/api/vendors' routes)
+  // VENDORS MANAGEMENT
   // -----------------------
   getVendors: async () => {
     try {
@@ -242,6 +639,34 @@ export const api = {
   },
 
   // -----------------------
+  // VENDOR API (Re-export vendorApi methods for compatibility)
+  // -----------------------
+  getVendorOrders: vendorApi.getVendorOrders,
+  getUpcomingOrders: vendorApi.getUpcomingOrders,
+  updateOrderStatus: vendorApi.updateOrderStatus,
+  getVendorCustomers: vendorApi.getVendorCustomers,
+  getVendorSubscriptions: vendorApi.getVendorSubscriptions,
+  getDeliveryPartners: vendorApi.getDeliveryPartners,
+  getDashboardStats: vendorApi.getDashboardStats,
+  getVendorPayments: vendorApi.getVendorPayments,
+  getVendorEarnings: vendorApi.getVendorEarnings,
+
+  // -----------------------
+  // PAYMENTS
+  // -----------------------
+  getPayments: async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/payments/admin/all`, {
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("getPayments error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  // -----------------------
   // MEAL PLANS & SCHEDULES
   // -----------------------
   getMealPlansForVendor: async () => {
@@ -266,35 +691,6 @@ export const api = {
       return { ok: res.ok, data: await safeJson(res), status: res.status };
     } catch (e) {
       console.error("createMealPlan error", e);
-      return { ok: false, error: e };
-    }
-  },
-
-  // -----------------------
-  // ORDERS & SUBSCRIPTIONS
-  // -----------------------
-  getVendorOrders: async () => {
-    try {
-      const res = await fetch(`${BASE_URL}/orders/vendor`, {
-        headers: { "Content-Type": "application/json", ...getAuthHeader() },
-      });
-      return await safeJson(res);
-    } catch (e) {
-      console.error("getVendorOrders error", e);
-      return [];
-    }
-  },
-
-  updateOrderStatus: async (orderId, status) => {
-    try {
-      const res = await fetch(`${BASE_URL}/orders/${orderId}/status`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...getAuthHeader() },
-        body: JSON.stringify({ status }),
-      });
-      return { ok: res.ok, data: await safeJson(res), status: res.status };
-    } catch (e) {
-      console.error("updateOrderStatus error", e);
       return { ok: false, error: e };
     }
   },

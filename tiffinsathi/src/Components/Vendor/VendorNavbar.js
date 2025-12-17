@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // src/Components/Vendor/VendorNavbar.js
 import React, { useEffect, useRef, useState } from "react";
 import { Menu, Bell, User, Settings, LogOut, X } from "lucide-react";
