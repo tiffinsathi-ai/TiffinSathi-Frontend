@@ -60,6 +60,9 @@ import OrderDeliveries from "./Pages/Delivery/OrderDeliveries";
 import DeliveryRoutes from "./Pages/Delivery/DeliveryRoutes";
 import Schedules from "./Pages/Delivery/Schedules";
 import DeliveryPerformance from "./Pages/Delivery/DeliveryPerformance";
+import EditSchedule from "./Pages/User/EditSchedule";
+import EditCheckout from "./Pages/User/EditCheckout";
+import EditSuccess from "./Pages/User/EditSuccess";
 
 function App() {
   return (
@@ -95,6 +98,9 @@ function App() {
                 path="schedule-customization"
                 element={<ScheduleCustomization />}
               />
+              <Route path="/subscription/edit" element={<EditSchedule />} />
+              <Route path="/subscription/edit/checkout" element={<EditCheckout />} /> 
+              <Route path="/subscription/edit/success" element={<EditSuccess />} />
             </Route>
 
             {/* Vendor Routes - TEMPORARILY NO AUTH */}

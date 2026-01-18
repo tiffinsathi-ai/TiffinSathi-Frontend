@@ -106,8 +106,8 @@ const Header = () => {
         localStorage.setItem("user", JSON.stringify(normalizedUser));
         console.log("User data set successfully:", normalizedUser);
 
-        // Fetch notifications count
-        fetchNotificationsCount();
+        // Fetch notifications count - Commented out the hardcoded endpoint
+        // fetchNotificationsCount();
       } else {
         // Create default user from localStorage
         const storedUser = localStorage.getItem("user");
@@ -148,32 +148,8 @@ const Header = () => {
     }
   };
 
-  const fetchNotificationsCount = async () => {
-    try {
-      const token = authStorage.getToken();
-      if (!token) return;
-
-      // Fetch notifications count from API
-      // This is a placeholder - replace with your actual API call
-      const response = await fetch(
-        "http://localhost:8080/api/notifications/unread-count",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setUnreadNotifications(data.count || 0);
-      }
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
-      // Mock data for demonstration
-      setUnreadNotifications(Math.floor(Math.random() * 5));
-    }
-  };
+  // Remove the fetchNotificationsCount function since it contains the hardcoded endpoint
+  // If you need to fetch notifications later, create a proper API helper function
 
   useEffect(() => {
     fetchUserData();
@@ -460,11 +436,7 @@ const Header = () => {
               onClick={() => navigate("/user/notifications")}
             >
               <Bell className="w-5 h-5 text-gray-600" />
-              {unreadNotifications > 0 && (
-                <span className="absolute -top-1 -right-1 text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center text-white bg-red-500">
-                  {unreadNotifications > 9 ? "9+" : unreadNotifications}
-                </span>
-              )}
+              {/* Removed unread notifications badge since we removed the endpoint */}
             </button>
 
             {/* Profile Dropdown */}
@@ -613,18 +585,7 @@ const Header = () => {
                     <div className="text-sm text-gray-600 truncate mt-1">
                       {getUserEmail()}
                     </div>
-                    {unreadNotifications > 0 && (
-                      <button
-                        onClick={() => {
-                          navigate("/user/notifications");
-                          setMobileMenuOpen(false);
-                        }}
-                        className="mt-2 flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
-                      >
-                        <Bell className="w-4 h-4" />
-                        <span>{unreadNotifications} notifications</span>
-                      </button>
-                    )}
+                    {/* Removed notifications section */}
                   </>
                 )}
               </div>
