@@ -2,8 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Calendar,
-  MapPin,
-  Clock,
   Star,
   Pause,
   Play,
@@ -12,7 +10,7 @@ import {
   Settings,
   HeadphonesIcon,
   Edit3,
-  ChevronRight,
+  Edit2,
   Package,
   CheckCircle,
   CreditCard,
@@ -1543,6 +1541,7 @@ const MySubscription = () => {
             </div>
 
             {/* Footer */}
+                        {/* Footer */}
             <div className="px-6 py-4 border-t bg-white flex justify-between items-center">
               <div>
                 <p className="text-sm font-semibold text-gray-900">
@@ -1556,6 +1555,13 @@ const MySubscription = () => {
                   className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
                   Close
+                </button>
+                <button
+                  onClick={() => navigate("/subscription/edit", { state: { subscription: selectedSubscription } })}
+                  className="flex items-center gap-1 px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Edit
                 </button>
                 <button
                   onClick={() => {
