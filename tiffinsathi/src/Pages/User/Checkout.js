@@ -146,7 +146,7 @@ const Checkout = () => {
     // Set earliest available date (2 days from today)
     const today = new Date();
     const earliestDate = new Date(today);
-    earliestDate.setDate(today.getDate() + 2);
+    earliestDate.setDate(today.getDate() + 3);
     setStartDate(earliestDate.toISOString().split("T")[0]);
 
     // Calculate pricing if not provided
@@ -442,7 +442,7 @@ const Checkout = () => {
     const today = new Date();
     const startDateObj = new Date(startDate);
     const minDate = new Date(today);
-    minDate.setDate(today.getDate() + 2);
+    minDate.setDate(today.getDate() + 3);
 
     if (startDateObj < minDate) {
       setError("Start date must be at least 2 days from today");
