@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Calendar, Plus, Minus, Save, X, Calculator, CreditCard, AlertCircle } from "lucide-react";
+import { Calendar, Plus, Minus, Save, X, Calculator, CreditCard, AlertCircle, RefreshCw } from "lucide-react";
 import axios from "axios";
 import { authStorage } from "../../helpers/api";
 import { toast } from "react-toastify";
@@ -17,6 +17,7 @@ const EditSchedule = () => {
   const [newSchedule, setNewSchedule] = useState([]);
   const [priceCalculation, setPriceCalculation] = useState(null);
   const [editReason, setEditReason] = useState("");
+  const [showRefundInfo, setShowRefundInfo] = useState(false);
 
   const daysOfWeek = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 
@@ -35,6 +36,15 @@ const EditSchedule = () => {
     }
   }, [subscriptionDetails]);
 
+  useEffect(() => {
+    // Show refund info when there's a refund
+    if (priceCalculation?.refundAmount && priceCalculation.refundAmount > 0) {
+      setShowRefundInfo(true);
+    } else {
+      setShowRefundInfo(false);
+    }
+  }, [priceCalculation]);
+
   const fetchSubscriptionDetails = async () => {
     try {
       const token = authStorage.getToken();
@@ -44,9 +54,26 @@ const EditSchedule = () => {
       );
       setSubscriptionDetails(response.data);
       initializeSchedule(response.data.schedule || []);
+      
+      // Fetch payment info to show current status
+      await fetchPaymentInfo(subscription.subscriptionId, token);
+      
     } catch (error) {
       console.error("Error fetching subscription details:", error);
       toast.error("Failed to load subscription details");
+    }
+  };
+
+  const fetchPaymentInfo = async (subscriptionId, token) => {
+    try {
+      const paymentResponse = await axios.get(
+        `http://localhost:8080/api/payments/subscription/${subscriptionId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      console.log("Payment info:", paymentResponse.data);
+      // You can store payment info in state if needed
+    } catch (error) {
+      console.error("Error fetching payment info:", error);
     }
   };
 
@@ -317,18 +344,38 @@ const EditSchedule = () => {
             paymentId: responseData.paymentId || null
           }
         });
-      } else if (responseData.editStatus === "COMPLETED" || responseData.editStatus === "PROCESSED") {
+      } else if (responseData.editStatus === "COMPLETED" || responseData.editStatus === "PROCESSED" || responseData.editStatus === "REFUND_APPROVED") {
         // No payment required or refund case
-        toast.success("Subscription updated successfully!");
-        if (priceCalculation?.refundAmount > 0) {
-          toast.info(`Refund of Rs. ${priceCalculation.refundAmount.toFixed(2)} will be processed.`);
+        if (responseData.editStatus === "REFUND_APPROVED") {
+          toast.success("Subscription updated successfully! Refund has been approved.");
+          toast.info(
+            <div>
+              <p>A refund of Rs. {priceCalculation.refundAmount.toFixed(2)} has been approved.</p>
+              <p className="mt-1">Refund will be processed within 5-7 business days to your original payment method.</p>
+              {responseData.vendorPhone && (
+                <p className="mt-1">For questions, contact vendor: {responseData.vendorName} - {responseData.vendorPhone}</p>
+              )}
+            </div>
+          );
+        } else {
+          toast.success("Subscription updated successfully!");
+          if (priceCalculation?.refundAmount > 0) {
+            toast.info(
+              <div>
+                <p>Refund of Rs. {priceCalculation.refundAmount.toFixed(2)} will be processed.</p>
+                <p className="mt-1">Please check your payment status for refund details.</p>
+              </div>
+            );
+          }
         }
-        navigate("/user/subscriptions");
-      } else if (responseData.editStatus === "REFUND_APPROVED") {
-        // Refund case
-        toast.success("Subscription updated successfully!");
-        toast.info(`Refund of Rs. ${priceCalculation.refundAmount.toFixed(2)} will be processed.`);
-        navigate("/user/subscriptions");
+        
+        // Refresh subscription details to get updated payment status
+        await fetchSubscriptionDetails();
+        
+        // Navigate after a short delay
+        setTimeout(() => {
+          navigate("/user/subscriptions");
+        }, 2000);
       } else {
         // Handle other statuses
         toast.info(responseData.message || "Edit processed successfully");
@@ -353,6 +400,24 @@ const EditSchedule = () => {
     return Math.max(0, Math.ceil(diff / (1000*3600*24)));
   };
 
+  const getCurrentPaymentStatus = () => {
+    if (!subscriptionDetails || !subscriptionDetails.payment) return "No payment info";
+    return subscriptionDetails.payment.paymentStatus;
+  };
+
+  const handleViewPaymentHistory = () => {
+    navigate(`/subscription/${subscription.subscriptionId}/payments`);
+  };
+
+  const resetChanges = () => {
+    if (subscriptionDetails) {
+      initializeSchedule(subscriptionDetails.schedule || []);
+      setPriceCalculation(null);
+      setEditReason("");
+      toast.info("Changes reset to original schedule");
+    }
+  };
+
   if (!subscriptionDetails) {
     return <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
@@ -374,7 +439,7 @@ const EditSchedule = () => {
           </div>
 
           <div className="mt-6 bg-white p-6 rounded shadow">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <p className="text-sm text-gray-500">Package</p>
                 <p className="font-semibold">{subscriptionDetails.packageName}</p>
@@ -387,12 +452,39 @@ const EditSchedule = () => {
                 <p className="text-sm text-gray-500">Current Total</p>
                 <p className="font-semibold text-green-600">Rs. {subscriptionDetails.totalAmount?.toFixed(2) || "0.00"}</p>
               </div>
+              <div>
+                <p className="text-sm text-gray-500">Payment Status</p>
+                <p className={`font-semibold ${
+                  getCurrentPaymentStatus() === "REFUNDED" ? "text-green-600" : 
+                  getCurrentPaymentStatus() === "COMPLETED" ? "text-blue-600" : 
+                  getCurrentPaymentStatus() === "PENDING" ? "text-yellow-600" : 
+                  "text-gray-600"
+                }`}>
+                  {getCurrentPaymentStatus()}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4">
+              <button 
+                onClick={handleViewPaymentHistory}
+                className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+              >
+                <RefreshCw className="w-3 h-3" /> View Payment History
+              </button>
             </div>
           </div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h3 className="text-lg font-semibold">Reason for Edit</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Reason for Edit</h3>
+            <button 
+              onClick={resetChanges}
+              className="px-3 py-1 text-sm border rounded hover:bg-gray-50 flex items-center gap-1"
+            >
+              <RefreshCw className="w-3 h-3" /> Reset Changes
+            </button>
+          </div>
           <textarea 
             value={editReason} 
             onChange={e => setEditReason(e.target.value)} 
@@ -401,6 +493,26 @@ const EditSchedule = () => {
             placeholder="Why are you editing this subscription? (e.g., dietary change, schedule conflict)"
           />
         </div>
+
+        {showRefundInfo && priceCalculation?.refundAmount > 0 && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <h4 className="font-semibold text-green-800">Refund Information</h4>
+                <p className="text-sm text-green-700 mt-1">
+                  Your changes qualify for a refund of <span className="font-bold">Rs. {priceCalculation.refundAmount.toFixed(2)}</span>.
+                  If you apply these changes, a refund payment will be created with status "REFUNDED" and processed within 5-7 business days.
+                </p>
+                <div className="mt-2 text-xs text-green-600 space-y-1">
+                  <p>• Refund will be credited to your original payment method</p>
+                  <p>• Your subscription payment history will show the refund transaction</p>
+                  <p>• You can check payment status anytime from your subscriptions</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded-lg shadow mb-6">
           <div className="p-6 border-b">
@@ -542,15 +654,36 @@ const EditSchedule = () => {
                   </span>
                 </div>
                 
-                <div className="p-3 rounded bg-blue-50 border border-blue-100">
+                <div className={`p-3 rounded border ${
+                  priceCalculation.additionalPayment > 0 
+                    ? 'bg-yellow-50 border-yellow-100' 
+                    : priceCalculation.refundAmount > 0 
+                      ? 'bg-green-50 border-green-100' 
+                      : 'bg-blue-50 border-blue-100'
+                }`}>
                   <div className="flex items-start gap-2">
-                    <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <AlertCircle className={`w-5 h-5 ${
+                      priceCalculation.additionalPayment > 0 
+                        ? 'text-yellow-600' 
+                        : priceCalculation.refundAmount > 0 
+                          ? 'text-green-600' 
+                          : 'text-blue-600'
+                    } mt-0.5 flex-shrink-0`} />
                     <div>
-                      <p className="font-medium text-blue-700">
+                      <p className={`font-medium ${
+                        priceCalculation.additionalPayment > 0 
+                          ? 'text-yellow-700' 
+                          : priceCalculation.refundAmount > 0 
+                            ? 'text-green-700' 
+                            : 'text-blue-700'
+                      }`}>
                         {priceCalculation.additionalPayment > 0 ? (
                           `You need to pay an additional Rs. ${priceCalculation.additionalPayment.toFixed(2)} for the changes.`
                         ) : priceCalculation.refundAmount > 0 ? (
-                          `You will receive a refund of Rs. ${priceCalculation.refundAmount.toFixed(2)} for the changes.`
+                          <div>
+                            <p>You will receive a refund of Rs. {priceCalculation.refundAmount.toFixed(2)} for the changes.</p>
+                            <p className="text-sm mt-1">A refund payment will be created with status "REFUNDED" and processed within 5-7 business days.</p>
+                          </div>
                         ) : (
                           'No additional payment or refund required.'
                         )}
@@ -599,7 +732,9 @@ const EditSchedule = () => {
               className={`px-6 py-3 text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
                 priceCalculation.additionalPayment > 0 
                   ? 'bg-yellow-500 hover:bg-yellow-600' 
-                  : 'bg-green-500 hover:bg-green-600'
+                  : priceCalculation.refundAmount > 0 
+                    ? 'bg-green-500 hover:bg-green-600'
+                    : 'bg-blue-500 hover:bg-blue-600'
               }`}
             >
               {loading ? (
@@ -612,11 +747,15 @@ const EditSchedule = () => {
                   <CreditCard className="w-5 h-5" /> 
                   Proceed to Payment
                 </>
+              ) : priceCalculation.refundAmount > 0 ? (
+                <>
+                  <Save className="w-5 h-5" /> 
+                  Apply Changes with Refund
+                </>
               ) : (
                 <>
                   <Save className="w-5 h-5" /> 
                   Apply Changes
-                  {priceCalculation.refundAmount > 0 && ` (Refund: Rs. ${priceCalculation.refundAmount.toFixed(2)})`}
                 </>
               )}
             </button>
