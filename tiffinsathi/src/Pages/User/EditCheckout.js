@@ -72,7 +72,8 @@ const EditCheckout = () => {
         `http://localhost:8080/api/subscriptions/edit/${subscription.subscriptionId}/payment`,
         {
           paymentMethod: paymentMethod,
-          amount: priceCalculation.additionalPayment
+          amount: priceCalculation.additionalPayment,
+          editReason: editReason
         },
         { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } }
       );
@@ -156,12 +157,12 @@ const EditCheckout = () => {
 
       const responseData = response.data;
       
-      if (responseData.editStatus === "COMPLETED") {
+      if (responseData.editStatus === "COMPLETED" || responseData.editStatus === "REFUND_APPROVED") {
         if (priceCalculation?.refundAmount > 0) {
           toast.success(
             <div>
               <p>Subscription updated successfully!</p>
-              <p>A refund of Rs. {priceCalculation.refundAmount.toFixed(2)} will be processed within 5-7 business days.</p>
+              <p>A refund of Rs. {priceCalculation.refundAmount.toFixed(2)} has been approved and will be processed.</p>
               {responseData.vendorPhone && (
                 <p>For questions, contact vendor: {responseData.vendorName} - {responseData.vendorPhone}</p>
               )}
@@ -176,7 +177,8 @@ const EditCheckout = () => {
           state: { 
             subscriptionId: subscription.subscriptionId,
             editResponse: responseData,
-            isRefund: priceCalculation?.refundAmount > 0
+            isRefund: priceCalculation?.refundAmount > 0,
+            refundAmount: priceCalculation?.refundAmount || 0
           } 
         });
       } else {
