@@ -6,7 +6,6 @@ import {
   HiLockClosed,
   HiCheckCircle,
   HiInformationCircle,
-  HiChevronDown,
   HiArrowLeft,
   HiEye,
   HiEyeOff,
@@ -19,7 +18,6 @@ import { toast } from "react-toastify";
 const Login = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    loginAs: "User",
     email: "",
     password: "",
     rememberMe: false,
@@ -64,20 +62,6 @@ const Login = () => {
       default:
         return "/";
     }
-  };
-
-  // Function to validate if user role matches the selected login type
-  const validateRoleAccess = (userRole, loginType) => {
-    const userRoles = ["USER", "ADMIN"];
-    const restaurantRoles = ["VENDOR", "DELIVERY"];
-
-    if (loginType === "User" && userRoles.includes(userRole)) {
-      return true;
-    }
-    if (loginType === "Restaurant" && restaurantRoles.includes(userRole)) {
-      return true;
-    }
-    return false;
   };
 
   // Function to extract username from email
@@ -162,23 +146,7 @@ const Login = () => {
           const userRole = decodedToken.role || "USER";
           const userEmail = decodedToken.email || decodedToken.sub || formData.email;
           const username = getDisplayName(decodedToken, userEmail);
-          
-          // Validate if user has access based on selected login type
-          const hasAccess = validateRoleAccess(userRole, formData.loginAs);
-          
-          if (!hasAccess) {
-            let errorMessage = "";
-            if (formData.loginAs === "User") {
-              errorMessage = "This account is not authorized for user login. Please use Restaurant login for vendor/delivery accounts.";
-            } else {
-              errorMessage = "This account is not authorized for restaurant login. Please use User login for admin/user accounts.";
-            }
-            
-            setErrors({ submit: errorMessage });
-            setIsLoading(false);
-            return;
-          }
-          
+
           // Store user information in localStorage
           localStorage.setItem("userRole", userRole);
           localStorage.setItem("userEmail", userEmail);
@@ -394,26 +362,6 @@ const Login = () => {
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 md:space-y-6">
-            {/* Login As Dropdown */}
-            <div>
-              <label className="block text-left text-gray-700 font-medium mb-1 md:mb-2 text-sm sm:text-base">
-                Login as
-              </label>
-              <div className="relative">
-                <select
-                  name="loginAs"
-                  value={formData.loginAs}
-                  onChange={handleChange}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent appearance-none bg-white text-sm sm:text-base"
-                  style={{ borderColor: "#CCCCCC" }}
-                >
-                  <option value="User">User</option>
-                  <option value="Restaurant">Restaurant</option>
-                </select>
-                <HiChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5 pointer-events-none" />
-              </div>
-            </div>
-
             {/* Email Address */}
             <div>
               <label className="block text-left text-gray-700 font-medium mb-1 md:mb-2 text-sm sm:text-base">

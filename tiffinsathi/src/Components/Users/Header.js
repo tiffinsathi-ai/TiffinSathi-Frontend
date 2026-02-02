@@ -10,7 +10,7 @@ import {
   HiUserCircle,
   HiLogout,
 } from "react-icons/hi";
-import { UtensilsCrossed, Settings, Bell, Package, Clock } from "lucide-react";
+import { UtensilsCrossed, Settings, Package, Clock } from "lucide-react";
 import logo from "../../assets/logo.png";
 import defaultUser from "../../assets/default-user.jpg";
 import UserApi from "../../helpers/UserApi";
@@ -430,15 +430,6 @@ const Header = () => {
       <div className="hidden md:flex items-center gap-4">
         {isAuthenticated && user ? (
           <>
-            {/* Notifications */}
-            <button
-              className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              onClick={() => navigate("/user/notifications")}
-            >
-              <Bell className="w-5 h-5 text-gray-600" />
-              {/* Removed unread notifications badge since we removed the endpoint */}
-            </button>
-
             {/* Profile Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <button
