@@ -14,7 +14,7 @@ import { UtensilsCrossed, Settings, Bell, Package, Clock } from "lucide-react";
 import logo from "../../assets/logo.png";
 import defaultUser from "../../assets/default-user.jpg";
 import UserApi from "../../helpers/UserApi";
-import { authStorage } from "../../helpers/api";
+import authStorage from "../../helpers/authStorage";
 
 const Header = () => {
   const navigate = useNavigate();

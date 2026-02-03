@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useNavigate, useLocation } from "react-router-dom";
+import { api } from "../helpers/api";
+import authStorage from "../helpers/authStorage";
+import { jwtDecode } from "jwt-decode";
 import {
   HiMail,
   HiLockClosed,
@@ -18,6 +20,7 @@ import { toast } from "react-toastify";
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [formData, setFormData] = useState({
     loginAs: "User",
     email: "",
@@ -28,23 +31,41 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Check URL parameters for messages and redirect
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const message = searchParams.get('message');
+    const redirect = searchParams.get('redirect');
+    
+    if (message) {
+      toast.info(decodeURIComponent(message));
+    }
+    
+    // Check if user is already logged in
+    const token = authStorage.getToken();
+    const userRole = authStorage.getUserRole();
+    
+    if (token && userRole) {
+      // User is already logged in, redirect to appropriate portal
+      const redirectPath = getRedirectPath(userRole);
+      
+      // Use setTimeout to ensure redirect happens after component mounts
+      setTimeout(() => {
+        navigate(redirectPath, { replace: true });
+      }, 100);
+    }
+  }, [location, navigate]);
+
   useEffect(() => {
     if (!errors.submit) return;
     toast.error(errors.submit);
     setErrors((prev) => ({ ...prev, submit: "" }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [errors.submit]);
 
   // Function to decode JWT token and extract role
   const decodeToken = (token) => {
     try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
-      
-      return JSON.parse(jsonPayload);
+      return jwtDecode(token);
     } catch (error) {
       console.error("Error decoding token:", error);
       return null;
@@ -53,13 +74,13 @@ const Login = () => {
 
   // Function to determine redirect path based on role
   const getRedirectPath = (role) => {
-    switch (role) {
+    switch (role?.toUpperCase()) {
       case "ADMIN":
         return "/admin";
       case "DELIVERY":
-        return "/delivery";
+        return "/delivery/deliveries";
       case "VENDOR":
-        return "/vendor";
+        return "/vendor/dashboard";
       case "USER":
       default:
         return "/";
@@ -71,10 +92,10 @@ const Login = () => {
     const userRoles = ["USER", "ADMIN"];
     const restaurantRoles = ["VENDOR", "DELIVERY"];
 
-    if (loginType === "User" && userRoles.includes(userRole)) {
+    if (loginType === "User" && userRoles.includes(userRole.toUpperCase())) {
       return true;
     }
-    if (loginType === "Restaurant" && restaurantRoles.includes(userRole)) {
+    if (loginType === "Restaurant" && restaurantRoles.includes(userRole.toUpperCase())) {
       return true;
     }
     return false;
@@ -120,157 +141,103 @@ const Login = () => {
     setErrors({});
 
     if (!formData.email || !formData.password) {
-      setErrors({
-        submit: "Please enter both email and password",
-      });
+      toast.error("Please enter both email and password");
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await axios.post(
-        "http://localhost:8080/auth/login",
-        {
-          email: formData.email,
-          password: formData.password,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      // Use the API helper for login
+      const response = await api.login(formData.email, formData.password);
 
-      // Store token and user data in localStorage
-      const responseData = response.data;
-      console.log("Login response:", responseData);
+      if (!response.ok) {
+        let errorMessage = "Failed to login";
+        
+        if (response.data?.message) {
+          errorMessage = response.data.message;
+        } else if (response.status === 403) {
+          errorMessage = "Access denied. Please check your credentials.";
+        } else if (response.status === 401) {
+          errorMessage = "Invalid email or password.";
+        }
+        
+        throw new Error(errorMessage);
+      }
 
       // Extract token from response
-      const token = responseData?.token || responseData?.accessToken;
-      console.log("Extracted token:", token);
+      const token = response.data?.token || response.data?.accessToken;
+      
+      if (!token) {
+        throw new Error("No authentication token received");
+      }
 
-      if (token) {
-        // Store the token
-        localStorage.setItem("token", token);
-        localStorage.setItem("isAuthenticated", "true");
-
-        // Decode token to get user role and info
-        const decodedToken = decodeToken(token);
-        console.log("Decoded token:", decodedToken);
+      // Decode token to get user role and info
+      const decodedToken = decodeToken(token);
+      const userRole = decodedToken?.role || "USER";
+      const userEmail = decodedToken?.email || decodedToken?.sub || formData.email;
+      const username = getDisplayName(decodedToken, userEmail);
+      
+      // Validate if user has access based on selected login type
+      const hasAccess = validateRoleAccess(userRole, formData.loginAs);
+      
+      if (!hasAccess) {
+        let errorMessage = "";
+        if (formData.loginAs === "User") {
+          errorMessage = "This account is not authorized for user login. Please use Restaurant login for vendor/delivery accounts.";
+        } else {
+          errorMessage = "This account is not authorized for restaurant login. Please use User login for admin/user accounts.";
+        }
         
-        if (decodedToken) {
-          const userRole = decodedToken.role || "USER";
-          const userEmail = decodedToken.email || decodedToken.sub || formData.email;
-          const username = getDisplayName(decodedToken, userEmail);
-          
-          // Validate if user has access based on selected login type
-          const hasAccess = validateRoleAccess(userRole, formData.loginAs);
-          
-          if (!hasAccess) {
-            let errorMessage = "";
-            if (formData.loginAs === "User") {
-              errorMessage = "This account is not authorized for user login. Please use Restaurant login for vendor/delivery accounts.";
-            } else {
-              errorMessage = "This account is not authorized for restaurant login. Please use User login for admin/user accounts.";
-            }
-            
-            setErrors({ submit: errorMessage });
-            setIsLoading(false);
-            return;
-          }
-          
-          // Store user information in localStorage
-          localStorage.setItem("userRole", userRole);
-          localStorage.setItem("userEmail", userEmail);
-          localStorage.setItem("username", username);
-          
-          // Store complete user data
-          const userData = {
-            role: userRole,
-            email: userEmail,
-            username: username,
-            // Add other user data from token if available
-            ...(decodedToken.userId && { userId: decodedToken.userId }),
-            ...(decodedToken.vendorId && { vendorId: decodedToken.vendorId }),
-            ...(decodedToken.partnerId && { partnerId: decodedToken.partnerId }),
-            ...(decodedToken.name && { name: decodedToken.name }),
-            ...(decodedToken.userName && { userName: decodedToken.userName }),
-            ...(decodedToken.ownerName && { ownerName: decodedToken.ownerName }),
-            ...(decodedToken.businessName && { businessName: decodedToken.businessName }),
-          };
-          localStorage.setItem("user", JSON.stringify(userData));
-
-          console.log("Stored user data:", {
-            role: userRole,
-            email: userEmail,
-            username: username,
-            fullData: userData
-          });
-
-          // Determine redirect path based on role
-          const redirectPath = getRedirectPath(userRole);
-          console.log(`Redirecting ${userRole} (${username}) to: ${redirectPath}`);
-          
-          // Redirect based on role
-          navigate(redirectPath);
-        } else {
-          // If we can't determine role, use default values and redirect to home
-          console.warn("Could not determine user role from token, using defaults");
-          const defaultUsername = getUsernameFromEmail(formData.email);
-          localStorage.setItem("userRole", "USER");
-          localStorage.setItem("userEmail", formData.email);
-          localStorage.setItem("username", defaultUsername);
-          localStorage.setItem("user", JSON.stringify({
-            role: "USER",
-            email: formData.email,
-            username: defaultUsername
-          }));
-          navigate("/");
-        }
-
-        // If remember me is checked, also store email
-        if (formData.rememberMe) {
-          localStorage.setItem("rememberedEmail", formData.email);
-        }
-      } else {
-        throw new Error("No token received from server");
+        toast.error(errorMessage);
+        setIsLoading(false);
+        return;
       }
+      
+      // Create user data object
+      const userData = {
+        role: userRole.toUpperCase(),
+        email: userEmail,
+        username: username,
+        // Add other user data from token if available
+        ...(decodedToken?.userId && { userId: decodedToken.userId }),
+        ...(decodedToken?.vendorId && { vendorId: decodedToken.vendorId }),
+        ...(decodedToken?.partnerId && { partnerId: decodedToken.partnerId }),
+        ...(decodedToken?.name && { name: decodedToken.name }),
+        ...(decodedToken?.userName && { userName: decodedToken.userName }),
+        ...(decodedToken?.ownerName && { ownerName: decodedToken.ownerName }),
+        ...(decodedToken?.businessName && { businessName: decodedToken.businessName }),
+      };
+      
+      // ✅ CRITICAL FIX: Store BOTH token and user data
+      authStorage.setToken(token, formData.rememberMe);
+      authStorage.setUser(userData, formData.rememberMe);
+      
+      console.log("✅ Login successful - Token stored:", !!authStorage.getToken());
+      console.log("✅ User data stored:", userData);
+
+      // Get redirect path from URL or based on role
+      const searchParams = new URLSearchParams(location.search);
+      const redirectParam = searchParams.get('redirect');
+      
+      let redirectPath;
+      if (redirectParam && redirectParam !== '/login') {
+        redirectPath = redirectParam;
+      } else {
+        redirectPath = getRedirectPath(userRole);
+      }
+      
+      console.log(`📍 Redirecting ${userRole} to: ${redirectPath}`);
+      
+      // Clear any errors and redirect
+      setErrors({});
+      
+      // Use window.location.href for a full page reload to ensure clean state
+      window.location.href = redirectPath;
+      
     } catch (error) {
-      console.error("Login error:", error);
-
-      let errorMessage = "Failed to login. Please try again.";
-
-      if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
-        errorMessage =
-          "Network error: Cannot connect to server. Please ensure the backend is running on http://localhost:8080";
-      } else if (error.code === "ECONNREFUSED") {
-        errorMessage =
-          "Connection refused: The backend server is not running or not accessible on http://localhost:8080";
-      } else if (error.response) {
-        const status = error.response.status;
-        const responseData = error.response.data;
-
-        if (status === 401 || status === 403) {
-          errorMessage = responseData?.message || "Invalid email or password";
-        } else if (status === 404) {
-          errorMessage =
-            "Login endpoint not found. Please check the backend configuration.";
-        } else {
-          errorMessage =
-            responseData?.message ||
-            responseData?.error ||
-            `Server error: ${status} ${error.response.statusText}`;
-        }
-      } else if (error.request) {
-        errorMessage =
-          "No response from server. Please check if the backend is running and CORS is configured correctly.";
-      } else {
-        errorMessage = error.message || errorMessage;
-      }
-
-      setErrors({
-        submit: errorMessage,
-      });
+      console.error("❌ Login error:", error);
+      toast.error(error.message || "Login failed. Please try again.");
+      setErrors({ submit: error.message });
     } finally {
       setIsLoading(false);
     }
@@ -292,17 +259,16 @@ const Login = () => {
         <span className="text-sm font-medium">Back</span>
       </button>
 
-      {/* Left Section - Background and Branding - Hidden on small screens, shown on medium and up */}
+      {/* Left Section - Background and Branding */}
       <div
         className="hidden md:flex md:w-2/5 lg:w-2/5 relative items-center justify-center"
         style={{
           backgroundImage: `url(${loginBg})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
-          minHeight: "300px", // Added for mobile
+          minHeight: "300px",
         }}
       >
-        {/* Gradient Overlay */}
         <div
           className="absolute inset-0"
           style={{
@@ -311,9 +277,7 @@ const Login = () => {
           }}
         ></div>
 
-        {/* Content */}
         <div className="relative z-10 text-center px-6 lg:px-8 py-8 lg:py-12">
-          {/* Logo */}
           <div className="flex justify-center mb-4 lg:mb-6">
             <div className="w-24 h-24 lg:w-32 lg:h-32 rounded-full bg-white p-3 lg:p-4 flex items-center justify-center shadow-lg">
               <img
@@ -324,7 +288,6 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Brand Name */}
           <h1
             className="text-3xl lg:text-5xl font-bold text-white mb-2 lg:mb-3"
             style={{
@@ -334,12 +297,10 @@ const Login = () => {
             Tiffin Sathi
           </h1>
 
-          {/* Tagline */}
           <p className="text-white text-sm lg:text-lg mb-6 lg:mb-8">
             Fresh Homemade Meals Delivered
           </p>
 
-          {/* Features */}
           <div className="space-y-3 lg:space-y-4 text-left max-w-xs mx-auto">
             <div className="flex items-center gap-2 lg:gap-3 text-white">
               <HiCheckCircle className="w-5 h-5 lg:w-6 lg:h-6 flex-shrink-0" />
@@ -357,7 +318,7 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Mobile Header - Shows logo and brand name on small screens */}
+      {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-center p-4 bg-gradient-to-r from-[#4A8C39] to-[#F5B800] text-white">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-full bg-white p-2 flex items-center justify-center shadow-md">
@@ -384,7 +345,6 @@ const Login = () => {
       {/* Right Section - Login Form */}
       <div className="flex-1 w-full md:w-3/5 lg:w-3/5 bg-white flex items-center justify-center px-4 sm:px-6 md:px-8 lg:px-12 py-8 md:py-12">
         <div className="w-full max-w-sm sm:max-w-md md:max-w-md">
-          {/* Title */}
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-1 md:mb-2">
             Welcome Back!
           </h2>
@@ -392,9 +352,7 @@ const Login = () => {
             Sign in to your account
           </p>
 
-          {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 md:space-y-6">
-            {/* Login As Dropdown */}
             <div>
               <label className="block text-left text-gray-700 font-medium mb-1 md:mb-2 text-sm sm:text-base">
                 Login as
@@ -414,7 +372,6 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Email Address */}
             <div>
               <label className="block text-left text-gray-700 font-medium mb-1 md:mb-2 text-sm sm:text-base">
                 Email Address<span className="text-red-500">*</span>
@@ -434,7 +391,6 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Password */}
             <div>
               <label className="block text-left text-gray-700 font-medium mb-1 md:mb-2 text-sm sm:text-base">
                 Password<span className="text-red-500">*</span>
@@ -465,7 +421,6 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Remember Me & Forgot Password */}
             <div className="flex items-center justify-between flex-wrap gap-2">
               <label className="flex items-center gap-2 text-gray-700 text-sm sm:text-base">
                 <input
@@ -486,7 +441,6 @@ const Login = () => {
               </a>
             </div>
 
-            {/* Sign In Button */}
             <button
               type="submit"
               disabled={isLoading}
@@ -512,7 +466,6 @@ const Login = () => {
             </button>
           </form>
 
-          {/* Account Management Links */}
           <div className="mt-6 sm:mt-8 space-y-3 sm:space-y-4 text-center">
             <p className="text-gray-700 text-sm sm:text-base">
               Don't have an account?{" "}

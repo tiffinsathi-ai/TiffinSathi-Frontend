@@ -1,3 +1,4 @@
+// src/Pages/Vendor/Earnings.js
 import React, { useState, useEffect, useCallback } from 'react';
 import { vendorApi } from '../../helpers/api';
 import { 
@@ -49,7 +50,6 @@ const Earnings = () => {
   const [usingFallback, setUsingFallback] = useState(false);
   const [chartType, setChartType] = useState('line');
   const [expandedStats, setExpandedStats] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [hoveredBar, setHoveredBar] = useState(null);
 
   // Stats state
@@ -131,31 +131,97 @@ const Earnings = () => {
     return methods[hash % methods.length];
   };
 
-  // Load earnings data with fallback
+  // Load earnings data with fallback - UPDATED VERSION
   const loadEarningsData = useCallback(async () => {
     setLoading(true);
     setError('');
     
     try {
-      // First try the vendor payments endpoint
+      // Try to get data from API first
       let response = await vendorApi.getVendorPayments();
       
+      // If API returns error (like 500), use fallback data
       if (!response.ok || !response.data) {
-        // If that fails, try the vendor earnings endpoint
-        response = await vendorApi.getVendorEarnings(timeRange);
-      }
-      
-      if (!response.ok || !response.data) {
-        // If both fail, use the fallback method
         setUsingFallback(true);
-        response = await vendorApi.getVendorEarningsFallback();
-      }
-      
-      if (response.ok && response.data) {
+        console.log("Using fallback data due to API error:", response.error);
+        
+        // Create fallback data directly in component
+        const fallbackData = {
+          orders: [
+            { orderId: "1001", totalAmount: 1500, paymentStatus: "COMPLETED", createdAt: "2024-07-15T10:30:00Z", customer: { userName: "Rajesh Sharma", email: "rajesh@example.com" }, status: "DELIVERED", category: "Meal", paymentMethod: "ESEWA" },
+            { orderId: "1002", totalAmount: 2500, paymentStatus: "COMPLETED", createdAt: "2024-07-14T14:45:00Z", customer: { userName: "Priya Patel", email: "priya@example.com" }, status: "DELIVERED", category: "Meal", paymentMethod: "KHALTI" },
+            { orderId: "1003", totalAmount: 1800, paymentStatus: "PENDING", createdAt: "2024-07-13T12:15:00Z", customer: { userName: "Amit Kumar", email: "amit@example.com" }, status: "PREPARING", category: "Meal", paymentMethod: "COD" },
+            { orderId: "1004", totalAmount: 3200, paymentStatus: "COMPLETED", createdAt: "2024-07-12T09:20:00Z", customer: { userName: "Sunita Devi", email: "sunita@example.com" }, status: "DELIVERED", category: "Meal", paymentMethod: "CARD" },
+            { orderId: "1005", totalAmount: 2100, paymentStatus: "COMPLETED", createdAt: "2024-07-11T18:30:00Z", customer: { userName: "Rahul Verma", email: "rahul@example.com" }, status: "DELIVERED", category: "Meal", paymentMethod: "IME" },
+            { orderId: "1006", totalAmount: 2900, paymentStatus: "COMPLETED", createdAt: "2024-07-10T16:10:00Z", customer: { userName: "Meera Singh", email: "meera@example.com" }, status: "DELIVERED", category: "Meal", paymentMethod: "BANK_TRANSFER" },
+            { orderId: "1007", totalAmount: 1750, paymentStatus: "COMPLETED", createdAt: "2024-07-09T11:30:00Z", customer: { userName: "Arjun Shrestha", email: "arjun@example.com" }, status: "DELIVERED", category: "Meal", paymentMethod: "ESEWA" },
+            { orderId: "1008", totalAmount: 2200, paymentStatus: "COMPLETED", createdAt: "2024-07-08T13:45:00Z", customer: { userName: "Bina Magar", email: "bina@example.com" }, status: "DELIVERED", category: "Meal", paymentMethod: "KHALTI" }
+          ],
+          subscriptions: [
+            { subscriptionId: "2001", packagePrice: 5000, totalAmount: 5000, payment: { paymentStatus: "COMPLETED", transactionId: "TXN-SUB-001" }, startDate: "2024-07-01T00:00:00Z", customer: { userName: "Suresh Joshi", email: "suresh@example.com" }, status: "ACTIVE", paymentMethod: "ESEWA" },
+            { subscriptionId: "2002", packagePrice: 4500, totalAmount: 4500, payment: { paymentStatus: "COMPLETED", transactionId: "TXN-SUB-002" }, startDate: "2024-07-05T00:00:00Z", customer: { userName: "Anjali Gupta", email: "anjali@example.com" }, status: "ACTIVE", paymentMethod: "KHALTI" },
+            { subscriptionId: "2003", packagePrice: 6000, totalAmount: 6000, payment: { paymentStatus: "PENDING", transactionId: "TXN-SUB-003" }, startDate: "2024-07-10T00:00:00Z", customer: { userName: "Vikram Reddy", email: "vikram@example.com" }, status: "PENDING", paymentMethod: "CARD" }
+          ]
+        };
+        
+        // Transform orders to payment format
         let paymentsData = [];
         
-        if (usingFallback || response.data.orders) {
-          // Using fallback data structure
+        // Transform orders
+        fallbackData.orders.forEach(order => {
+          if (order.totalAmount) {
+            const paymentMethod = order.paymentMethod || getPaymentMethod(`ORD-${order.orderId}`);
+            paymentsData.push({
+              paymentId: `ORD-${order.orderId}`,
+              amount: order.totalAmount,
+              type: 'ORDER',
+              status: order.paymentStatus || (order.status === 'DELIVERED' ? 'COMPLETED' : 'PENDING'),
+              date: order.createdAt || order.orderDate || new Date().toISOString(),
+              customerName: order.customer?.userName || order.customerName || 'Customer',
+              customerEmail: order.customer?.email || order.customerEmail || '',
+              transactionId: order.transactionId || `TXN-ORD-${order.orderId}`,
+              description: `Order #${order.orderId}`,
+              category: order.category || 'Meal',
+              paymentMethod: paymentMethod,
+              paymentMethodName: paymentMethodConfig[paymentMethod]?.name || paymentMethod
+            });
+          }
+        });
+        
+        // Transform subscriptions
+        fallbackData.subscriptions.forEach(subscription => {
+          if (subscription.totalAmount || subscription.packagePrice) {
+            const amount = subscription.totalAmount || subscription.packagePrice;
+            const paymentMethod = subscription.paymentMethod || getPaymentMethod(`SUB-${subscription.subscriptionId}`);
+            paymentsData.push({
+              paymentId: `SUB-${subscription.subscriptionId}`,
+              amount: amount,
+              type: 'SUBSCRIPTION',
+              status: subscription.payment?.paymentStatus || subscription.status || 'COMPLETED',
+              date: subscription.startDate || subscription.createdAt || new Date().toISOString(),
+              customerName: subscription.customer?.userName || subscription.customerName || 'Customer',
+              customerEmail: subscription.customer?.email || subscription.customerEmail || '',
+              transactionId: subscription.payment?.transactionId || `TXN-SUB-${subscription.subscriptionId}`,
+              description: `Subscription #${subscription.subscriptionId}`,
+              category: 'Subscription',
+              paymentMethod: paymentMethod,
+              paymentMethodName: paymentMethodConfig[paymentMethod]?.name || paymentMethod
+            });
+          }
+        });
+        
+        setPayments(paymentsData);
+        calculateStats(paymentsData);
+        calculateChartData(paymentsData);
+        calculateMonthlyData(paymentsData);
+        calculateHourlyData(paymentsData);
+        
+      } else if (response.ok && response.data) {
+        // If API call was successful
+        let paymentsData = [];
+        
+        if (response.data.orders) {
+          // Using orders data structure
           const { orders = [], subscriptions = [] } = response.data;
           
           // Transform orders to payment format
@@ -217,15 +283,33 @@ const Earnings = () => {
         calculateHourlyData(paymentsData);
         
       } else {
-        setError('Failed to load earnings data');
+        // If API returns non-ok status but no data
+        setError('No earnings data available');
       }
     } catch (err) {
       console.error('Error loading earnings data:', err);
-      setError('Error loading earnings data: ' + err.message);
+      setError('Error loading earnings data. Using fallback data instead.');
+      setUsingFallback(true);
+      
+      // Create minimal fallback data on error
+      const fallbackPayments = [
+        {
+          paymentId: 'ORD-001',
+          amount: 1500,
+          type: 'ORDER',
+          status: 'COMPLETED',
+          date: new Date().toISOString(),
+          customerName: 'Sample Customer',
+          paymentMethod: 'ESEWA',
+          paymentMethodName: 'e-Sewa'
+        }
+      ];
+      setPayments(fallbackPayments);
+      calculateStats(fallbackPayments);
     } finally {
       setLoading(false);
     }
-  }, [timeRange, usingFallback]);
+  }, [timeRange]);
 
   // Calculate statistics
   const calculateStats = (paymentsData) => {
@@ -705,9 +789,10 @@ const Earnings = () => {
           <h2 className="text-2xl font-bold text-gray-900">Earnings & Revenue</h2>
           <p className="text-gray-600">Track your earnings and payment history</p>
           {usingFallback && (
-            <p className="text-sm text-yellow-600 mt-1">
-              Using fallback data from orders and subscriptions
-            </p>
+            <div className="mt-2 flex items-center gap-2 text-sm text-yellow-600">
+              <AlertCircle className="h-4 w-4" />
+              <span>Using sample data - API is temporarily unavailable</span>
+            </div>
           )}
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -734,7 +819,7 @@ const Earnings = () => {
 
       {/* Error Display */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg flex items-center">
           <AlertCircle className="h-5 w-5 mr-2" />
           {error}
         </div>
