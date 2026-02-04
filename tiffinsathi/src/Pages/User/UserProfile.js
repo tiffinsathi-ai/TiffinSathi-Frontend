@@ -353,32 +353,7 @@ const UserProfile = () => {
               </div>
             </div>
 
-            {/* Additional Sections for User */}
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Preferences Card */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h4 className="font-semibold text-gray-900 mb-4">
-                  Preferences
-                </h4>
-                <div className="space-y-3 text-sm text-gray-600">
-                  <p>• Email notifications</p>
-                  <p>• Meal preferences</p>
-                  <p>• Delivery settings</p>
-                </div>
-              </div>
-
-              {/* Order History Summary */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h4 className="font-semibold text-gray-900 mb-4">
-                  Order Summary
-                </h4>
-                <div className="space-y-2 text-sm text-gray-600">
-                  <p>Total Orders: 0</p>
-                  <p>Pending Orders: 0</p>
-                  <p>Completed Orders: 0</p>
-                </div>
-              </div>
-            </div>
+            {/* Additional sections removed as requested */}
           </div>
         </div>
       </div>

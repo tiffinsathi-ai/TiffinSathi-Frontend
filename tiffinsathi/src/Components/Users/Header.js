@@ -10,7 +10,7 @@ import {
   HiUserCircle,
   HiLogout,
 } from "react-icons/hi";
-import { UtensilsCrossed, Settings, Bell, Package, Clock } from "lucide-react";
+import { UtensilsCrossed, Settings, Package, Clock } from "lucide-react";
 import logo from "../../assets/logo.png";
 import defaultUser from "../../assets/default-user.jpg";
 import UserApi from "../../helpers/UserApi";

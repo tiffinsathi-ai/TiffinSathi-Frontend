@@ -88,6 +88,10 @@ function App() {
               <Route path="checkout" element={<Checkout />} />
               <Route path="user/profile" element={<UserProfile />} />
               <Route path="user/subscriptions" element={<MySubscription />} />
+              <Route
+                path="user/subscriptions/:subscriptionId/edit"
+                element={<EditSchedule />}
+              />
               <Route path="payment/success" element={<PaymentSuccess />} />
               <Route path="payment/failure" element={<PaymentFailure />} />
               <Route

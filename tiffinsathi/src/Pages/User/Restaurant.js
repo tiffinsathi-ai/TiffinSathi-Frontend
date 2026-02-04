@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { HiStar, HiChevronDown } from "react-icons/hi";
-import { Heart, MapPin, Phone, ChefHat } from "lucide-react";
+import { MapPin, Phone, ChefHat } from "lucide-react";
 import homeBg from "../../assets/home.jpg";
 import { toast } from "react-toastify";
 
@@ -14,7 +14,6 @@ const Restaurant = () => {
   const [error, setError] = useState(null);
   const [sortBy, setSortBy] = useState("Most Popular");
   const [showSortDropdown, setShowSortDropdown] = useState(false);
-  const [favorites, setFavorites] = useState(new Set());
 
   useEffect(() => {
     fetchVendors();
@@ -79,13 +78,6 @@ const Restaurant = () => {
 
     setFilteredVendors(filtered);
   }, [vendors, sortBy]);
-
-  const toggleFavorite = (vendorId) => {
-    const next = new Set(favorites);
-    if (next.has(vendorId)) next.delete(vendorId);
-    else next.add(vendorId);
-    setFavorites(next);
-  };
 
   const getProfileSrc = (profilePicture) => {
     if (!profilePicture)
@@ -260,19 +252,6 @@ const Restaurant = () => {
                         </span>
                       </div>
 
-                      {/* Favorite Button */}
-                      <button
-                        onClick={() => toggleFavorite(v.vendorId)}
-                        className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors shadow-sm"
-                      >
-                        <Heart
-                          className={`w-5 h-5 ${
-                            favorites.has(v.vendorId)
-                              ? "fill-red-500 text-red-500"
-                              : "text-gray-400"
-                          }`}
-                        />
-                      </button>
                     </div>
 
                     {/* Content Section */}
