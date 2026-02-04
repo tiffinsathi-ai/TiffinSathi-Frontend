@@ -49,7 +49,7 @@ export const getRedirectPath = (role) => {
     case 'ADMIN':
       return '/admin';
     case 'DELIVERY':
-      return '/delivery/deliveries';
+      return '/delivery';  // ✅ CHANGED: Fixed to just "/delivery"
     case 'VENDOR':
       return '/vendor/dashboard';
     case 'USER':

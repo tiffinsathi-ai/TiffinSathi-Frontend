@@ -78,7 +78,7 @@ const Login = () => {
       case "ADMIN":
         return "/admin";
       case "DELIVERY":
-        return "/delivery/deliveries";
+        return "/delivery";  // ✅ CHANGED: Fixed to just "/delivery"
       case "VENDOR":
         return "/vendor/dashboard";
       case "USER":
@@ -177,8 +177,15 @@ const Login = () => {
       const userEmail = decodedToken?.email || decodedToken?.sub || formData.email;
       const username = getDisplayName(decodedToken, userEmail);
       
+      // Debug logging
+      console.log("🔍 User role from token:", userRole);
+      console.log("🔍 Decoded token data:", decodedToken);
+      console.log("🔍 Login type selected:", formData.loginAs);
+      
       // Validate if user has access based on selected login type
       const hasAccess = validateRoleAccess(userRole, formData.loginAs);
+      
+      console.log("🔍 Has access?", hasAccess);
       
       if (!hasAccess) {
         let errorMessage = "";

@@ -162,7 +162,7 @@ const NavigationGuard = ({ children }) => {
         const dashboardRoutes = {
           'VENDOR': '/vendor/dashboard',
           'ADMIN': '/admin',
-          'DELIVERY': '/delivery/deliveries',
+          'DELIVERY': '/delivery', // CHANGED: Now points to /delivery (which will show DeliveryDashboard)
           'USER': '/'
         };
         
@@ -290,7 +290,7 @@ function App() {
                 </ProtectedRoute>
               }>
                 <Route index element={<Dashboard />} />  {/* This is for /vendor */}
-                <Route path="dashboard" element={<Dashboard />} /> {/* ADDED: This is for /vendor/dashboard */}
+                <Route path="dashboard" element={<Dashboard />} />
                 <Route path="tiffins" element={<Tiffins />} />
                 <Route path="orders" element={<Orders />} />
                 <Route path="customers" element={<Customers />} />
@@ -322,14 +322,15 @@ function App() {
               </Route>
 
               {/* Delivery Routes - PROTECTED */}
+              {/* CHANGED: Made DeliveryDashboard the index route for better UX */}
               <Route path="/delivery/*" element={
                 <ProtectedRoute allowedRoles={['DELIVERY']}>
                   <DeliveryLayout />
                 </ProtectedRoute>
               }>
-                <Route index element={<OrderDeliveries />} />
+                <Route index element={<DeliveryDashboard />} /> {/* CHANGED: Now DeliveryDashboard is the main page */}
                 <Route path="profile" element={<DeliveryProfile />} />
-                <Route path="deliveries" element={<DeliveryDashboard />} />
+                <Route path="orders" element={<OrderDeliveries />} /> {/* Added explicit orders route */}
                 <Route path="routes" element={<DeliveryRoutes />} />
                 <Route path="schedule" element={<Schedules />} />
                 <Route path="performance" element={<DeliveryPerformance />} />

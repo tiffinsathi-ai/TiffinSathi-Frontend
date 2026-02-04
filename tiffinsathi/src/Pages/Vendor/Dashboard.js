@@ -7,13 +7,17 @@ import {
   BarChart3, 
   RefreshCw,
   ShoppingBag,
-  UserCheck 
+  UserCheck,
+  TrendingUp,
+  DollarSign,
+  Calendar
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   // Mock data - temporary until backend is fixed
   const mockData = {
@@ -23,15 +27,21 @@ const Dashboard = () => {
     pendingOrders: 3,
     todayRevenue: 2850,
     recentOrders: [
-      { id: "ORD-001", userName: "John Doe", status: "pending", deliveryTime: "12:30 PM" },
-      { id: "ORD-002", userName: "Jane Smith", status: "preparing", deliveryTime: "1:00 PM" },
-      { id: "ORD-003", userName: "Robert Johnson", status: "out_for_delivery", deliveryTime: "11:45 AM" },
-      { id: "ORD-004", userName: "Sarah Williams", status: "delivered", deliveryTime: "10:30 AM" },
+      { id: "ORD-001", userName: "John Doe", status: "pending", deliveryTime: "12:30 PM", amount: 450 },
+      { id: "ORD-002", userName: "Jane Smith", status: "preparing", deliveryTime: "1:00 PM", amount: 320 },
+      { id: "ORD-003", userName: "Robert Johnson", status: "out_for_delivery", deliveryTime: "11:45 AM", amount: 580 },
+      { id: "ORD-004", userName: "Sarah Williams", status: "delivered", deliveryTime: "10:30 AM", amount: 620 },
     ],
     recentCustomers: [
       { id: "CUST-001", name: "Alice Johnson", phone: "123-456-7890", totalSpent: 500, totalSubscriptions: 1 },
       { id: "CUST-002", name: "Bob Williams", phone: "987-654-3210", totalSpent: 750, totalSubscriptions: 2 },
       { id: "CUST-003", name: "Charlie Brown", phone: "456-789-0123", totalSpent: 1200, totalSubscriptions: 1 },
+    ],
+    todaysPerformance: [
+      { label: "New Orders", value: 8, change: "+12%", color: "blue" },
+      { label: "Revenue", value: "₹2,850", change: "+8%", color: "green" },
+      { label: "Avg Order", value: "₹356", change: "+5%", color: "purple" },
+      { label: "Success Rate", value: "94%", change: "+2%", color: "orange" },
     ]
   };
 
@@ -39,36 +49,36 @@ const Dashboard = () => {
     // Simulate loading
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 500);
+    }, 800);
     
-    return () => clearTimeout(timer);
+    // Update time every minute
+    const timeInterval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+    
+    return () => {
+      clearTimeout(timer);
+      clearInterval(timeInterval);
+    };
   }, []);
 
   // Enhanced StatCard
-  const StatCard = ({ title, value, icon: Icon, color, change }) => {
+  const StatCard = ({ title, value, icon: Icon, color, change, onClick }) => {
     const colors = {
-      blue: "text-blue-600 bg-blue-50",
-      green: "text-green-600 bg-green-50",
-      purple: "text-purple-600 bg-purple-50",
-      orange: "text-orange-600 bg-orange-50",
-      emerald: "text-emerald-600 bg-emerald-50"
-    };
-
-    const getNavigationPath = () => {
-      if (title.includes("Today's Orders") || title.includes("Pending")) return "/vendor/orders";
-      if (title.includes("Active Subscriptions")) return "/vendor/subscriptions";
-      if (title.includes("Customers")) return "/vendor/customers";
-      if (title.includes("Revenue")) return "/vendor/earnings";
-      return "/vendor/dashboard";
+      blue: "from-blue-500 to-blue-600",
+      green: "from-green-500 to-green-600",
+      purple: "from-purple-500 to-purple-600",
+      orange: "from-orange-500 to-orange-600",
+      emerald: "from-emerald-500 to-emerald-600"
     };
 
     return (
       <div 
-        className="bg-white p-6 rounded-xl border shadow-sm hover:shadow-md transition-shadow cursor-pointer" 
-        onClick={() => navigate(getNavigationPath())}
+        className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+        onClick={onClick}
       >
-        <div className="flex items-center justify-between mb-4">
-          <div className={`p-3 rounded-lg ${colors[color] || colors.blue}`}>
+        <div className="flex items-center justify-between mb-3">
+          <div className={`p-3 rounded-lg bg-gradient-to-br ${colors[color] || colors.blue} text-white`}>
             <Icon className="h-6 w-6" />
           </div>
           {change && (
@@ -77,8 +87,11 @@ const Dashboard = () => {
             </span>
           )}
         </div>
-        <h3 className="text-3xl font-bold text-gray-900 mb-1">{value}</h3>
+        <h3 className="text-2xl font-bold text-gray-900 mb-1">{value}</h3>
         <p className="text-sm text-gray-600">{title}</p>
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <span className="text-xs text-gray-500">Click to view details →</span>
+        </div>
       </div>
     );
   };
@@ -86,16 +99,16 @@ const Dashboard = () => {
   // ActionButton component
   const ActionButton = ({ icon: Icon, label, onClick, color = "blue" }) => {
     const colors = {
-      blue: "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500",
-      green: "bg-green-600 hover:bg-green-700 focus:ring-green-500",
-      purple: "bg-purple-600 hover:bg-purple-700 focus:ring-purple-500",
-      orange: "bg-orange-600 hover:bg-orange-700 focus:ring-orange-500"
+      blue: "bg-blue-600 hover:bg-blue-700",
+      green: "bg-green-600 hover:bg-green-700",
+      purple: "bg-purple-600 hover:bg-purple-700",
+      orange: "bg-orange-600 hover:bg-orange-700"
     };
 
     return (
       <button
         onClick={onClick}
-        className={`flex items-center gap-2 text-white px-4 py-3 rounded-lg font-medium transition-colors ${colors[color] || colors.blue} focus:outline-none focus:ring-2 focus:ring-offset-2`}
+        className={`flex items-center justify-center gap-2 text-white px-4 py-3 rounded-lg font-medium transition-all ${colors[color] || colors.blue} focus:outline-none focus:ring-2 focus:ring-offset-2 w-full`}
       >
         <Icon size={20} />
         <span>{label}</span>
@@ -104,82 +117,90 @@ const Dashboard = () => {
   };
 
   const getStatusColor = (status) => {
-    if (!status) return "bg-gray-100 text-gray-800 border-gray-200";
+    if (!status) return "bg-gray-100 text-gray-800";
     
     const colors = {
-      pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      preparing: "bg-blue-100 text-blue-800 border-blue-200",
-      out_for_delivery: "bg-purple-100 text-purple-800 border-purple-200",
-      delivered: "bg-green-100 text-green-800 border-green-200",
-      cancelled: "bg-red-100 text-red-800 border-red-200",
-      completed: "bg-emerald-100 text-emerald-800 border-emerald-200"
+      pending: "bg-yellow-100 text-yellow-800",
+      preparing: "bg-blue-100 text-blue-800",
+      out_for_delivery: "bg-purple-100 text-purple-800",
+      delivered: "bg-green-100 text-green-800",
+      cancelled: "bg-red-100 text-red-800",
+      completed: "bg-emerald-100 text-emerald-800"
     };
-    return colors[status] || "bg-gray-100 text-gray-800 border-gray-200";
+    return colors[status] || "bg-gray-100 text-gray-800";
+  };
+
+  const getStatusText = (status) => {
+    return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex flex-col items-center justify-center h-64">
         <RefreshCw className="animate-spin text-green-600 mr-2" size={24} />
-        <span className="text-gray-600">Loading dashboard...</span>
+        <span className="text-gray-600 mt-2">Loading dashboard...</span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-6">
       {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl p-6 text-white shadow-lg">
-        <div className="flex justify-between items-start">
+      <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl p-5 sm:p-6 text-white shadow-lg">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold mb-2">Welcome back, Vendor!</h1>
-            <p className="opacity-90">Here's what's happening with your business today</p>
+            <h1 className="text-xl sm:text-2xl font-bold mb-1">Welcome back!</h1>
+            <p className="opacity-90 text-sm">Here's what's happening with your business today</p>
           </div>
           <div className="text-right">
-            <p className="text-2xl md:text-4xl font-bold">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            <p className="text-lg sm:text-xl font-bold">
+              {currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
             </p>
-            <p className="opacity-90 mt-1">{new Date().toLocaleTimeString()}</p>
+            <p className="opacity-90 text-sm">{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
           </div>
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Today's Orders"
           value={mockData.ordersToday}
           icon={ShoppingBag}
           color="blue"
-          change="+12% from yesterday"
+          change="+12%"
+          onClick={() => navigate("/vendor/orders")}
         />
         <StatCard
           title="Active Subscriptions"
           value={mockData.activeSubscriptions}
-          icon={Users}
+          icon={Calendar}
           color="green"
-          change="+5 this week"
+          change="+5"
+          onClick={() => navigate("/vendor/subscriptions")}
         />
         <StatCard
           title="Total Customers"
           value={mockData.totalCustomers}
           icon={UserCheck}
           color="purple"
-          change="+3 new this month"
+          change="+3"
+          onClick={() => navigate("/vendor/customers")}
         />
         <StatCard
           title="Pending Orders"
           value={mockData.pendingOrders}
           icon={Clock}
           color="orange"
-          change="Requires attention"
+          change="Needs attention"
+          onClick={() => navigate("/vendor/orders")}
         />
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-xl border shadow-sm p-4 md:p-6">
-        <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <ActionButton
             icon={Package}
             label="View Orders"
@@ -207,11 +228,11 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Recent Orders */}
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
-          <div className="flex items-center justify-between mb-4 md:mb-6">
-            <h3 className="text-base md:text-lg font-semibold text-gray-900">Recent Orders</h3>
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Recent Orders</h3>
             <button 
               onClick={() => navigate("/vendor/orders")}
               className="text-sm text-blue-600 hover:text-blue-700 font-medium"
@@ -219,28 +240,28 @@ const Dashboard = () => {
               View All →
             </button>
           </div>
-          <div className="space-y-3 md:space-y-4">
+          <div className="space-y-3">
             {mockData.recentOrders.map((order) => (
-              <div key={order.id} className="flex items-center justify-between p-3 md:p-4 hover:bg-gray-50 rounded-lg border">
-                <div className="flex items-center space-x-3 md:space-x-4">
+              <div key={order.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg border border-gray-100">
+                <div className="flex items-center space-x-3">
                   <div className={`p-2 rounded-lg ${getStatusColor(order.status)}`}>
-                    <Package className="h-4 w-4 md:h-5 md:w-5" />
+                    <Package className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900 text-sm md:text-base">
+                    <p className="font-medium text-gray-900 text-sm">
                       Order #{order.id}
                     </p>
-                    <p className="text-xs md:text-sm text-gray-500">
-                      {order.userName}
+                    <p className="text-xs text-gray-500">
+                      {order.userName} • {order.deliveryTime}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className={`px-2 py-1 md:px-3 md:py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                    {order.status.replace('_', ' ')}
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                    {getStatusText(order.status)}
                   </span>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {order.deliveryTime}
+                  <p className="text-xs font-medium text-gray-900 mt-1">
+                    ₹{order.amount}
                   </p>
                 </div>
               </div>
@@ -249,9 +270,9 @@ const Dashboard = () => {
         </div>
 
         {/* Recent Customers */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
-          <div className="flex items-center justify-between mb-4 md:mb-6">
-            <h3 className="text-base md:text-lg font-semibold text-gray-900">Recent Customers</h3>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Recent Customers</h3>
             <button 
               onClick={() => navigate("/vendor/customers")}
               className="text-sm text-blue-600 hover:text-blue-700 font-medium"
@@ -259,28 +280,28 @@ const Dashboard = () => {
               View All →
             </button>
           </div>
-          <div className="space-y-3 md:space-y-4">
+          <div className="space-y-3">
             {mockData.recentCustomers.map(customer => (
-              <div key={customer.id} className="flex items-center justify-between p-3 md:p-4 hover:bg-gray-50 rounded-lg border">
-                <div className="flex items-center space-x-3 md:space-x-4">
-                  <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                    <Users className="h-4 w-4 md:h-5 md:w-5 text-gray-500" />
+              <div key={customer.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg border border-gray-100">
+                <div className="flex items-center space-x-3">
+                  <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                    <Users className="h-4 w-4 text-gray-500" />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900 text-sm md:text-base">
+                    <p className="font-medium text-gray-900 text-sm">
                       {customer.name}
                     </p>
-                    <p className="text-xs md:text-sm text-gray-500">
+                    <p className="text-xs text-gray-500">
                       {customer.phone}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-medium text-gray-900">
-                    Rs. {(customer.totalSpent).toLocaleString()}
+                    ₹{customer.totalSpent}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {customer.totalSubscriptions} subscription(s)
+                    {customer.totalSubscriptions} sub(s)
                   </p>
                 </div>
               </div>
@@ -290,25 +311,19 @@ const Dashboard = () => {
       </div>
 
       {/* Today's Performance */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
-        <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-4">Today's Performance</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          <div className="text-center p-3 md:p-4 bg-blue-50 rounded-lg">
-            <p className="text-xl md:text-2xl font-bold text-blue-600">{mockData.ordersToday}</p>
-            <p className="text-xs md:text-sm text-gray-600">Orders</p>
-          </div>
-          <div className="text-center p-3 md:p-4 bg-green-50 rounded-lg">
-            <p className="text-xl md:text-2xl font-bold text-green-600">Rs {mockData.todayRevenue}</p>
-            <p className="text-xs md:text-sm text-gray-600">Revenue</p>
-          </div>
-          <div className="text-center p-3 md:p-4 bg-purple-50 rounded-lg">
-            <p className="text-xl md:text-2xl font-bold text-purple-600">{mockData.activeSubscriptions}</p>
-            <p className="text-xs md:text-sm text-gray-600">Active Subs</p>
-          </div>
-          <div className="text-center p-3 md:p-4 bg-orange-50 rounded-lg">
-            <p className="text-xl md:text-2xl font-bold text-orange-600">{mockData.pendingOrders}</p>
-            <p className="text-xs md:text-sm text-gray-600">Pending</p>
-          </div>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Today's Performance</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {mockData.todaysPerformance.map((item, index) => (
+            <div key={index} className="text-center p-3 sm:p-4 rounded-lg border border-gray-100">
+              <p className="text-lg sm:text-xl font-bold text-gray-900">{item.value}</p>
+              <p className="text-xs text-gray-600">{item.label}</p>
+              <div className="flex items-center justify-center mt-2">
+                <TrendingUp size={12} className="text-green-500 mr-1" />
+                <span className="text-xs text-green-600">{item.change}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

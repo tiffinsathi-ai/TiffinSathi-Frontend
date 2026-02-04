@@ -59,86 +59,11 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
   const [vendor, setVendor] = useState(null);
   const [profilePicture, setProfilePicture] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [notifications, setNotifications] = useState([]);
-  const [lastActivity, setLastActivity] = useState(Date.now());
+  const [notificationsCount, setNotificationsCount] = useState(0);
   const dropdownRef = useRef(null);
   const notificationsRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
-
-  // Check token expiry periodically
-  useEffect(() => {
-    const checkTokenExpiry = () => {
-      const token = authStorage.getToken();
-      if (!token) {
-        handleLogout();
-        return;
-      }
-
-      // Check if token is expired
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const expiryTime = payload.exp * 1000;
-        
-        if (Date.now() >= expiryTime - 60000) { // 1 minute before expiry
-          console.log("Token expiring soon, redirecting to login...");
-          handleLogout("Session expired. Please login again.");
-        }
-      } catch (error) {
-        console.error("Error checking token:", error);
-      }
-    };
-
-    const interval = setInterval(checkTokenExpiry, 30000); // Check every 30 seconds
-    return () => clearInterval(interval);
-  }, []);
-
-  // Check token on route change
-  useEffect(() => {
-    const token = authStorage.getToken();
-    if (!token) {
-      navigate("/login", { 
-        state: { 
-          from: location.pathname,
-          message: "Please login to continue"
-        } 
-      });
-      return;
-    }
-  }, [location.pathname, navigate]);
-
-  // Track user activity
-  useEffect(() => {
-    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart'];
-    
-    const updateActivity = () => {
-      setLastActivity(Date.now());
-    };
-
-    activityEvents.forEach(event => {
-      document.addEventListener(event, updateActivity);
-    });
-
-    return () => {
-      activityEvents.forEach(event => {
-        document.removeEventListener(event, updateActivity);
-      });
-    };
-  }, []);
-
-  // Auto-logout after 30 minutes of inactivity
-  useEffect(() => {
-    const inactivityCheck = setInterval(() => {
-      const timeSinceLastActivity = Date.now() - lastActivity;
-      const thirtyMinutes = 30 * 60 * 1000;
-      
-      if (timeSinceLastActivity > thirtyMinutes) {
-        handleLogout("Logged out due to inactivity");
-      }
-    }, 60000); // Check every minute
-
-    return () => clearInterval(inactivityCheck);
-  }, [lastActivity]);
 
   // Fetch vendor data from database
   const fetchVendorData = async () => {
@@ -152,7 +77,7 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
         return;
       }
 
-      // Fetch vendor profile using the provided API
+      // Fetch vendor profile
       const response = await vendorApi.getVendorProfile();
       
       if (response.ok && response.data) {
@@ -166,7 +91,6 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
         
         // Store in localStorage for quick access
         authStorage.setUser(response.data);
-        localStorage.setItem("lastVendorUpdate", Date.now().toString());
         
         // Update auth storage with vendor data
         if (response.data.businessName) {
@@ -181,10 +105,6 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
       }
     } catch (error) {
       console.error("Error fetching vendor data:", error);
-      if (error.response?.status === 401) {
-        handleLogout("Session expired. Please login again.");
-        return;
-      }
       
       // Fallback to localStorage if API fails
       const storedVendor = authStorage.getVendor();
@@ -205,24 +125,16 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
     }
   };
 
-  // Fetch notifications
+  // Fetch notifications count only
   const fetchNotifications = async () => {
     try {
       const response = await vendorApi.getNotifications();
       if (response.ok && response.data) {
-        setNotifications(response.data);
+        const unreadCount = response.data.filter(n => !n.read).length;
+        setNotificationsCount(unreadCount);
       }
     } catch (error) {
       console.error("Error fetching notifications:", error);
-      // Mock notifications for demo
-      const mockNotifications = [
-        { id: 1, message: "New order #ORD-001 received from John Doe", time: "10 min ago", read: false, type: "order", priority: "high" },
-        { id: 2, message: "Subscription #SUB-123 is about to expire tomorrow", time: "1 hour ago", read: false, type: "subscription", priority: "medium" },
-        { id: 3, message: "Delivery partner assigned to order #456", time: "2 hours ago", read: true, type: "delivery", priority: "low" },
-        { id: 4, message: "Payment of $150 received for order #789", time: "3 hours ago", read: true, type: "payment", priority: "low" },
-        { id: 5, message: "New review received from Sarah Johnson", time: "5 hours ago", read: false, type: "review", priority: "medium" },
-      ];
-      setNotifications(mockNotifications);
     }
   };
 
@@ -230,9 +142,8 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
     fetchVendorData();
     fetchNotifications();
     
-    // Set up interval to refresh data
-    const dataInterval = setInterval(fetchVendorData, 300000); // 5 minutes
-    const notificationInterval = setInterval(fetchNotifications, 60000); // 1 minute
+    // Set up interval to refresh notifications
+    const notificationInterval = setInterval(fetchNotifications, 30000);
 
     // Listen for vendor data updates
     const handleVendorDataUpdated = (event) => {
@@ -246,7 +157,6 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
     window.addEventListener('vendorDataUpdated', handleVendorDataUpdated);
 
     return () => {
-      clearInterval(dataInterval);
       clearInterval(notificationInterval);
       window.removeEventListener('vendorDataUpdated', handleVendorDataUpdated);
     };
@@ -364,42 +274,6 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
     });
   };
 
-  const markNotificationAsRead = (id) => {
-    setNotifications(notifications.map(notif => 
-      notif.id === id ? { ...notif, read: true } : notif
-    ));
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(notif => ({ ...notif, read: true })));
-  };
-
-  const clearAllNotifications = () => {
-    setNotifications([]);
-  };
-
-  const getNotificationIcon = (type) => {
-    switch(type) {
-      case 'order': return '🛒';
-      case 'payment': return '💰';
-      case 'subscription': return '📅';
-      case 'delivery': return '🚚';
-      case 'review': return '⭐';
-      default: return '🔔';
-    }
-  };
-
-  const getPriorityColor = (priority) => {
-    switch(priority) {
-      case 'high': return 'bg-red-100 border-red-300';
-      case 'medium': return 'bg-yellow-100 border-yellow-300';
-      case 'low': return 'bg-blue-100 border-blue-300';
-      default: return 'bg-gray-100 border-gray-300';
-    }
-  };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
-
   if (loading) {
     return (
       <nav
@@ -486,7 +360,7 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
 
           {/* Right Section */}
           <div className="flex items-center space-x-3 sm:space-x-4">
-            {/* Notifications */}
+            {/* Notifications - SIMPLIFIED */}
             <div className="relative" ref={notificationsRef}>
               <button
                 onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
@@ -499,85 +373,31 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
                 onMouseLeave={() => setHoveredItem(null)}
               >
                 <Bell size={20} className="sm:w-6 sm:h-6" />
-                {unreadCount > 0 && (
+                {notificationsCount > 0 && (
                   <span
-                    className="absolute -top-1 -right-1 text-xs font-bold rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-white text-[10px] sm:text-xs animate-pulse"
+                    className="absolute -top-1 -right-1 text-xs font-bold rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-white text-[10px] sm:text-xs"
                     style={{ backgroundColor: designTokens.colors.accent.red }}
                   >
-                    {unreadCount}
+                    {notificationsCount > 9 ? '9+' : notificationsCount}
                   </span>
                 )}
               </button>
 
               {isNotificationsOpen && (
                 <div 
-                  className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border z-50"
+                  className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-xl border z-50"
                   style={{ borderColor: designTokens.colors.border.medium }}
                 >
-                  <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-lg">
-                    <div>
-                      <h3 className="font-bold text-gray-900">Notifications</h3>
-                      <p className="text-xs text-gray-500">
-                        {unreadCount} unread {unreadCount === 1 ? 'notification' : 'notifications'}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      {unreadCount > 0 && (
-                        <button 
-                          onClick={markAllAsRead}
-                          className="text-xs text-blue-600 hover:text-blue-800 px-3 py-1 hover:bg-blue-50 rounded"
-                        >
-                          Mark all read
-                        </button>
-                      )}
-                      <button 
-                        onClick={clearAllNotifications}
-                        className="text-xs text-red-600 hover:text-red-800 px-3 py-1 hover:bg-red-50 rounded"
-                      >
-                        Clear all
-                      </button>
-                    </div>
+                  <div className="p-4 border-b">
+                    <h3 className="font-bold text-gray-900">Notifications</h3>
+                    <p className="text-xs text-gray-500">
+                      {notificationsCount} unread {notificationsCount === 1 ? 'notification' : 'notifications'}
+                    </p>
                   </div>
-                  <div className="max-h-96 overflow-y-auto">
-                    {notifications.length > 0 ? (
-                      notifications.map(notification => (
-                        <div 
-                          key={notification.id} 
-                          className={`p-4 border-b hover:bg-gray-50 transition-colors ${!notification.read ? 'bg-blue-50' : ''} ${getPriorityColor(notification.priority)}`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="text-lg mt-1">
-                              {getNotificationIcon(notification.type)}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex justify-between items-start">
-                                <p className="text-sm text-gray-900 font-medium">{notification.message}</p>
-                                {!notification.read && (
-                                  <button 
-                                    onClick={() => markNotificationAsRead(notification.id)} 
-                                    className="text-xs text-blue-600 hover:text-blue-800 ml-2"
-                                  >
-                                    Mark read
-                                  </button>
-                                )}
-                              </div>
-                              <div className="flex justify-between items-center mt-2">
-                                <p className="text-xs text-gray-500">{notification.time}</p>
-                                <span className={`text-xs px-2 py-1 rounded-full ${notification.priority === 'high' ? 'bg-red-100 text-red-800' : notification.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'}`}>
-                                  {notification.type}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="p-8 text-center text-gray-500">
-                        <Bell className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                        <p className="font-medium">No notifications</p>
-                        <p className="text-sm mt-1">You're all caught up!</p>
-                      </div>
-                    )}
+                  <div className="p-6 text-center">
+                    <Bell className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-600">Notifications will appear here</p>
+                    <p className="text-sm text-gray-500 mt-1">You have {notificationsCount} unread</p>
                   </div>
                 </div>
               )}
@@ -639,7 +459,7 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
 
               {isDropdownOpen && (
                 <div
-                  className="absolute right-0 mt-2 w-80 sm:w-96 rounded-lg shadow-xl overflow-hidden z-50"
+                  className="absolute right-0 mt-2 w-72 sm:w-80 rounded-lg shadow-xl overflow-hidden z-50"
                   style={{
                     backgroundColor: designTokens.colors.background.primary,
                     border: `1px solid ${designTokens.colors.border.medium}`,
@@ -647,12 +467,12 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
                 >
                   {/* Vendor Info Section */}
                   <div
-                    className="px-4 py-5 border-b bg-gradient-to-r from-green-50 to-gray-50"
+                    className="px-4 py-4 border-b bg-gradient-to-r from-green-50 to-gray-50"
                     style={{ borderColor: designTokens.colors.border.light }}
                   >
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-3">
                       <div className="relative">
-                        <div className="w-16 h-16 rounded-full flex items-center justify-center overflow-hidden border-3 border-white shadow-sm bg-gradient-to-br from-green-100 to-green-50">
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-sm bg-gradient-to-br from-green-100 to-green-50">
                           <img
                             src={getProfilePictureSrc()}
                             alt="Profile"
@@ -662,82 +482,55 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
                             }}
                           />
                         </div>
-                        <div className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-white ${getStatusColor(getVendorStatus()).icon}`}></div>
+                        <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${getStatusColor(getVendorStatus()).icon}`}></div>
                       </div>
                       <div className="flex-1">
                         <div className="flex justify-between items-start">
                           <div>
                             <p
-                              className="text-lg font-bold mb-1"
+                              className="text-sm font-bold mb-1 truncate"
                               style={{ color: designTokens.colors.text.primary }}
                             >
                               {getDisplayName()}
                             </p>
-                            <div className="flex items-center gap-2 mb-2">
+                            <div className="flex items-center gap-1 mb-1">
                               <span className={`text-xs font-semibold px-2 py-1 rounded-full ${getStatusColor(getVendorStatus()).bg} ${getStatusColor(getVendorStatus()).text} ${getStatusColor(getVendorStatus()).border}`}>
-                                <Store size={10} className="inline mr-1" />
+                                <Store size={8} className="inline mr-1" />
                                 {getVendorStatus()}
                               </span>
-                              <Shield size={12} className="text-green-600" />
-                              <span className="text-xs text-gray-600">Verified Vendor</span>
                             </div>
                           </div>
                         </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Mail size={12} className="text-gray-400" />
-                            <span className="text-xs text-gray-600 truncate">{getVendorEmail()}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Phone size={12} className="text-gray-400" />
-                            <span className="text-xs text-gray-600">{getVendorPhone()}</span>
-                          </div>
-                        </div>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Quick Actions */}
-                  <div className="py-3 px-4 bg-gray-50 border-b">
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => {
-                          setIsDropdownOpen(false);
-                          navigate("/vendor/dashboard");
-                        }}
-                        className="text-sm px-3 py-2 bg-white hover:bg-green-50 border border-green-200 rounded-lg transition-colors flex items-center justify-center gap-2"
-                        style={{ color: designTokens.colors.secondary.main }}
-                      >
-                        <Home className="w-4 h-4" />
-                        Dashboard
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsDropdownOpen(false);
-                          navigate("/vendor/earnings");
-                        }}
-                        className="text-sm px-3 py-2 bg-white hover:bg-green-50 border border-green-200 rounded-lg transition-colors flex items-center justify-center gap-2"
-                        style={{ color: designTokens.colors.secondary.main }}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Earnings
-                      </button>
                     </div>
                   </div>
 
                   {/* Menu Items */}
                   <div className="py-2">
                     <button
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        navigate("/vendor/dashboard");
+                      }}
+                      className="flex items-center gap-3 w-full px-4 py-3 transition-colors text-left hover:bg-gray-50"
+                      style={{ color: designTokens.colors.text.primary }}
+                    >
+                      <Home size={16} className="text-green-600" />
+                      <div>
+                        <span className="text-sm font-medium">Dashboard</span>
+                        <p className="text-xs text-gray-500">Back to dashboard</p>
+                      </div>
+                    </button>
+
+                    <button
                       onClick={handleProfileClick}
                       className="flex items-center gap-3 w-full px-4 py-3 transition-colors text-left hover:bg-gray-50"
                       style={{ color: designTokens.colors.text.primary }}
                     >
-                      <UserCircle size={18} className="text-green-600" />
+                      <UserCircle size={16} className="text-green-600" />
                       <div>
                         <span className="text-sm font-medium">My Profile</span>
-                        <p className="text-xs text-gray-500">View and edit your profile</p>
+                        <p className="text-xs text-gray-500">View and edit profile</p>
                       </div>
                     </button>
 
@@ -746,10 +539,10 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
                       className="flex items-center gap-3 w-full px-4 py-3 transition-colors text-left hover:bg-gray-50"
                       style={{ color: designTokens.colors.text.primary }}
                     >
-                      <Settings size={18} className="text-green-600" />
+                      <Settings size={16} className="text-green-600" />
                       <div>
                         <span className="text-sm font-medium">Settings</span>
-                        <p className="text-xs text-gray-500">Manage account settings</p>
+                        <p className="text-xs text-gray-500">Account settings</p>
                       </div>
                     </button>
                   </div>
@@ -763,7 +556,7 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
                       className="flex items-center gap-3 w-full px-4 py-3 transition-colors text-left hover:bg-red-50"
                       style={{ color: designTokens.colors.accent.red }}
                     >
-                      <LogOut size={18} />
+                      <LogOut size={16} />
                       <div>
                         <span className="text-sm font-medium">Logout</span>
                         <p className="text-xs text-gray-500">Sign out of your account</p>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import { 
   User, 
   Camera, 
@@ -12,9 +12,12 @@ import {
   Shield,
   Settings,
   Eye,
-  EyeOff
-} from "lucide-react";
+  EyeOff,
+  AlertCircle,
+  CheckCircle
+} from 'lucide-react';
 import AdminApi from "../../helpers/adminApi";
+import { validatePassword, passwordRequirements } from '../../helpers/passwordValidation'; // ADDED
 
 const AdminProfile = () => {
   const [user, setUser] = useState(null);
@@ -38,6 +41,15 @@ const AdminProfile = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // ADDED: Password validation state
+  const [passwordErrors, setPasswordErrors] = useState([]);
+  const [passwordValidation, setPasswordValidation] = useState({
+    length: false,
+    uppercase: false,
+    number: false,
+    special: false
+  });
 
   useEffect(() => {
     fetchUserProfile();
@@ -155,7 +167,44 @@ const AdminProfile = () => {
     }
   };
 
+  // ADDED: Validate password in real-time
+  const validatePasswordInRealTime = (password) => {
+    const validation = validatePassword(password);
+    setPasswordErrors(validation.errors);
+    
+    // Update individual validation checks for UI feedback
+    setPasswordValidation({
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      number: /[0-9]/.test(password),
+      special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+    });
+    
+    return validation.isValid;
+  };
+
+  // ADDED: Password form validation
+  const validatePasswordForm = () => {
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setMessage("New password and confirm password don't match");
+      return false;
+    }
+    
+    const isValid = validatePasswordInRealTime(passwordData.newPassword);
+    if (!isValid) {
+      setMessage("Password doesn't meet the requirements");
+      return false;
+    }
+    
+    return true;
+  };
+
   const handleChangePassword = async () => {
+    // ADDED: Validate password before API call
+    if (!validatePasswordForm()) {
+      return;
+    }
+    
     try {
       await AdminApi.changePassword(passwordData);
       setMessage("Password changed successfully!");
@@ -164,6 +213,14 @@ const AdminProfile = () => {
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
+      });
+      // Reset validation state
+      setPasswordErrors([]);
+      setPasswordValidation({
+        length: false,
+        uppercase: false,
+        number: false,
+        special: false
       });
       setTimeout(() => setMessage(""), 3000);
     } catch (error) {
@@ -184,7 +241,7 @@ const AdminProfile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-blue-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -192,18 +249,18 @@ const AdminProfile = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-blue-50">
         <div className="text-red-600">Error loading profile</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between">
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-gray-100">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Admin Profile</h1>
               <p className="text-gray-600">Manage your administrator account</p>
@@ -215,7 +272,7 @@ const AdminProfile = () => {
               </div>
               <button
                 onClick={() => setIsChangePasswordOpen(true)}
-                className="flex items-center gap-2 bg-yellow-500 text-white py-2 px-4 rounded-lg hover:bg-yellow-600 transition-colors"
+                className="flex items-center gap-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white py-2 px-4 rounded-lg hover:from-yellow-600 hover:to-yellow-700 transition-all shadow-sm"
               >
                 <Lock className="w-4 h-4" />
                 Change Password
@@ -224,7 +281,7 @@ const AdminProfile = () => {
                 <div className="flex gap-2">
                   <button
                     onClick={handleCancelEdit}
-                    className="flex items-center gap-2 bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors"
+                    className="flex items-center gap-2 bg-gradient-to-r from-gray-500 to-gray-600 text-white py-2 px-4 rounded-lg hover:from-gray-600 hover:to-gray-700 transition-all shadow-sm"
                   >
                     <X className="w-4 h-4" />
                     Cancel
@@ -232,7 +289,7 @@ const AdminProfile = () => {
                   <button
                     onClick={handleSaveProfile}
                     disabled={saving}
-                    className="flex items-center gap-2 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-2 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-sm disabled:opacity-50"
                   >
                     <Save className="w-4 h-4" />
                     {saving ? "Saving..." : "Save Changes"}
@@ -241,7 +298,7 @@ const AdminProfile = () => {
               ) : (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-2 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-2 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-sm"
                 >
                   <Edit3 className="w-4 h-4" />
                   Edit Profile
@@ -267,10 +324,10 @@ const AdminProfile = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Profile Image Section */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
               <div className="flex flex-col items-center">
                 <div className="relative mb-4">
-                  <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">
+                  <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">
                     {user.profilePicture || profileImage ? (
                       <img
                         src={profileImage || user.profilePicture}
@@ -278,11 +335,11 @@ const AdminProfile = () => {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <User className="w-16 h-16 text-gray-400" />
+                      <User className="w-16 h-16 text-blue-400" />
                     )}
                   </div>
                   {isEditing && (
-                    <label className="absolute bottom-2 right-2 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors shadow-lg">
+                    <label className="absolute bottom-2 right-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-2 rounded-full cursor-pointer hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg">
                       <Camera className="w-4 h-4" />
                       <input
                         type="file"
@@ -305,8 +362,8 @@ const AdminProfile = () => {
                 <div
                   className={`mt-3 px-3 py-1 rounded-full text-sm font-medium ${
                     user.status === "ACTIVE"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
+                      ? "bg-gradient-to-r from-green-100 to-green-50 text-green-800 border border-green-200"
+                      : "bg-gradient-to-r from-red-100 to-red-50 text-red-800 border border-red-200"
                   }`}
                 >
                   {user.status}
@@ -315,18 +372,18 @@ const AdminProfile = () => {
 
               {/* Additional Info */}
               <div className="mt-6 space-y-3">
-                <div className="flex items-center gap-3 text-gray-600 p-2 rounded-lg bg-gray-50">
+                <div className="flex items-center gap-3 text-gray-600 p-3 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200">
                   <Mail className="w-4 h-4" />
                   <span className="text-sm">{user.email}</span>
                 </div>
-                <div className="flex items-center gap-3 text-gray-600 p-2 rounded-lg bg-gray-50">
+                <div className="flex items-center gap-3 text-gray-600 p-3 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200">
                   <Calendar className="w-4 h-4" />
                   <span className="text-sm">
                     Joined {new Date(user.createdAt).toLocaleDateString()}
                   </span>
                 </div>
                 {user.phoneNumber && (
-                  <div className="flex items-center gap-3 text-gray-600 p-2 rounded-lg bg-gray-50">
+                  <div className="flex items-center gap-3 text-gray-600 p-3 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200">
                     <Phone className="w-4 h-4" />
                     <span className="text-sm">{user.phoneNumber}</span>
                   </div>
@@ -335,21 +392,21 @@ const AdminProfile = () => {
             </div>
 
             {/* Admin Stats Card */}
-            <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
+            <div className="bg-white rounded-xl shadow-lg p-6 mt-6 border border-gray-100">
               <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <Settings className="w-4 h-4" />
                 Admin Statistics
               </h4>
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50">
                   <span className="text-gray-600">System Access</span>
-                  <span className="font-medium text-gray-900">Full</span>
+                  <span className="font-medium text-blue-600">Full</span>
                 </div>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50">
                   <span className="text-gray-600">Permissions</span>
-                  <span className="font-medium text-gray-900">All</span>
+                  <span className="font-medium text-green-600">All</span>
                 </div>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50">
                   <span className="text-gray-600">Last Login</span>
                   <span className="font-medium text-gray-900">Today</span>
                 </div>
@@ -359,8 +416,9 @@ const AdminProfile = () => {
 
           {/* Profile Information */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">
+            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                <User className="w-5 h-5" />
                 Personal Information
               </h3>
 
@@ -377,11 +435,11 @@ const AdminProfile = () => {
                       onChange={(e) =>
                         setFormData({ ...formData, userName: e.target.value })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       placeholder="Enter your full name"
                     />
                   ) : (
-                    <div className="flex items-center gap-3 text-gray-900 p-3 rounded-lg bg-gray-50">
+                    <div className="flex items-center gap-3 text-gray-900 p-3 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200">
                       <User className="w-4 h-4" />
                       {user.userName}
                     </div>
@@ -393,11 +451,11 @@ const AdminProfile = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Email Address
                   </label>
-                  <div className="flex items-center gap-3 text-gray-900 p-3 rounded-lg bg-gray-50">
+                  <div className="flex items-center gap-3 text-gray-900 p-3 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200">
                     <Mail className="w-4 h-4" />
                     {user.email}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                  <p className="text-xs text-gray-500 mt-2">Email cannot be changed</p>
                 </div>
 
                 {/* Phone Number */}
@@ -412,11 +470,11 @@ const AdminProfile = () => {
                       onChange={(e) =>
                         setFormData({ ...formData, phoneNumber: e.target.value })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       placeholder="Enter your phone number"
                     />
                   ) : (
-                    <div className="flex items-center gap-3 text-gray-900 p-3 rounded-lg bg-gray-50">
+                    <div className="flex items-center gap-3 text-gray-900 p-3 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200">
                       <Phone className="w-4 h-4" />
                       {user.phoneNumber || "Not provided"}
                     </div>
@@ -428,7 +486,7 @@ const AdminProfile = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Account Status
                   </label>
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200">
                     <div
                       className={`w-3 h-3 rounded-full ${
                         user.status === "ACTIVE" ? "bg-green-500" : "bg-red-500"
@@ -445,9 +503,9 @@ const AdminProfile = () => {
             {/* Admin Features Section */}
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* System Access Card */}
-              <div className="bg-white rounded-xl shadow-sm p-6">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-100">
                 <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <Shield className="w-4 h-4" />
+                  <Shield className="w-4 h-4 text-blue-600" />
                   System Access
                 </h4>
                 <div className="space-y-3 text-sm text-gray-600">
@@ -471,19 +529,19 @@ const AdminProfile = () => {
               </div>
 
               {/* Quick Actions Card */}
-              <div className="bg-white rounded-xl shadow-sm p-6">
+              <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-6 rounded-xl border border-gray-200">
                 <h4 className="font-semibold text-gray-900 mb-4">Quick Actions</h4>
                 <div className="space-y-3 text-sm text-gray-600">
-                  <button className="w-full text-left hover:text-blue-600 transition-colors">
+                  <button className="w-full text-left hover:text-blue-600 transition-colors p-2 rounded-lg hover:bg-blue-50">
                     • View System Logs
                   </button>
-                  <button className="w-full text-left hover:text-blue-600 transition-colors">
+                  <button className="w-full text-left hover:text-blue-600 transition-colors p-2 rounded-lg hover:bg-blue-50">
                     • Manage Administrators
                   </button>
-                  <button className="w-full text-left hover:text-blue-600 transition-colors">
+                  <button className="w-full text-left hover:text-blue-600 transition-colors p-2 rounded-lg hover:bg-blue-50">
                     • System Configuration
                   </button>
-                  <button className="w-full text-left hover:text-blue-600 transition-colors">
+                  <button className="w-full text-left hover:text-blue-600 transition-colors p-2 rounded-lg hover:bg-blue-50">
                     • Backup & Restore
                   </button>
                 </div>
@@ -493,18 +551,57 @@ const AdminProfile = () => {
         </div>
       </div>
 
-      {/* Change Password Modal */}
+      {/* Change Password Modal - UPDATED with password validation */}
       {isChangePasswordOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Change Password</h3>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Change Password</h3>
+                <p className="text-sm text-gray-600 mt-1">Please enter your current and new password</p>
+              </div>
               <button
-                onClick={() => setIsChangePasswordOpen(false)}
+                onClick={() => {
+                  setIsChangePasswordOpen(false);
+                  setPasswordErrors([]);
+                  setPasswordValidation({
+                    length: false,
+                    uppercase: false,
+                    number: false,
+                    special: false
+                  });
+                }}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
+            </div>
+
+            {/* Password Requirements */}
+            <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+              <p className="text-sm font-medium text-blue-800 mb-2">Password Requirements:</p>
+              <div className="space-y-1 text-xs text-blue-700">
+                {passwordRequirements.map((req, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className={`w-4 h-4 rounded-full flex items-center justify-center ${passwordValidation[
+                      index === 0 ? 'length' : 
+                      index === 1 ? 'uppercase' : 
+                      index === 2 ? 'number' : 'special'
+                    ] ? 'bg-green-100 text-green-600 border border-green-300' : 'bg-gray-100 text-gray-400 border border-gray-300'}`}>
+                      {passwordValidation[
+                        index === 0 ? 'length' : 
+                        index === 1 ? 'uppercase' : 
+                        index === 2 ? 'number' : 'special'
+                      ] ? (
+                        <CheckCircle className="w-3 h-3" />
+                      ) : (
+                        <span className="text-xs">•</span>
+                      )}
+                    </div>
+                    <span>{req}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -549,13 +646,15 @@ const AdminProfile = () => {
                   <input
                     type={showNewPassword ? "text" : "password"}
                     value={passwordData.newPassword}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const newPwd = e.target.value;
                       setPasswordData({
                         ...passwordData,
-                        newPassword: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
+                        newPassword: newPwd,
+                      });
+                      validatePasswordInRealTime(newPwd);
+                    }}
+                    className={`w-full px-3 py-2 border ${passwordErrors.length > 0 && passwordData.newPassword ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10`}
                     placeholder="Enter new password"
                   />
                   <button
@@ -570,6 +669,24 @@ const AdminProfile = () => {
                     )}
                   </button>
                 </div>
+                {passwordErrors.length > 0 && passwordData.newPassword && (
+                  <div className="mt-2 space-y-1">
+                    {passwordErrors.map((error, index) => (
+                      <div key={index} className="flex items-center gap-2 text-red-600 text-xs">
+                        <AlertCircle className="w-3 h-3" />
+                        <span>{error}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {passwordValidation.length && passwordValidation.uppercase && 
+                 passwordValidation.number && passwordValidation.special && 
+                 passwordData.newPassword && (
+                  <div className="mt-2 flex items-center gap-2 text-green-600 text-xs">
+                    <CheckCircle className="w-3 h-3" />
+                    <span>Password meets all requirements</span>
+                  </div>
+                )}
               </div>
 
               {/* Confirm New Password */}
@@ -587,7 +704,7 @@ const AdminProfile = () => {
                         confirmPassword: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
+                    className={`w-full px-3 py-2 border ${passwordData.confirmPassword && passwordData.newPassword !== passwordData.confirmPassword ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10`}
                     placeholder="Confirm new password"
                   />
                   <button
@@ -602,19 +719,48 @@ const AdminProfile = () => {
                     )}
                   </button>
                 </div>
+                {passwordData.confirmPassword && passwordData.newPassword !== passwordData.confirmPassword && (
+                  <div className="mt-2 flex items-center gap-2 text-red-600 text-xs">
+                    <AlertCircle className="w-3 h-3" />
+                    <span>Passwords don't match</span>
+                  </div>
+                )}
+                {passwordData.confirmPassword && passwordData.newPassword === passwordData.confirmPassword && passwordData.newPassword && (
+                  <div className="mt-2 flex items-center gap-2 text-green-600 text-xs">
+                    <CheckCircle className="w-3 h-3" />
+                    <span>Passwords match</span>
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="flex gap-3 mt-6">
               <button
-                onClick={() => setIsChangePasswordOpen(false)}
+                onClick={() => {
+                  setIsChangePasswordOpen(false);
+                  // Reset password visibility when closing modal
+                  setShowCurrentPassword(false);
+                  setShowNewPassword(false);
+                  setShowConfirmPassword(false);
+                  setPasswordErrors([]);
+                  setPasswordValidation({
+                    length: false,
+                    uppercase: false,
+                    number: false,
+                    special: false
+                  });
+                }}
                 className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleChangePassword}
-                className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                disabled={passwordErrors.length > 0 || passwordData.newPassword !== passwordData.confirmPassword}
+                className={`flex-1 py-2 px-4 rounded-lg transition-colors ${passwordErrors.length > 0 || passwordData.newPassword !== passwordData.confirmPassword
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800'
+                }`}
               >
                 Change Password
               </button>

@@ -1,4 +1,3 @@
-// src/Pages/Vendor/Orders.js
 import React, { useState, useEffect, useCallback } from "react";
 import { vendorApi } from "../../helpers/api";
 import { 
@@ -15,7 +14,10 @@ import {
   DollarSign,
   Users,
   ShoppingBag,
-  X
+  X,
+  Eye,
+  Check,
+  ChevronRight
 } from "lucide-react";
 
 const Orders = () => {
@@ -37,12 +39,11 @@ const Orders = () => {
     todayRevenue: 0,
     activeSubscriptions: 0
   });
-  const [activeTab, setActiveTab] = useState("today"); // today, delivered, upcoming, cancelled
+  const [activeTab, setActiveTab] = useState("today");
 
   // Load data on component mount and when date changes
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateFilter]);
 
   const loadData = async () => {
@@ -178,21 +179,21 @@ const Orders = () => {
 
   const getStatusColor = (status) => {
     const colors = {
-      PENDING: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      CONFIRMED: "bg-blue-100 text-blue-800 border-blue-200",
-      PREPARING: "bg-orange-100 text-orange-800 border-orange-200",
-      READY_FOR_DELIVERY: "bg-purple-100 text-purple-800 border-purple-200",
-      ASSIGNED: "bg-indigo-100 text-indigo-800 border-indigo-200",
-      OUT_FOR_DELIVERY: "bg-purple-100 text-purple-800 border-purple-200",
-      PICKED_UP: "bg-blue-100 text-blue-800 border-blue-200",
-      ARRIVED: "bg-teal-100 text-teal-800 border-teal-200",
-      DELIVERED: "bg-green-100 text-green-800 border-green-200",
-      CANCELLED: "bg-red-100 text-red-800 border-red-200",
-      FAILED: "bg-gray-100 text-gray-800 border-gray-200",
-      COMPLETED: "bg-emerald-100 text-emerald-800 border-emerald-200",
-      PAUSED: "bg-amber-100 text-amber-800 border-amber-200"
+      PENDING: "bg-yellow-100 text-yellow-800",
+      CONFIRMED: "bg-blue-100 text-blue-800",
+      PREPARING: "bg-orange-100 text-orange-800",
+      READY_FOR_DELIVERY: "bg-purple-100 text-purple-800",
+      ASSIGNED: "bg-indigo-100 text-indigo-800",
+      OUT_FOR_DELIVERY: "bg-purple-100 text-purple-800",
+      PICKED_UP: "bg-blue-100 text-blue-800",
+      ARRIVED: "bg-teal-100 text-teal-800",
+      DELIVERED: "bg-green-100 text-green-800",
+      CANCELLED: "bg-red-100 text-red-800",
+      FAILED: "bg-gray-100 text-gray-800",
+      COMPLETED: "bg-emerald-100 text-emerald-800",
+      PAUSED: "bg-amber-100 text-amber-800"
     };
-    return colors[status] || "bg-gray-100 text-gray-800 border-gray-200";
+    return colors[status] || "bg-gray-100 text-gray-800";
   };
 
   const getStatusIcon = (status) => {
@@ -221,32 +222,24 @@ const Orders = () => {
 
   // Filter orders based on active tab
   const getFilteredOrders = () => {
-    const today = new Date().toISOString().split("T")[0];
-    const isToday = dateFilter === today;
-    
     switch (activeTab) {
       case "today":
-        // For today tab, show orders that need action: PENDING, CONFIRMED, PREPARING, READY_FOR_DELIVERY
         return orders.filter(order => 
           ["PENDING", "CONFIRMED", "PREPARING", "READY_FOR_DELIVERY"].includes(order.status)
         );
       case "assigned":
-        // Show assigned orders
         return orders.filter(order => 
           ["ASSIGNED", "OUT_FOR_DELIVERY", "PICKED_UP", "ARRIVED"].includes(order.status)
         );
       case "delivered":
-        // Show delivered/completed orders
         return orders.filter(order => 
           ["DELIVERED", "COMPLETED"].includes(order.status)
         );
       case "cancelled":
-        // Show cancelled orders
         return orders.filter(order => 
           ["CANCELLED", "FAILED"].includes(order.status)
         );
       case "upcoming":
-        // Show upcoming orders (these are separate from today's orders)
         return upcomingOrders;
       default:
         return [];
@@ -258,21 +251,21 @@ const Orders = () => {
   // Format date for display
   const formatDisplayDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
   // Stats Card Component
   const StatCard = ({ title, value, icon: Icon, color, description }) => {
     const colors = {
-      blue: "text-blue-600 bg-blue-50 border-blue-200",
-      green: "text-green-600 bg-green-50 border-green-200",
-      purple: "text-purple-600 bg-purple-50 border-purple-200",
-      orange: "text-orange-600 bg-orange-50 border-orange-200",
-      emerald: "text-emerald-600 bg-emerald-50 border-emerald-200"
+      blue: "text-blue-600 bg-blue-50",
+      green: "text-green-600 bg-green-50",
+      purple: "text-purple-600 bg-purple-50",
+      orange: "text-orange-600 bg-orange-50",
+      emerald: "text-emerald-600 bg-emerald-50"
     };
 
     return (
-      <div className="bg-white p-4 rounded-xl border shadow-sm">
+      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
         <div className="flex items-center justify-between mb-2">
           <div className={`p-2 rounded-lg ${colors[color]}`}>
             <Icon className="h-4 w-4" />
@@ -291,16 +284,16 @@ const Orders = () => {
   const TabButton = ({ label, active, onClick, count }) => (
     <button
       onClick={onClick}
-      className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+      className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
         active
-          ? "border-blue-500 text-blue-600 bg-white"
-          : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+          ? "bg-blue-600 text-white shadow-sm"
+          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
       }`}
     >
       {label}
       {count > 0 && (
         <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
-          active ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-600"
+          active ? "bg-white text-blue-600" : "bg-gray-300 text-gray-700"
         }`}>
           {count}
         </span>
@@ -308,144 +301,136 @@ const Orders = () => {
     </button>
   );
 
-  // OrderCard Component - Back to original layout
+  // OrderCard Component - Responsive
   const OrderCard = ({ order, showActions = true }) => {
     return (
-      <div className="bg-white border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
-        {/* Header */}
-        <div className="flex justify-between items-start mb-4">
-          <div>
+      <div className="bg-white border border-gray-200 rounded-xl p-4 mb-3 shadow-sm hover:shadow-md transition-shadow">
+        {/* Header - Stack on mobile */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-3">
+          <div className="mb-2 sm:mb-0">
             <h3 className="font-semibold text-lg text-gray-900">
               Order #{order.orderId}
             </h3>
             <p className="text-sm text-gray-500 mt-1">
-              Customer: {order.customer?.userName || "N/A"} • 
-              Phone: {order.customer?.phoneNumber || "N/A"}
-            </p>
-            <p className="text-sm text-gray-500">
-              Delivery: {order.deliveryDate} at {order.preferredDeliveryTime || "N/A"}
+              Customer: {order.customer?.userName || "N/A"}
             </p>
           </div>
-
-          <span
-            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(
-              order.status
-            )}`}
-          >
+          
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium self-start ${getStatusColor(
+            order.status
+          )}`}>
             {getStatusIcon(order.status)}
             <span className="ml-1">{order.status.replace(/_/g, ' ')}</span>
           </span>
         </div>
 
-        {/* Meals */}
-        <div className="mb-4">
-          <h4 className="text-sm font-medium text-gray-900 mb-2">Meals</h4>
-          <div className="space-y-2">
-            {order.orderMeals?.map((meal, index) => (
-              <div key={index} className="flex justify-between text-sm">
-                <span>
-                  {meal.mealSetName} ({meal.mealSetType})
-                </span>
-                <span className="font-medium">Qty: {meal.quantity}</span>
-              </div>
-            ))}
+        {/* Simplified info for mobile */}
+        <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
+          <div>
+            <p className="text-gray-600">Phone:</p>
+            <p className="font-medium">{order.customer?.phoneNumber || "N/A"}</p>
+          </div>
+          <div>
+            <p className="text-gray-600">Time:</p>
+            <p className="font-medium">{order.preferredDeliveryTime || "N/A"}</p>
+          </div>
+          <div className="col-span-2">
+            <p className="text-gray-600">Amount:</p>
+            <p className="font-medium text-green-600">₹{order.totalAmount || 0}</p>
           </div>
         </div>
 
-        {/* Address */}
-        <div className="mb-4">
-          <p className="text-sm text-gray-600">
-            <strong>Address:</strong> {order.deliveryAddress}
-          </p>
-        </div>
-
-        {/* Instructions */}
-        {order.specialInstructions && (
-          <div className="bg-yellow-50 border border-yellow-200 p-3 rounded mb-4">
-            <p className="text-sm text-yellow-800">
-              <strong>Instructions:</strong> {order.specialInstructions}
-            </p>
-          </div>
-        )}
-
-        {/* Action Buttons - Bottom Left */}
+        {/* Actions - Full width on mobile */}
         {showActions && (
-          <div className="flex gap-2 flex-wrap">
-            {order.status === "PENDING" && (
-              <button
-                onClick={() => updateOrderStatus(order.orderId, "CONFIRMED")}
-                className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
-              >
-                Confirm Order
-              </button>
-            )}
-
-            {order.status === "CONFIRMED" && (
-              <button
-                onClick={() => updateOrderStatus(order.orderId, "PREPARING")}
-                className="bg-orange-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-orange-700"
-              >
-                Start Preparing
-              </button>
-            )}
-
-            {order.status === "PREPARING" && (
-              <button
-                onClick={() => updateOrderStatus(order.orderId, "READY_FOR_DELIVERY")}
-                className="bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-purple-700"
-              >
-                Mark Ready
-              </button>
-            )}
-
-            {order.status === "READY_FOR_DELIVERY" && (
-              <div className="flex gap-2 items-center w-full">
-                <select
-                  className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 flex-grow"
-                  onChange={(e) => assignDeliveryPartner(order.orderId, e.target.value)}
-                  defaultValue=""
+          <div className="mt-4 pt-3 border-t border-gray-100">
+            <div className="flex flex-col sm:flex-row gap-2">
+              {order.status === "PENDING" && (
+                <button
+                  onClick={() => updateOrderStatus(order.orderId, "CONFIRMED")}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 w-full sm:w-auto"
                 >
-                  <option value="" disabled>Select Delivery Partner</option>
-                  {getAvailableDeliveryPartners().map(partner => (
-                    <option key={partner.partnerId} value={partner.partnerId}>
-                      {partner.name} {partner.phoneNumber ? `(${partner.phoneNumber})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+                  Confirm Order
+                </button>
+              )}
 
-            {(order.status === "ASSIGNED" || order.status === "OUT_FOR_DELIVERY" || order.status === "PICKED_UP") && (
-              <div className="flex items-center gap-2 text-sm text-gray-600 w-full">
-                <Truck className="h-4 w-4" />
-                <span>
-                  Assigned to: {
-                    selectedDeliveryPartner[order.orderId]?.name || 
-                    deliveryPartners.find(p => p.partnerId === order.deliveryPersonId)?.name || 
-                    `Delivery Partner`
-                  }
-                </span>
-                {order.deliveryPersonId && (
-                  <CheckCircle className="h-4 w-4 text-green-600 ml-2" />
-                )}
-              </div>
-            )}
+              {order.status === "CONFIRMED" && (
+                <button
+                  onClick={() => updateOrderStatus(order.orderId, "PREPARING")}
+                  className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-700 w-full sm:w-auto"
+                >
+                  Start Preparing
+                </button>
+              )}
 
-            {(order.status === "DELIVERED" || order.status === "COMPLETED") && (
-              <div className="flex items-center gap-2 text-sm text-gray-600 w-full">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <span className="text-green-600 font-medium">Order Delivered Successfully</span>
-              </div>
-            )}
+              {order.status === "PREPARING" && (
+                <button
+                  onClick={() => updateOrderStatus(order.orderId, "READY_FOR_DELIVERY")}
+                  className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 w-full sm:w-auto"
+                >
+                  Mark Ready
+                </button>
+              )}
 
-            {(order.status === "PENDING" || order.status === "CONFIRMED") && (
+              {order.status === "READY_FOR_DELIVERY" && (
+                <div className="w-full">
+                  <select
+                    className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+                    onChange={(e) => assignDeliveryPartner(order.orderId, e.target.value)}
+                    defaultValue=""
+                  >
+                    <option value="" disabled>Select Delivery Partner</option>
+                    {getAvailableDeliveryPartners().map(partner => (
+                      <option key={partner.partnerId} value={partner.partnerId}>
+                        {partner.name} {partner.phoneNumber ? `(${partner.phoneNumber})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {(order.status === "ASSIGNED" || order.status === "OUT_FOR_DELIVERY" || order.status === "PICKED_UP") && (
+                <div className="flex items-center gap-2 text-sm text-gray-600 w-full">
+                  <Truck className="h-4 w-4" />
+                  <span>
+                    Assigned to: {
+                      selectedDeliveryPartner[order.orderId]?.name || 
+                      deliveryPartners.find(p => p.partnerId === order.deliveryPersonId)?.name || 
+                      `Delivery Partner`
+                    }
+                  </span>
+                  {order.deliveryPersonId && (
+                    <CheckCircle className="h-4 w-4 text-green-600 ml-2" />
+                  )}
+                </div>
+              )}
+
+              {(order.status === "DELIVERED" || order.status === "COMPLETED") && (
+                <div className="flex items-center gap-2 text-sm text-gray-600 w-full">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-green-600 font-medium">Order Delivered Successfully</span>
+                </div>
+              )}
+
               <button
-                onClick={() => updateOrderStatus(order.orderId, "CANCELLED")}
-                className="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700"
+                onClick={() => {
+                  setSelectedOrder(order);
+                  setShowOrderModal(true);
+                }}
+                className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300 w-full sm:w-auto flex items-center justify-center gap-1"
               >
-                Cancel Order
+                <Eye size={14} />
+                View Details
               </button>
-            )}
+
+              {(order.status === "PENDING" || order.status === "CONFIRMED") && (
+                <button
+                  onClick={() => updateOrderStatus(order.orderId, "CANCELLED")}
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 w-full sm:w-auto"
+                >
+                  Cancel Order
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -466,19 +451,19 @@ const Orders = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Order Management</h2>
-          <p className="text-gray-600">Manage and track customer orders</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Order Management</h2>
+          <p className="text-gray-600 text-sm">Manage and track customer orders</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2 flex-1 sm:flex-none">
             <Calendar className="h-4 w-4 text-gray-500" />
             <input
               type="date"
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
             />
           </div>
           <button
@@ -487,7 +472,7 @@ const Orders = () => {
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+            <span className="hidden sm:inline">Refresh</span>
           </button>
         </div>
       </div>
@@ -501,7 +486,7 @@ const Orders = () => {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
           title="Today's Orders"
           value={stats.totalOrders}
@@ -518,7 +503,7 @@ const Orders = () => {
         />
         <StatCard
           title="Revenue"
-          value={`Rs ${stats.todayRevenue.toLocaleString()}`}
+          value={`₹${stats.todayRevenue.toLocaleString()}`}
           icon={DollarSign}
           color="green"
           description="Today's amount"
@@ -532,8 +517,8 @@ const Orders = () => {
         />
       </div>
 
-      {/* Filters - Always visible at top */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+      {/* Filters */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <div className="md:col-span-4">
             <div className="relative">
@@ -565,98 +550,49 @@ const Orders = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="border-b border-gray-200">
-        <nav className="flex space-x-2">
-          <TabButton
-            label="Today's Orders"
-            active={activeTab === "today"}
-            onClick={() => setActiveTab("today")}
-            count={orders.filter(order => 
-              ["PENDING", "CONFIRMED", "PREPARING", "READY_FOR_DELIVERY"].includes(order.status)
-            ).length}
-          />
-          <TabButton
-            label="Assigned"
-            active={activeTab === "assigned"}
-            onClick={() => setActiveTab("assigned")}
-            count={orders.filter(order => 
-              ["ASSIGNED", "OUT_FOR_DELIVERY", "PICKED_UP", "ARRIVED"].includes(order.status)
-            ).length}
-          />
-          <TabButton
-            label="Delivered"
-            active={activeTab === "delivered"}
-            onClick={() => setActiveTab("delivered")}
-            count={orders.filter(order => 
-              ["DELIVERED", "COMPLETED"].includes(order.status)
-            ).length}
-          />
-          <TabButton
-            label="Upcoming"
-            active={activeTab === "upcoming"}
-            onClick={() => setActiveTab("upcoming")}
-            count={upcomingOrders.length}
-          />
-          <TabButton
-            label="Cancelled"
-            active={activeTab === "cancelled"}
-            onClick={() => setActiveTab("cancelled")}
-            count={orders.filter(order => 
-              ["CANCELLED", "FAILED"].includes(order.status)
-            ).length}
-          />
-        </nav>
+      <div className="flex space-x-2 overflow-x-auto pb-2 mb-4">
+        <TabButton
+          label="Today's Orders"
+          active={activeTab === "today"}
+          onClick={() => setActiveTab("today")}
+          count={orders.filter(order => 
+            ["PENDING", "CONFIRMED", "PREPARING", "READY_FOR_DELIVERY"].includes(order.status)
+          ).length}
+        />
+        <TabButton
+          label="Assigned"
+          active={activeTab === "assigned"}
+          onClick={() => setActiveTab("assigned")}
+          count={orders.filter(order => 
+            ["ASSIGNED", "OUT_FOR_DELIVERY", "PICKED_UP", "ARRIVED"].includes(order.status)
+          ).length}
+        />
+        <TabButton
+          label="Delivered"
+          active={activeTab === "delivered"}
+          onClick={() => setActiveTab("delivered")}
+          count={orders.filter(order => 
+            ["DELIVERED", "COMPLETED"].includes(order.status)
+          ).length}
+        />
+        <TabButton
+          label="Upcoming"
+          active={activeTab === "upcoming"}
+          onClick={() => setActiveTab("upcoming")}
+          count={upcomingOrders.length}
+        />
+        <TabButton
+          label="Cancelled"
+          active={activeTab === "cancelled"}
+          onClick={() => setActiveTab("cancelled")}
+          count={orders.filter(order => 
+            ["CANCELLED", "FAILED"].includes(order.status)
+          ).length}
+        />
       </div>
 
       {/* Tab Content */}
       <div>
-        {/* Tab Title */}
-        <div className="flex items-center gap-2 mb-4">
-          {activeTab === "today" && (
-            <>
-              <Calendar className="h-5 w-5 text-gray-600" />
-              <h3 className="text-xl font-semibold text-gray-900">
-                Today's Orders - {formatDisplayDate(dateFilter)}
-              </h3>
-            </>
-          )}
-          {activeTab === "assigned" && (
-            <>
-              <Truck className="h-5 w-5 text-indigo-600" />
-              <h3 className="text-xl font-semibold text-gray-900">
-                Assigned Orders
-              </h3>
-            </>
-          )}
-          {activeTab === "delivered" && (
-            <>
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <h3 className="text-xl font-semibold text-gray-900">
-                Delivered Orders
-              </h3>
-            </>
-          )}
-          {activeTab === "upcoming" && (
-            <>
-              <Clock className="h-5 w-5 text-blue-600" />
-              <h3 className="text-xl font-semibold text-gray-900">
-                Upcoming Orders (Next 7 Days)
-              </h3>
-            </>
-          )}
-          {activeTab === "cancelled" && (
-            <>
-              <XCircle className="h-5 w-5 text-red-600" />
-              <h3 className="text-xl font-semibold text-gray-900">
-                Cancelled Orders
-              </h3>
-            </>
-          )}
-          <span className="ml-auto text-sm text-gray-600">
-            {filteredOrders.length} orders
-          </span>
-        </div>
-
         {/* Loading State */}
         {loading ? (
           <div className="text-center py-12">
@@ -667,38 +603,38 @@ const Orders = () => {
         
         /* Empty State */
         filteredOrders.length === 0 ? (
-          <div className="bg-white border rounded-lg p-12 text-center shadow-sm">
+          <div className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
             {activeTab === "today" && (
               <>
-                <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No orders to prepare</h3>
                 <p className="text-gray-500">No orders for {formatDisplayDate(dateFilter)}</p>
               </>
             )}
             {activeTab === "assigned" && (
               <>
-                <Truck className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <Truck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No assigned orders</h3>
                 <p className="text-gray-500">No orders are currently assigned to delivery partners</p>
               </>
             )}
             {activeTab === "delivered" && (
               <>
-                <CheckCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No delivered orders</h3>
                 <p className="text-gray-500">No orders have been delivered yet</p>
               </>
             )}
             {activeTab === "upcoming" && (
               <>
-                <Clock className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming orders</h3>
                 <p className="text-gray-500">No upcoming orders for the next 7 days</p>
               </>
             )}
             {activeTab === "cancelled" && (
               <>
-                <XCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <XCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No cancelled orders</h3>
                 <p className="text-gray-500">No orders have been cancelled</p>
               </>
@@ -708,7 +644,7 @@ const Orders = () => {
         
         /* Orders List */
         (
-          <div className="space-y-6">
+          <div className="space-y-3">
             {filteredOrders.map((order) => (
               <OrderCard 
                 key={order.orderId} 
@@ -723,9 +659,9 @@ const Orders = () => {
       {/* Order Details Modal */}
       {showOrderModal && selectedOrder && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
-            <div className="flex justify-between items-center mb-6 pb-4 border-b">
-              <h3 className="text-xl font-bold text-gray-900">Order #{selectedOrder.orderId} Details</h3>
+          <div className="relative top-4 sm:top-20 mx-auto p-4 sm:p-5 border w-full max-w-2xl sm:max-w-4xl shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center mb-4 sm:mb-6 pb-4 border-b">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">Order #{selectedOrder.orderId} Details</h3>
               <button
                 onClick={() => setShowOrderModal(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -734,11 +670,11 @@ const Orders = () => {
               </button>
             </div>
             
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Customer Info */}
               <div>
                 <h4 className="font-bold text-gray-900 mb-3">Customer Information</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
                   <div>
                     <p className="text-gray-600">Name</p>
                     <p className="font-medium">{selectedOrder.customer?.userName || "N/A"}</p>
@@ -763,7 +699,7 @@ const Orders = () => {
               {/* Order Details */}
               <div>
                 <h4 className="font-bold text-gray-900 mb-3">Order Details</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
                   <div>
                     <p className="text-gray-600">Order Date</p>
                     <p className="font-medium">{new Date(selectedOrder.createdAt || selectedOrder.orderDate).toLocaleDateString()}</p>
@@ -778,7 +714,7 @@ const Orders = () => {
                   </div>
                   <div>
                     <p className="text-gray-600">Total Amount</p>
-                    <p className="font-bold text-green-600">Rs {selectedOrder.totalAmount || 0}</p>
+                    <p className="font-bold text-green-600">₹ {selectedOrder.totalAmount || 0}</p>
                   </div>
                 </div>
               </div>
@@ -791,35 +727,12 @@ const Orders = () => {
                   <p className="text-sm text-gray-600 mt-1">Landmark: {selectedOrder.landmark}</p>
                 )}
               </div>
-              
-              {/* Meal Items */}
-              <div>
-                <h4 className="font-bold text-gray-900 mb-3">Order Items</h4>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  {selectedOrder.orderMeals?.map((meal, index) => (
-                    <div key={index} className="flex justify-between items-center py-2 border-b last:border-0">
-                      <div>
-                        <p className="font-medium">{meal.mealSetName}</p>
-                        <p className="text-sm text-gray-500">{meal.mealSetType}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">Qty: {meal.quantity}</p>
-                        <p className="text-sm text-gray-500">Rs {meal.price || 0} each</p>
-                      </div>
-                    </div>
-                  ))}
-                  <div className="flex justify-between items-center pt-4 mt-4 border-t">
-                    <p className="font-bold">Total</p>
-                    <p className="font-bold text-green-600">Rs {selectedOrder.totalAmount || 0}</p>
-                  </div>
-                </div>
-              </div>
             </div>
             
             <div className="mt-6 pt-4 border-t flex justify-end">
               <button
                 onClick={() => setShowOrderModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 w-full sm:w-auto"
               >
                 Close
               </button>
