@@ -11,7 +11,7 @@ import {
   Locate,
 } from "lucide-react";
 import axios from "axios";
-import { authStorage } from "../../helpers/api";
+import authStorage from "../../helpers/authStorage";
 import homeBg from "../../assets/home.jpg";
 import { toast } from "react-toastify";
 

@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import { HiStar, HiChevronDown } from "react-icons/hi";
-import { authStorage } from "../../helpers/api";
+import { Heart } from "lucide-react";
+import authStorage from "../../helpers/authStorage";
 import homeBg from "../../assets/home.jpg";
 import { toast } from "react-toastify";
 

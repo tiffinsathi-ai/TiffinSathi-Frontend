@@ -1,12 +1,51 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import AdminNavbar from './AdminNavbar';
 import AdminSidebar from './AdminSidebar';
 import AdminFooter from './AdminFooter';
+import authStorage from '../../helpers/authStorage';
+import { isTokenExpired } from '../../helpers/authUtils';
 
 const AdminLayout = () => {
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Check authentication on mount and when token changes
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = authStorage.getToken();
+      const userRole = authStorage.getUserRole();
+      
+      // Check if token exists and is not expired
+      if (!token || isTokenExpired(token)) {
+        authStorage.clearAuth();
+        navigate(`/login?message=${encodeURIComponent('Session expired. Please login again.')}`);
+        return;
+      }
+      
+      // Check if user has admin role
+      if (userRole !== 'ADMIN') {
+        // Redirect based on actual role
+        const redirectPath = userRole === 'VENDOR' ? '/vendor/dashboard' :
+                            userRole === 'DELIVERY' ? '/delivery/deliveries' : '/';
+        navigate(redirectPath);
+      }
+    };
+
+    checkAuth();
+
+    // Set up interval to check token expiration every minute
+    const intervalId = setInterval(() => {
+      const token = authStorage.getToken();
+      if (token && isTokenExpired(token)) {
+        authStorage.clearAuth();
+        navigate(`/login?message=${encodeURIComponent('Session expired. Please login again.')}`);
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(intervalId);
+  }, [navigate]);
 
   // Check screen size on mount and resize
   useEffect(() => {

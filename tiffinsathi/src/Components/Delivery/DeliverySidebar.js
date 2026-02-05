@@ -1,4 +1,4 @@
-// layout/DeliverySidebar.js
+// layout/DeliverySidebar.js - UPDATED
 import React, { useState } from "react";
 import {
   LayoutDashboard,
@@ -34,7 +34,7 @@ const DeliverySidebar = ({ isOpen, onItemClick }) => {
 
   const menuItems = [
     { id: "dashboard", icon: LayoutDashboard, label: "Dashboard", path: "/delivery" },
-    { id: "deliveries", icon: Package, label: "My Deliveries", path: "/delivery/deliveries" },
+    { id: "deliveries", icon: Package, label: "My Deliveries", path: "/delivery/orders" }, // ✅ CHANGED: Fixed route
     { id: "routes", icon: MapPin, label: "Delivery Routes", path: "/delivery/routes" },
     { id: "schedule", icon: Clock, label: "Schedule", path: "/delivery/schedule" },
     { id: "performance", icon: BarChart3, label: "Performance", path: "/delivery/performance" },

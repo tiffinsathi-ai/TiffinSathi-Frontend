@@ -1,7 +1,8 @@
-// src/Pages/Vendor/DeliveryPartnersPage.js - UPDATED
 import React, { useState, useEffect, useCallback } from 'react';
 import DeliveryPartnerForm from '../../Components/Vendor/DeliveryPartnerForm';
 import { toast } from 'react-toastify';
+import authStorage from '../../helpers/authStorage';
+import { vendorApi } from '../../helpers/api';
 import {
   Users,
   UserCheck,
@@ -20,8 +21,8 @@ import {
   UserX,
   Key,
   UserPlus,
-  Edit2, // Added Edit2 icon
-  Trash2 // Added Trash2 icon
+  Edit2,
+  Trash2
 } from 'lucide-react';
 
 const DeliveryPartnersPage = () => {
@@ -38,10 +39,12 @@ const DeliveryPartnersPage = () => {
   const [tempPassword, setTempPassword] = useState('');
   const [selectedPartnerName, setSelectedPartnerName] = useState('');
 
-  const API_BASE_URL = 'http://localhost:8080/api/delivery-partners';
+  const BASE_URL = process.env.REACT_APP_API_BASE || "http://localhost:8080/api";
 
-  const getAuthToken = () => {
-    return localStorage.getItem('token');
+  // Get auth header using authStorage
+  const getAuthHeader = () => {
+    const token = authStorage.getToken();
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
   };
 
   const StatCard = ({ title, value, icon: Icon, color, description }) => {
@@ -117,114 +120,151 @@ const DeliveryPartnersPage = () => {
     return <Bike size={16} className="text-gray-600" />;
   };
 
+  // Enhanced fetch function with proper error handling
+  const authFetch = async (url, options = {}) => {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...getAuthHeader(),
+      ...options.headers
+    };
+
+    try {
+      const response = await fetch(url, { ...options, headers });
+      
+      // Handle 401 Unauthorized (token expired)
+      if (response.status === 401) {
+        authStorage.clearAuth();
+        const currentPath = window.location.pathname;
+        window.location.href = `/login?message=${encodeURIComponent("Session expired. Please login again.")}&redirect=${encodeURIComponent(currentPath)}`;
+        throw new Error("Session expired");
+      }
+      
+      // Handle 403 Forbidden
+      if (response.status === 403) {
+        throw new Error("Access denied");
+      }
+      
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
+      
+      return { 
+        ok: response.ok, 
+        status: response.status, 
+        data,
+        error: !response.ok ? (data?.message || 'Request failed') : null
+      };
+    } catch (error) {
+      console.error("Fetch error:", error);
+      
+      // Only logout on specific authentication errors
+      if (error.message === "Session expired" || error.message.includes("Unauthorized")) {
+        authStorage.clearAuth();
+        window.location.href = `/login?message=${encodeURIComponent("Session expired. Please login again.")}`;
+      }
+      
+      return { 
+        ok: false, 
+        error: error.message,
+        status: 500 
+      };
+    }
+  };
+
+  // API methods using vendorApi from helpers
   const api = {
-    getMyDeliveryPartners: async () => {
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/vendor/my-partners`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      if (!response.ok) throw new Error('Failed to fetch delivery partners');
-      return response.json();
-    },
-
-    getActivePartnersCount: async () => {
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/vendor/count`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      if (!response.ok) throw new Error('Failed to fetch count');
-      return response.json();
-    },
-
-    searchDeliveryPartners: async (name) => {
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/vendor/search?name=${encodeURIComponent(name)}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      if (!response.ok) throw new Error('Failed to search delivery partners');
-      return response.json();
+    getDeliveryPartners: async () => {
+      try {
+        return await vendorApi.getDeliveryPartners();
+      } catch (error) {
+        console.error("getDeliveryPartners error", error);
+        throw error;
+      }
     },
 
     createDeliveryPartner: async (data) => {
-      const token = getAuthToken();
-      const response = await fetch(API_BASE_URL, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create delivery partner');
+      try {
+        const response = await authFetch(`${BASE_URL}/delivery-partners`, {
+          method: 'POST',
+          body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+          throw new Error(response.error || 'Failed to create delivery partner');
+        }
+        return response.data;
+      } catch (error) {
+        console.error("createDeliveryPartner error", error);
+        throw error;
       }
-      return response.json();
     },
 
     updateDeliveryPartner: async (partnerId, data) => {
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/vendor/${partnerId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update delivery partner');
+      try {
+        const response = await authFetch(`${BASE_URL}/delivery-partners/vendor/${partnerId}`, {
+          method: 'PUT',
+          body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+          throw new Error(response.error || 'Failed to update delivery partner');
+        }
+        return response.data;
+      } catch (error) {
+        console.error("updateDeliveryPartner error", error);
+        throw error;
       }
-      return response.json();
     },
 
     deleteDeliveryPartner: async (partnerId) => {
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/vendor/${partnerId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      try {
+        const response = await authFetch(`${BASE_URL}/delivery-partners/vendor/${partnerId}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+          throw new Error(response.error || 'Failed to delete delivery partner');
         }
-      });
-      if (!response.ok) throw new Error('Failed to delete delivery partner');
-      return response.json();
+        return response.data;
+      } catch (error) {
+        console.error("deleteDeliveryPartner error", error);
+        throw error;
+      }
     },
 
     toggleAvailability: async (partnerId) => {
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/vendor/${partnerId}/toggle-availability`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      try {
+        const response = await authFetch(`${BASE_URL}/delivery-partners/${partnerId}/toggle-availability`, {
+          method: 'PUT'
+        });
+        
+        if (!response.ok) {
+          throw new Error(response.error || 'Failed to toggle availability');
         }
-      });
-      if (!response.ok) throw new Error('Failed to toggle availability');
-      return response.json();
+        return response.data;
+      } catch (error) {
+        console.error("toggleAvailability error", error);
+        throw error;
+      }
     },
 
     resetPassword: async (partnerId) => {
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/vendor/${partnerId}/reset-password`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      try {
+        const response = await authFetch(`${BASE_URL}/delivery-partners/${partnerId}/reset-password`, {
+          method: 'POST'
+        });
+        
+        if (!response.ok) {
+          throw new Error(response.error || 'Failed to reset password');
         }
-      });
-      if (!response.ok) throw new Error('Failed to reset password');
-      return response.json();
+        return response.data;
+      } catch (error) {
+        console.error("resetPassword error", error);
+        throw error;
+      }
     }
   };
 
@@ -232,22 +272,49 @@ const DeliveryPartnersPage = () => {
     try {
       setLoading(true);
       setError('');
-      const partners = await api.getMyDeliveryPartners();
+      
+      // Check authentication first
+      if (!authStorage.isAuthenticated()) {
+        throw new Error("Not authenticated");
+      }
+      
+      // Use vendorApi from helpers
+      const response = await vendorApi.getDeliveryPartners();
+      
+      if (!response.ok) {
+        throw new Error(response.error || 'Failed to fetch delivery partners');
+      }
+      
+      const partners = response.data || [];
       setDeliveryPartners(Array.isArray(partners) ? partners : []);
       
-      const active = Array.isArray(partners) ? partners.filter(p => 
-        p.isActive && (p.availabilityStatus === 'AVAILABLE' || p.availabilityStatus === 'available')
-      ).length : 0;
-      
-      const busy = Array.isArray(partners) ? partners.filter(p => 
-        p.isActive && (p.availabilityStatus === 'BUSY' || p.availabilityStatus === 'busy')
-      ).length : 0;
-      
-      setActiveCount(active);
-      setBusyCount(busy);
+      // Calculate counts
+      if (Array.isArray(partners)) {
+        const active = partners.filter(p => 
+          p.isActive && (p.availabilityStatus === 'AVAILABLE' || p.availabilityStatus === 'available')
+        ).length;
+        
+        const busy = partners.filter(p => 
+          p.isActive && (p.availabilityStatus === 'BUSY' || p.availabilityStatus === 'busy')
+        ).length;
+        
+        setActiveCount(active);
+        setBusyCount(busy);
+      } else {
+        setActiveCount(0);
+        setBusyCount(0);
+      }
     } catch (error) {
-      setError('Failed to load delivery partners: ' + error.message);
-      toast.error('Failed to fetch delivery partners');
+      console.error("Fetch delivery partners error:", error);
+      setError(error.message || 'Failed to load delivery partners');
+      
+      // Don't show toast for auth errors (handled by authFetch)
+      if (error.message !== "Session expired" && !error.message.includes("Unauthorized")) {
+        toast.error(error.message || 'Failed to fetch delivery partners');
+      }
+      
+      // If empty array, set empty
+      setDeliveryPartners([]);
     } finally {
       setLoading(false);
     }
@@ -257,18 +324,9 @@ const DeliveryPartnersPage = () => {
     fetchDeliveryPartners();
   }, [fetchDeliveryPartners]);
 
-  const handleSearch = async (term) => {
+  const handleSearch = (term) => {
     setSearchTerm(term);
-    if (term.trim() === '') {
-      fetchDeliveryPartners();
-    } else {
-      try {
-        const partners = await api.searchDeliveryPartners(term);
-        setDeliveryPartners(partners);
-      } catch (error) {
-        toast.error('Failed to search delivery partners');
-      }
-    }
+    // Search is now done client-side
   };
 
   const handleCreate = () => {
@@ -288,7 +346,7 @@ const DeliveryPartnersPage = () => {
         toast.success('Delivery partner deleted successfully');
         fetchDeliveryPartners();
       } catch (error) {
-        toast.error('Failed to delete delivery partner');
+        toast.error(error.message || 'Failed to delete delivery partner');
       }
     }
   };
@@ -299,7 +357,7 @@ const DeliveryPartnersPage = () => {
       toast.success('Status updated successfully');
       fetchDeliveryPartners();
     } catch (error) {
-      toast.error('Failed to update status');
+      toast.error(error.message || 'Failed to update status');
     }
   };
 
@@ -309,6 +367,7 @@ const DeliveryPartnersPage = () => {
         const response = await api.resetPassword(partnerId);
         toast.success('Password reset successfully');
         
+        // Extract temp password from response
         if (response && response.tempPassword) {
           setTempPassword(response.tempPassword);
           setSelectedPartnerName(partnerName);
@@ -320,9 +379,13 @@ const DeliveryPartnersPage = () => {
             setSelectedPartnerName(partnerName);
             setShowPasswordModal(true);
           }
+        } else if (response && response.data && response.data.tempPassword) {
+          setTempPassword(response.data.tempPassword);
+          setSelectedPartnerName(partnerName);
+          setShowPasswordModal(true);
         }
       } catch (error) {
-        toast.error('Failed to reset password: ' + error.message);
+        toast.error(error.message || 'Failed to reset password');
       }
     }
   };
@@ -350,7 +413,21 @@ const DeliveryPartnersPage = () => {
     });
   };
 
+  // Client-side filtering
   const filteredPartners = deliveryPartners.filter(partner => {
+    // Apply search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = 
+        (partner.name && partner.name.toLowerCase().includes(searchLower)) ||
+        (partner.email && partner.email.toLowerCase().includes(searchLower)) ||
+        (partner.phoneNumber && partner.phoneNumber.includes(searchTerm)) ||
+        (partner.vehicleInfo && partner.vehicleInfo.toLowerCase().includes(searchLower));
+      
+      if (!matchesSearch) return false;
+    }
+    
+    // Apply status filter
     const status = getDisplayStatus(partner.availabilityStatus, partner.isActive);
     
     if (statusFilter === 'all') return true;
@@ -365,7 +442,8 @@ const DeliveryPartnersPage = () => {
     if (partner.profilePicture && partner.profilePicture.startsWith('data:image')) {
       return partner.profilePicture;
     }
-    return '/src/assets/admin-banner.jpg';
+    // Use a default image
+    return 'https://via.placeholder.com/150/cccccc/ffffff?text=DP';
   };
 
   return (
@@ -439,7 +517,7 @@ const DeliveryPartnersPage = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="text"
-                placeholder="Search partners..."
+                placeholder="Search partners by name, email, phone or vehicle..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
@@ -476,26 +554,25 @@ const DeliveryPartnersPage = () => {
             
             return (
               <div
-                key={partner.partnerId}
+                key={partner.partnerId || partner.id}
                 className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
               >
                 <div className="relative">
                   <img
                     src={profileImage}
-                    className="w-full h-48 object-cover"
+                    className="w-full h-48 object-cover bg-gray-100"
                     alt={partner.name}
                     onError={(e) => {
-                      e.target.src = '/src/assets/admin-banner.jpg';
+                      e.target.src = 'https://via.placeholder.com/150/cccccc/ffffff?text=DP';
                     }}
                   />
-                  {/* Removed the status toggle button from the image */}
                 </div>
 
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <h3 className="font-bold text-lg text-gray-900">
-                        {partner.name}
+                        {partner.name || 'Unnamed Partner'}
                       </h3>
                       <div className="flex items-center space-x-2 mt-1">
                         {getVehicleIcon(partner.vehicleInfo)}
@@ -529,10 +606,9 @@ const DeliveryPartnersPage = () => {
                   </div>
 
                   <div className="flex justify-between items-center">
-                    {/* Fixed button sizing - all buttons same height */}
                     <div className="flex gap-2">
                       <button
-                        onClick={() => handleToggleStatus(partner.partnerId)}
+                        onClick={() => handleToggleStatus(partner.partnerId || partner.id)}
                         className={`px-3 py-1.5 rounded text-sm font-medium min-w-[120px] ${
                           status === 'busy' || status === 'inactive' || status === 'offline'
                             ? 'bg-green-100 text-green-700 hover:bg-green-200'
@@ -542,7 +618,7 @@ const DeliveryPartnersPage = () => {
                         {status === 'busy' || status === 'inactive' || status === 'offline' ? 'Set Available' : 'Set Busy'}
                       </button>
                       <button
-                        onClick={() => handleResetPassword(partner.partnerId, partner.name)}
+                        onClick={() => handleResetPassword(partner.partnerId || partner.id, partner.name)}
                         className="px-3 py-1.5 text-sm bg-purple-100 text-purple-700 hover:bg-purple-200 rounded transition-colors flex items-center min-w-[100px]"
                         title="Reset Password"
                       >
@@ -557,13 +633,13 @@ const DeliveryPartnersPage = () => {
                         className="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
                         title="Edit partner"
                       >
-                        <Edit2 size={16} /> {/* Changed to Edit2 icon */}
+                        <Edit2 size={16} />
                       </button>
                       <button
-                        onClick={() => handleDelete(partner.partnerId)}
+                        onClick={() => handleDelete(partner.partnerId || partner.id)}
                         className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
                       >
-                        <Trash2 size={16} /> {/* Changed to Trash2 icon */}
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </div>

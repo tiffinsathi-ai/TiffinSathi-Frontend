@@ -1,4 +1,3 @@
-// src/Components/Vendor/VendorFooter.js
 import React from 'react';
 
 const designTokens = {
@@ -48,6 +47,41 @@ const VendorFooter = () => {
             Privacy
           </a>
         </div>
+        
+        <div className="flex items-center gap-4">
+          <a 
+            href="/vendor/support" 
+            className="text-xs sm:text-sm font-medium transition-colors hover:underline"
+            style={{ color: designTokens.colors.secondary.main }}
+          >
+            Help Center
+          </a>
+          <span className="text-gray-300">|</span>
+          <a 
+            href="/vendor/terms" 
+            className="text-xs sm:text-sm font-medium transition-colors hover:underline"
+            style={{ color: designTokens.colors.text.secondary }}
+          >
+            Terms
+          </a>
+          <span className="text-gray-300">|</span>
+          <a 
+            href="/vendor/privacy" 
+            className="text-xs sm:text-sm font-medium transition-colors hover:underline"
+            style={{ color: designTokens.colors.text.secondary }}
+          >
+            Privacy
+          </a>
+        </div>
+      </div>
+      
+      <div className="mt-2 text-center">
+        <span 
+          className="text-xs"
+          style={{ color: designTokens.colors.text.tertiary }}
+        >
+          Version 2.0.0 • Last updated: {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        </span>
       </div>
     </footer>
   );

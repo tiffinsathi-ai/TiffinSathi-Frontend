@@ -1,12 +1,51 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import VendorNavbar from './VendorNavbar';
 import VendorSidebar from './VendorSidebar';
 import VendorFooter from './VendorFooter';
+import authStorage from '../../helpers/authStorage';
+import { isTokenExpired } from '../../helpers/authUtils';
 
 const VendorLayout = () => {
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Check authentication on mount and when token changes
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = authStorage.getToken();
+      const userRole = authStorage.getUserRole();
+      
+      // Check if token exists and is not expired
+      if (!token || isTokenExpired(token)) {
+        authStorage.clearAuth();
+        navigate(`/login?message=${encodeURIComponent('Session expired. Please login again.')}`);
+        return;
+      }
+      
+      // Check if user has vendor role
+      if (userRole !== 'VENDOR') {
+        // Redirect based on actual role
+        const redirectPath = userRole === 'ADMIN' ? '/admin' :
+                            userRole === 'DELIVERY' ? '/delivery/deliveries' : '/';
+        navigate(redirectPath);
+      }
+    };
+
+    checkAuth();
+
+    // Set up interval to check token expiration every minute
+    const intervalId = setInterval(() => {
+      const token = authStorage.getToken();
+      if (token && isTokenExpired(token)) {
+        authStorage.clearAuth();
+        navigate(`/login?message=${encodeURIComponent('Session expired. Please login again.')}`);
+      }
+    }, 60000);
+
+    return () => clearInterval(intervalId);
+  }, [navigate]);
 
   // Check screen size on mount and resize
   useEffect(() => {
@@ -57,7 +96,7 @@ const VendorLayout = () => {
             lg:translate-x-0 transition-transform duration-300 ease-in-out
             lg:top-16 lg:bottom-0 lg:h-[calc(100vh-4rem)]`}
         >
-          <div className={`${sidebarOpen ? 'w-64' : 'w-0'} h-full`}>
+          <div className="h-full">
             <VendorSidebar 
               isOpen={sidebarOpen} 
               onItemClick={closeSidebarOnMobile}

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { HiHeart, HiTruck, HiTag, HiSearch, HiCube, HiCog, HiEmojiHappy, HiStar } from "react-icons/hi";
 import { FaLeaf } from "react-icons/fa";
 import { Heart } from "lucide-react";
-import { authStorage } from "../../helpers/api";
+import authStorage from "../../helpers/authStorage";
 import homeBg from "../../assets/home.jpg";
 
 const Home = () => {
