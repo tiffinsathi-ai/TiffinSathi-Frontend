@@ -8,7 +8,6 @@ import {
   HiLockClosed,
   HiCheckCircle,
   HiInformationCircle,
-  HiChevronDown,
   HiArrowLeft,
   HiEye,
   HiEyeOff,
@@ -22,7 +21,6 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [formData, setFormData] = useState({
-    loginAs: "User",
     email: "",
     password: "",
     rememberMe: false,

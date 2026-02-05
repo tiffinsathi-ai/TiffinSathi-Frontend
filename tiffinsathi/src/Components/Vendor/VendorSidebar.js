@@ -63,6 +63,68 @@ const VendorSidebar = ({ isOpen, onItemClick }) => {
   const [todaysRevenue, setTodaysRevenue] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Fetch pending orders count
+  const fetchPendingOrdersCount = useCallback(async () => {
+    try {
+      setLoading(true);
+      const today = new Date().toISOString().split("T")[0];
+      const response = await vendorApi.getVendorOrders(today);
+      
+      if (response.ok && Array.isArray(response.data)) {
+        // Count orders that need attention (PENDING, CONFIRMED, PREPARING)
+        const pendingCount = response.data.filter(order => 
+          ["PENDING", "CONFIRMED", "PREPARING", "READY_FOR_DELIVERY"].includes(order.status)
+        ).length;
+        
+        setPendingOrdersCount(pendingCount);
+      }
+    } catch (error) {
+      console.error("Error fetching pending orders count:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Initial fetch and set up refresh interval
+  useEffect(() => {
+    if (isOpen) {
+      fetchPendingOrdersCount();
+      
+      // Set up interval to refresh every 30 seconds
+      const intervalId = setInterval(fetchPendingOrdersCount, 10000);
+      
+      // Clean up interval on unmount
+      return () => clearInterval(intervalId);
+    }
+  }, [isOpen, fetchPendingOrdersCount]);
+
+  // Also refresh count when navigating to/from orders page
+  useEffect(() => {
+    if (location.pathname.includes("/vendor/orders")) {
+      fetchPendingOrdersCount();
+    }
+  }, [location.pathname, fetchPendingOrdersCount]);
+
+  const menuItems = [
+    { id: "dashboard", icon: LayoutDashboard, label: "Dashboard", path: "/vendor/dashboard" },
+    { id: "tiffins", icon: UtensilsCrossed, label: "My Tiffins", path: "/vendor/tiffins" },
+    { 
+      id: "orders", 
+      icon: Package, 
+      label: "Orders", 
+      path: "/vendor/orders",
+      showBadge: true 
+    },
+    { id: "subscriptions", icon: Calendar, label: "Subscriptions", path: "/vendor/subscriptions" },
+    { id: "earnings", icon: CreditCard, label: "Earnings", path: "/vendor/earnings" },
+    { id: "analytics", icon: BarChart3, label: "Analytics", path: "/vendor/analytics" },
+    { id: "customers", icon: Users, label: "Customers", path: "/vendor/customers" },
+    { id: "delivery", icon: Truck, label: "Delivery", path: "/vendor/delivery-partners" },
+    { id: "reviews", icon: Star, label: "Reviews", path: "/vendor/reviews" },
+    { id: "settings", icon: Settings, label: "Settings", path: "/vendor/settings" },
+  ];
 
   // Check authentication
   useEffect(() => {
