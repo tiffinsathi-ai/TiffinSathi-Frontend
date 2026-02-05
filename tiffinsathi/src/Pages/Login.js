@@ -11,6 +11,7 @@ import {
   HiArrowLeft,
   HiEye,
   HiEyeOff,
+  HiChevronDown,
 } from "react-icons/hi";
 import { FaArrowRight } from "react-icons/fa";
 import loginBg from "../assets/login.jpg";

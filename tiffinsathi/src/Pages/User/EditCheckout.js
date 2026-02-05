@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { CreditCard, AlertCircle, CheckCircle, ArrowLeft, Shield, Clock, Phone, Mail } from "lucide-react";
 import axios from "axios";
-import { authStorage } from "../../helpers/api";
+import authStorage from "../../helpers/authStorage";
 import { toast } from "react-toastify";
 
 const EditCheckout = () => {

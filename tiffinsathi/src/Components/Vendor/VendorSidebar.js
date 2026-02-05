@@ -63,7 +63,7 @@ const VendorSidebar = ({ isOpen, onItemClick }) => {
   const [todaysRevenue, setTodaysRevenue] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
-  const location = useLocation();
+
 
   // Fetch pending orders count
   const fetchPendingOrdersCount = useCallback(async () => {
@@ -239,79 +239,79 @@ const VendorSidebar = ({ isOpen, onItemClick }) => {
     }
   };
 
-  const menuItems = [
-    { 
-      id: "dashboard", 
-      icon: LayoutDashboard, 
-      label: "Dashboard", 
-      path: "/vendor/dashboard",
-      description: "Overview & analytics"
-    },
-    { 
-      id: "tiffins", 
-      icon: UtensilsCrossed, 
-      label: "My Tiffins", 
-      path: "/vendor/tiffins",
-      description: "Manage your tiffins"
-    },
-    { 
-      id: "orders", 
-      icon: Package, 
-      label: "Orders", 
-      path: "/vendor/orders",
-      showBadge: true,
-      description: "Manage customer orders"
-    },
-    { 
-      id: "subscriptions", 
-      icon: Calendar, 
-      label: "Subscriptions", 
-      path: "/vendor/subscriptions",
-      description: "Active subscriptions"
-    },
-    { 
-      id: "earnings", 
-      icon: CreditCard, 
-      label: "Earnings", 
-      path: "/vendor/earnings",
-      description: "Revenue & payments"
-    },
-    { 
-      id: "analytics", 
-      icon: BarChart3, 
-      label: "Analytics", 
-      path: "/vendor/analytics",
-      description: "Business insights"
-    },
-    { 
-      id: "customers", 
-      icon: Users, 
-      label: "Customers", 
-      path: "/vendor/customers",
-      description: "Customer database"
-    },
-    { 
-      id: "delivery", 
-      icon: Truck, 
-      label: "Delivery", 
-      path: "/vendor/delivery-partners",
-      description: "Delivery management"
-    },
-    { 
-      id: "reviews", 
-      icon: Star, 
-      label: "Reviews", 
-      path: "/vendor/reviews",
-      description: "Customer feedback"
-    },
-    { 
-      id: "settings", 
-      icon: Settings, 
-      label: "Settings", 
-      path: "/vendor/settings",
-      description: "Account settings"
-    },
-  ];
+  // const menuItems = [
+  //   { 
+  //     id: "dashboard", 
+  //     icon: LayoutDashboard, 
+  //     label: "Dashboard", 
+  //     path: "/vendor/dashboard",
+  //     description: "Overview & analytics"
+  //   },
+  //   { 
+  //     id: "tiffins", 
+  //     icon: UtensilsCrossed, 
+  //     label: "My Tiffins", 
+  //     path: "/vendor/tiffins",
+  //     description: "Manage your tiffins"
+  //   },
+  //   { 
+  //     id: "orders", 
+  //     icon: Package, 
+  //     label: "Orders", 
+  //     path: "/vendor/orders",
+  //     showBadge: true,
+  //     description: "Manage customer orders"
+  //   },
+  //   { 
+  //     id: "subscriptions", 
+  //     icon: Calendar, 
+  //     label: "Subscriptions", 
+  //     path: "/vendor/subscriptions",
+  //     description: "Active subscriptions"
+  //   },
+  //   { 
+  //     id: "earnings", 
+  //     icon: CreditCard, 
+  //     label: "Earnings", 
+  //     path: "/vendor/earnings",
+  //     description: "Revenue & payments"
+  //   },
+  //   { 
+  //     id: "analytics", 
+  //     icon: BarChart3, 
+  //     label: "Analytics", 
+  //     path: "/vendor/analytics",
+  //     description: "Business insights"
+  //   },
+  //   { 
+  //     id: "customers", 
+  //     icon: Users, 
+  //     label: "Customers", 
+  //     path: "/vendor/customers",
+  //     description: "Customer database"
+  //   },
+  //   { 
+  //     id: "delivery", 
+  //     icon: Truck, 
+  //     label: "Delivery", 
+  //     path: "/vendor/delivery-partners",
+  //     description: "Delivery management"
+  //   },
+  //   { 
+  //     id: "reviews", 
+  //     icon: Star, 
+  //     label: "Reviews", 
+  //     path: "/vendor/reviews",
+  //     description: "Customer feedback"
+  //   },
+  //   { 
+  //     id: "settings", 
+  //     icon: Settings, 
+  //     label: "Settings", 
+  //     path: "/vendor/settings",
+  //     description: "Account settings"
+  //   },
+  // ];
 
   if (!isOpen) return null;
 

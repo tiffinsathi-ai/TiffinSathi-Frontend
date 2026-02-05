@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Calendar, Plus, Minus, Save, X, Calculator, CreditCard, AlertCircle, RefreshCw } from "lucide-react";
 import axios from "axios";
-import { authStorage } from "../../helpers/api";
+import authStorage from "../../helpers/authStorage";
 import { toast } from "react-toastify";
 
 const EditSchedule = () => {
