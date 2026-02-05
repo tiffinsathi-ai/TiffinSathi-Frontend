@@ -39,6 +39,17 @@ const designTokens = {
       tertiary: "#64748B",
       inverse: "#FFFFFF"
     },
+    accent: {
+      red: "#DC2626",
+    },
+    background: {
+      primary: "#FFFFFF",
+    },
+    text: {
+      primary: "#1E293B",
+      secondary: "#475569",
+      tertiary: "#64748B",
+    },
     border: {
       light: "#E2E8F0",
       medium: "#CBD5E1"
@@ -280,6 +291,48 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
         style={{
           backgroundColor: designTokens.colors.background.primary,
           boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+        }}
+        className="sticky top-0 z-50 w-full"
+      >
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={onToggleSidebar}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors lg:hidden"
+              >
+                <Menu className="h-6 w-6 text-gray-600" />
+              </button>
+              <div className="flex items-center gap-3">
+                <img
+                  src={logo}
+                  alt="Tiffin Sathi Logo"
+                  className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
+                />
+                <h1
+                  className="text-xl sm:text-2xl font-bold hidden sm:block"
+                  style={{
+                    fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
+                    color: designTokens.colors.secondary.main,
+                  }}
+                >
+                  Tiffin Sathi
+                </h1>
+              </div>
+            </div>
+            <div className="animate-pulse bg-gray-200 h-8 w-32 rounded hidden sm:block"></div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
+  if (loading) {
+    return (
+      <nav
+        style={{
+          backgroundColor: designTokens.colors.background.primary,
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
         }}
         className="sticky top-0 z-50 w-full"
       >

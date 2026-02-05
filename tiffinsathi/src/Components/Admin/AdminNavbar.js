@@ -1,13 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useRef, useEffect } from "react";
-import {
-  Bell,
-  Settings,
-  LogOut,
-  UserCircle,
-  Shield,
-  Menu,
-} from "lucide-react";
+import { Settings, LogOut, UserCircle, Shield, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AdminApi from "../../helpers/adminApi";
 import logo from "../../assets/logo.png";
@@ -49,11 +42,20 @@ const AdminNavbar = ({ onToggleSidebar, isMobile }) => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-      
-      if (!token) {
-        console.error("No token found");
-        setLoading(false);
+      const admin = localStorage.getItem("userRole");
+      console.log("check", admin)
+      if (!
+        token) {
+          console.error("No token found");
+        navigate('/login')
         return;
+      }
+
+      if (token){
+        if (admin == "USER") {
+          navigate('/');
+          setLoading(false);
+        }
       }
 
       console.log("Fetching user data...");
@@ -310,21 +312,6 @@ const AdminNavbar = ({ onToggleSidebar, isMobile }) => {
 
           {/* Right Section */}
           <div className="flex items-center space-x-2 sm:space-x-4">
-            <button
-              className="relative p-2 rounded-lg transition-all duration-200"
-              style={{ color: designTokens.colors.text.primary }}
-              onMouseEnter={() => setHoveredItem("bell")}
-              onMouseLeave={() => setHoveredItem(null)}
-            >
-              <Bell size={20} className="sm:w-6 sm:h-6" />
-              <span
-                className="absolute -top-1 -right-1 text-xs font-bold rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center text-white text-[10px] sm:text-xs"
-                style={{ backgroundColor: designTokens.colors.accent.red }}
-              >
-                5
-              </span>
-            </button>
-
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}

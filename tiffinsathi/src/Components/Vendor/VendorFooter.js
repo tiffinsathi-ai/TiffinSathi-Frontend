@@ -15,25 +15,37 @@ const VendorFooter = () => {
   return (
     <footer 
       className="py-4 px-4 sm:px-6 lg:px-8 border-t bg-white mt-auto"
-      style={{ 
-        backgroundColor: designTokens.colors.background.secondary,
-        borderColor: designTokens.colors.border.light 
-      }}
+      style={{ borderColor: designTokens.colors.border.light }}
     >
       <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-2">
-        <div className="flex items-center gap-2">
-          <span 
-            className="text-xs sm:text-sm font-semibold"
+        <p 
+          className="text-xs sm:text-sm text-center sm:text-left" 
+          style={{ color: designTokens.colors.text.secondary }}
+        >
+          © {currentYear} Tiffin Sathi Vendor Panel. All rights reserved.
+        </p>
+        <div className="flex items-center gap-3">
+          <a 
+            href="#help" 
+            className="text-xs sm:text-sm font-medium transition-colors hover:underline"
             style={{ color: designTokens.colors.secondary.main }}
           >
-            Tiffin Sathi
-          </span>
-          <span 
-            className="text-xs sm:text-sm"
-            style={{ color: designTokens.colors.text.secondary }}
+            Help
+          </a>
+          <a 
+            href="#terms" 
+            className="text-xs sm:text-sm font-medium transition-colors hover:underline"
+            style={{ color: designTokens.colors.secondary.main }}
           >
-            © {currentYear} Vendor Panel. All rights reserved.
-          </span>
+            Terms
+          </a>
+          <a 
+            href="#privacy" 
+            className="text-xs sm:text-sm font-medium transition-colors hover:underline"
+            style={{ color: designTokens.colors.secondary.main }}
+          >
+            Privacy
+          </a>
         </div>
         
         <div className="flex items-center gap-4">

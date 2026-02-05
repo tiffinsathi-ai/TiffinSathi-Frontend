@@ -17,7 +17,6 @@ const Packages = () => {
   const [activeFilter, setActiveFilter] = useState("All Packages");
   const [sortBy, setSortBy] = useState("Most Popular");
   const [showSortDropdown, setShowSortDropdown] = useState(false);
-  const [favorites, setFavorites] = useState(new Set());
 
   const vendorContext = useMemo(() => {
     const sp = new URLSearchParams(location.search || "");
@@ -142,16 +141,6 @@ const Packages = () => {
     }
 
     setFilteredPackages(filtered);
-  };
-
-  const toggleFavorite = (packageId) => {
-    const newFavorites = new Set(favorites);
-    if (newFavorites.has(packageId)) {
-      newFavorites.delete(packageId);
-    } else {
-      newFavorites.add(packageId);
-    }
-    setFavorites(newFavorites);
   };
 
   const getDurationLabel = (durationDays) => {
@@ -402,19 +391,6 @@ const Packages = () => {
                           </span>
                         )}
                       </div>
-                      {/* Favorite Button */}
-                      <button
-                        onClick={() => toggleFavorite(pkg.packageId)}
-                        className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors shadow-sm"
-                      >
-                        <Heart
-                          className={`w-5 h-5 ${
-                            favorites.has(pkg.packageId)
-                              ? "fill-red-500 text-red-500"
-                              : "text-gray-400"
-                          }`}
-                        />
-                      </button>
                     </div>
 
                     {/* Content Section */}
