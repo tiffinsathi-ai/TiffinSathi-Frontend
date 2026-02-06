@@ -1,6 +1,6 @@
-import axios from "axios";
+import axios from 'axios';
 
-const API_BASE_URL = "http://localhost:8080/api";
+const API_BASE_URL = 'http://localhost:8080/api';
 
 class UserApi {
   constructor() {
@@ -11,8 +11,7 @@ class UserApi {
 
     // Add token to requests
     this.api.interceptors.request.use((config) => {
-      const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -23,10 +22,10 @@ class UserApi {
     this.api.interceptors.response.use(
       (response) => response,
       (error) => {
-        console.error("User API Error:", error);
+        console.error('User API Error:', error);
         if (error.response?.status === 401) {
-          localStorage.removeItem("token");
-          localStorage.removeItem("user");
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
         }
         throw error;
       }
@@ -37,26 +36,26 @@ class UserApi {
   async getCurrentUserProfile() {
     try {
       // First try the user profile endpoint
-      const response = await this.api.get("/users/profile");
+      const response = await this.api.get('/users/profile');
       return response.data;
     } catch (error) {
-      console.log("User profile endpoint failed, trying fallback...");
-
+      console.log('User profile endpoint failed, trying fallback...');
+      
       // Fallback to localStorage if API fails
-      const storedUser = localStorage.getItem("user");
+      const storedUser = localStorage.getItem('user');
       if (storedUser) {
         try {
           return JSON.parse(storedUser);
         } catch (parseError) {
-          console.error("Error parsing stored user:", parseError);
+          console.error('Error parsing stored user:', parseError);
         }
       }
-
+      
       // Minimal fallback user object
       return {
-        userName: localStorage.getItem("username") || "User",
-        email: localStorage.getItem("userEmail") || "",
-        role: "USER",
+        userName: localStorage.getItem('username') || 'User',
+        email: localStorage.getItem('userEmail') || '',
+        role: 'USER'
       };
     }
   }
@@ -64,37 +63,12 @@ class UserApi {
   // Update user profile (keep only if needed)
   async updateUserProfile(profileData) {
     try {
-      const response = await this.api.put("/users/profile", profileData);
+      const response = await this.api.put('/users/profile', profileData);
       return response.data;
     } catch (error) {
-      console.error("Error updating user profile:", error);
+      console.error('Error updating user profile:', error);
       throw error;
     }
-  }
-
-  // Initiate modification payment (for subscription edit checkout)
-  async initiateModificationPayment(modificationId, paymentMethod) {
-    const response = await this.api.post(
-      "/subscriptions/edit/payment/initiate",
-      {
-        modificationId,
-        paymentMethod,
-      }
-    );
-    return response.data;
-  }
-
-  // Fallback: initiate edit payment by subscription ID (when backend doesn't return modificationId)
-  async initiateEditPaymentBySubscription(
-    subscriptionId,
-    amount,
-    paymentMethod
-  ) {
-    const response = await this.api.post(
-      `/subscriptions/edit/${subscriptionId}/payment`,
-      { paymentMethod, amount }
-    );
-    return response.data;
   }
 }
 
