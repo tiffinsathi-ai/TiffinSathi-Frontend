@@ -219,7 +219,7 @@ export const vendorApi = {
     } catch (e) {
       console.error("updateSubscriptionStatus error", e);
       return { ok: false, error: e, data: null };
-    }
+    } 
   },
 
   pauseSubscription: async (subscriptionId, pauseReason = "") => {
