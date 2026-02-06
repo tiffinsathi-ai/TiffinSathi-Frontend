@@ -66,6 +66,13 @@ const AdminLayout = () => {
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
+  // useEffect(() => {
+  //   const token = localStorage.getItem('token');
+  //   if (!token) {
+  //     navigate('/login');
+  //   }
+  // }, []);   
+
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };

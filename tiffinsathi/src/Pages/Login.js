@@ -8,10 +8,10 @@ import {
   HiLockClosed,
   HiCheckCircle,
   HiInformationCircle,
-  HiChevronDown,
   HiArrowLeft,
   HiEye,
   HiEyeOff,
+  HiChevronDown,
 } from "react-icons/hi";
 import { FaArrowRight } from "react-icons/fa";
 import loginBg from "../assets/login.jpg";
@@ -22,7 +22,6 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [formData, setFormData] = useState({
-    loginAs: "User",
     email: "",
     password: "",
     rememberMe: false,

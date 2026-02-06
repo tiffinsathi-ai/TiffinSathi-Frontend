@@ -146,7 +146,7 @@ const Checkout = () => {
     // Set earliest available date (2 days from today)
     const today = new Date();
     const earliestDate = new Date(today);
-    earliestDate.setDate(today.getDate() + 2);
+    earliestDate.setDate(today.getDate() + 3);
     setStartDate(earliestDate.toISOString().split("T")[0]);
 
     // Calculate pricing if not provided
@@ -699,7 +699,7 @@ const Checkout = () => {
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
                       min={
-                        new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
+                        new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
                           .toISOString()
                           .split("T")[0]
                       }
