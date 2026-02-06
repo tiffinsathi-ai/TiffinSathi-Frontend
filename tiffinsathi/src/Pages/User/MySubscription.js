@@ -1129,17 +1129,11 @@ const MySubscription = () => {
         ></div>
         <div className="absolute inset-0 bg-gradient-to-br from-green-400/30 via-yellow-400/20 to-green-500/30"></div>
         <div className="absolute inset-0 bg-black/20"></div>
-        <div className="relative z-10 max-w-6xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 drop-shadow-lg">
-            Your Meal
+        <div className="relative z-10 text-center px-6 max-w-4xl mx-auto py-20">
+          <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight drop-shadow-lg">
+            Your Meal <span style={{ color: "#F5B800" }}>Subscriptions</span>
           </h1>
-          <h2
-            className="text-3xl md:text-4xl font-bold mb-4 drop-shadow-lg"
-            style={{ color: "#F5B800" }}
-          >
-            Subscriptions
-          </h2>
-          <p className="text-lg text-white drop-shadow-md max-w-xl mx-auto">
+          <p className="text-lg md:text-xl text-white mb-8 max-w-2xl mx-auto drop-shadow-md">
             Manage your active subscriptions, view upcoming meals, and customize
             your preferences
           </p>

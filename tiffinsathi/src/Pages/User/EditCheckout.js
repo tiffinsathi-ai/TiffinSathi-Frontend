@@ -1,23 +1,40 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { CreditCard, AlertCircle, CheckCircle, ArrowLeft, Shield, Clock, Phone, Mail } from "lucide-react";
+import { CreditCard, AlertCircle, CheckCircle, ArrowLeft, Shield, Phone } from "lucide-react";
 import axios from "axios";
 import { authStorage } from "../../helpers/api";
 import { toast } from "react-toastify";
 
+// Safe display helpers — avoid NaN, undefined, null
+const formatAmount = (val) => {
+  const n = Number(val);
+  return Number.isFinite(n) ? n.toFixed(2) : "0.00";
+};
+const safeStr = (val, fallback = "—") =>
+  val != null && String(val).trim() !== "" ? String(val).trim() : fallback;
+
 const EditCheckout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { subscription, newSchedule, priceCalculation, editReason } = location.state || {};
+  const { subscription, newSchedule, priceCalculation: rawPrice, editReason } = location.state || {};
 
   const [paymentMethod, setPaymentMethod] = useState("ESEWA");
   const [processingPayment, setProcessingPayment] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  if (!subscription || !priceCalculation) {
+  if (!subscription || !rawPrice) {
     navigate("/user/subscriptions");
     return null;
   }
+
+  // Normalize price — support different backend keys and ensure numbers (API may return strings)
+  const priceCalculation = {
+    ...rawPrice,
+    oldCost: Number(rawPrice.oldCost ?? rawPrice.oldRemainingCost) || 0,
+    newCost: Number(rawPrice.newCost ?? rawPrice.newRemainingCost) || 0,
+    additionalPayment: Number(rawPrice.additionalPayment) || 0,
+    refundAmount: Number(rawPrice.refundAmount) || 0,
+  };
 
   const handlePayment = async () => {
     try {
@@ -37,8 +54,6 @@ const EditCheckout = () => {
         refundAmount: priceCalculation?.refundAmount || 0
       };
 
-      console.log("Creating edit history before payment:", applyRequest);
-
       // Create/edit history first
       const applyResponse = await axios.post(
         "http://localhost:8080/api/subscriptions/edit/apply",
@@ -47,7 +62,6 @@ const EditCheckout = () => {
       );
 
       const applyData = applyResponse.data;
-      console.log("Edit history created:", applyData);
 
       if (applyData.paymentResponse) {
         // If apply endpoint returns payment response directly, use it
@@ -158,13 +172,13 @@ const EditCheckout = () => {
       const responseData = response.data;
       
       if (responseData.editStatus === "COMPLETED" || responseData.editStatus === "REFUND_APPROVED") {
-        if (priceCalculation?.refundAmount > 0) {
+        if (priceCalculation.refundAmount > 0) {
           toast.success(
             <div>
               <p>Subscription updated successfully!</p>
-              <p>A refund of Rs. {priceCalculation.refundAmount.toFixed(2)} has been approved and will be processed.</p>
+              <p>A refund of Rs. {formatAmount(priceCalculation.refundAmount)} has been approved and will be processed.</p>
               {responseData.vendorPhone && (
-                <p>For questions, contact vendor: {responseData.vendorName} - {responseData.vendorPhone}</p>
+                <p>For questions, contact vendor: {responseData.vendorName} — {responseData.vendorPhone}</p>
               )}
             </div>
           );
@@ -199,297 +213,233 @@ const EditCheckout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <button 
-            onClick={() => navigate("/subscription/edit", { state: { subscription } })} 
-            className="flex items-center gap-2 text-gray-600 mb-4 hover:text-gray-800"
+      <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+              {isRefundCase ? "Complete edit (refund available)" : "Complete subscription edit"}
+            </h1>
+            <p className="text-gray-600 mt-1 text-sm sm:text-base">
+              {isRefundCase ? "Review and confirm to receive your refund." : "Review and complete payment."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/subscription/edit", { state: { subscription } })}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-gray-900 hover:opacity-90 transition-opacity shrink-0"
+            style={{ backgroundColor: "#F5B800" }}
           >
-            <ArrowLeft className="w-5 h-5" /> Back to Edit
+            <ArrowLeft className="w-4 h-4" />
+            Back to edit
           </button>
-
-          <h1 className="text-3xl font-bold text-gray-900">
-            {isRefundCase ? "Complete Subscription Edit - Refund Available" : "Complete Subscription Edit"}
-          </h1>
-          <p className="text-gray-600 mt-2">
-            {isRefundCase 
-              ? "Review changes and confirm to receive your refund"
-              : "Review changes and complete payment for schedule update"}
-          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold">Edit Summary</h3>
-              <div className="mt-3 space-y-2">
-                <div className="flex justify-between"><span>Subscription ID:</span><span className="font-medium">{subscription.subscriptionId}</span></div>
-                <div className="flex justify-between"><span>Package:</span><span className="font-medium">{subscription.packageName}</span></div>
-                <div className="flex justify-between"><span>Remaining Days:</span><span className="font-medium">{getRemainingDays()} days</span></div>
-                <div className="flex justify-between"><span>Edit Reason:</span><span className="font-medium text-blue-600">{editReason}</span></div>
-              </div>
+            <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Summary</h3>
+              <dl className="space-y-2">
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <dt className="text-gray-600 text-sm">Subscription ID</dt>
+                  <dd className="font-medium text-gray-900">{safeStr(subscription.subscriptionId)}</dd>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <dt className="text-gray-600 text-sm">Package</dt>
+                  <dd className="font-medium text-gray-900">{safeStr(subscription.packageName)}</dd>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <dt className="text-gray-600 text-sm">Remaining days</dt>
+                  <dd className="font-medium text-gray-900">{getRemainingDays()} days</dd>
+                </div>
+                {safeStr(editReason) !== "—" && (
+                  <div className="flex justify-between items-start py-2">
+                    <dt className="text-gray-600 text-sm">Edit reason</dt>
+                    <dd className="font-medium text-blue-600 text-right max-w-[60%]">{editReason}</dd>
+                  </div>
+                )}
+              </dl>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold">Price Summary</h3>
-              <div className="mt-3 space-y-3">
+            <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Price Summary</h3>
+              <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 bg-gray-50 rounded">
-                    <p className="text-sm text-gray-500">Current Remaining Value</p>
-                    <p className="text-lg font-semibold">Rs. {priceCalculation?.oldCost?.toFixed(2) || "0.00"}</p>
+                  <div className="p-3 bg-gray-50 rounded border border-gray-100">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Current remaining</p>
+                    <p className="text-lg font-bold text-gray-900">Rs. {formatAmount(priceCalculation.oldCost)}</p>
                   </div>
-                  <div className="p-3 bg-gray-50 rounded">
-                    <p className="text-sm text-gray-500">New Remaining Value</p>
-                    <p className="text-lg font-semibold">Rs. {priceCalculation?.newCost?.toFixed(2) || "0.00"}</p>
+                  <div className="p-3 bg-gray-50 rounded border border-gray-100">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">New remaining</p>
+                    <p className="text-lg font-bold text-gray-900">Rs. {formatAmount(priceCalculation.newCost)}</p>
                   </div>
                 </div>
 
-                {priceCalculation?.additionalPayment > 0 && (
-                  <>
-                    <div className="flex justify-between py-2 border-t pt-4">
-                      <span>Additional Payment Required:</span>
-                      <span className="font-bold text-yellow-600">Rs. {priceCalculation.additionalPayment.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between py-2 text-lg font-bold border-t pt-4">
-                      <span>Total to Pay:</span>
-                      <span className="text-yellow-600">Rs. {priceCalculation.additionalPayment.toFixed(2)}</span>
-                    </div>
-                  </>
-                )}
+                <div className="border-t border-gray-200 pt-4 space-y-2">
+                  {priceCalculation.additionalPayment > 0 && (
+                    <>
+                      <div className="flex justify-between text-gray-700">
+                        <span>Additional payment</span>
+                        <span className="font-semibold" style={{ color: "#F5B800" }}>Rs. {formatAmount(priceCalculation.additionalPayment)}</span>
+                      </div>
+                      <div className="flex justify-between text-lg font-bold pt-2">
+                        <span>Total to pay</span>
+                        <span style={{ color: "#F5B800" }}>Rs. {formatAmount(priceCalculation.additionalPayment)}</span>
+                      </div>
+                    </>
+                  )}
 
-                {isRefundCase && (
-                  <div className="p-4 bg-green-50 rounded border">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="w-5 h-5 text-green-600" />
-                      <div>
-                        <p className="font-semibold text-green-700">Refund Available</p>
-                        <p className="text-sm text-green-600">
-                          You will receive a refund of <span className="font-bold">Rs. {priceCalculation.refundAmount.toFixed(2)}</span> because your new schedule costs less.
-                        </p>
-                        <div className="mt-2 p-3 bg-green-100 rounded">
-                          <p className="text-sm font-medium text-green-800">Refund Details:</p>
-                          <ul className="text-xs text-green-700 mt-1 space-y-1">
-                            <li>• Refund will be processed within 5-7 business days</li>
-                            <li>• Amount will be credited to your original payment method</li>
-                            <li>• For questions, contact the vendor directly</li>
-                            {subscription.vendorPhone && (
-                              <li className="flex items-center gap-1">
-                                <Phone className="w-3 h-3" /> Vendor: {subscription.vendorName} - {subscription.vendorPhone}
-                              </li>
-                            )}
-                          </ul>
+                  {isRefundCase && (
+                    <div className="p-3 bg-green-50 rounded border border-green-200">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-green-800">Refund: Rs. {formatAmount(priceCalculation.refundAmount)}</p>
+                          <p className="text-xs text-green-700 mt-1">Processed in 5–7 days to your original payment method.</p>
+                          {(subscription.vendorName || subscription.vendorPhone) && (
+                            <p className="text-xs text-green-700 mt-1 flex items-center gap-1">
+                              <Phone className="w-3 h-3" />
+                              {safeStr(subscription.vendorName)} {subscription.vendorPhone ? `— ${subscription.vendorPhone}` : ""}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {priceCalculation?.additionalPayment <= 0 && priceCalculation?.refundAmount <= 0 && (
-                  <div className="p-4 bg-blue-50 rounded border">
-                    <div className="flex items-start gap-2">
-                      <CheckCircle className="w-5 h-5 text-blue-600" />
-                      <div>
-                        <p className="font-semibold text-blue-700">No Price Change</p>
-                        <p className="text-sm text-blue-600">Your changes don't require any additional payment or refund.</p>
-                      </div>
+                  {priceCalculation.additionalPayment <= 0 && priceCalculation.refundAmount <= 0 && (
+                    <div className="p-3 bg-blue-50 rounded border border-blue-200 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                      <p className="text-sm text-blue-800">No additional payment or refund.</p>
                     </div>
-                  </div>
-                )}
-
+                  )}
+                </div>
               </div>
             </div>
 
-            {priceCalculation?.additionalPayment > 0 && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold">Select Payment Method</h3>
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  {["ESEWA", "KHALTI"].map(m => (
-                    <label 
-                      key={m} 
-                      className={`flex items-center gap-3 p-3 border rounded cursor-pointer ${paymentMethod===m ? "border-yellow-500 bg-yellow-50" : "border-gray-200 hover:border-gray-300"}`}
+            {priceCalculation.additionalPayment > 0 && (
+              <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Payment method</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {["ESEWA", "KHALTI"].map((m) => (
+                    <label
+                      key={m}
+                      className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
+                        paymentMethod === m ? "border-yellow-500 bg-yellow-50" : "border-gray-200 hover:bg-gray-50"
+                      }`}
                     >
-                      <input 
-                        type="radio" 
-                        name="pm" 
-                        value={m} 
-                        checked={paymentMethod===m} 
-                        onChange={(e)=>setPaymentMethod(e.target.value)} 
-                        className="w-4 h-4"
+                      <input
+                        type="radio"
+                        name="pm"
+                        value={m}
+                        checked={paymentMethod === m}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        className="w-4 h-4 accent-yellow-500"
                       />
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="w-4 h-4" />
-                        <span>{m}</span>
-                      </div>
+                      <CreditCard className="w-4 h-4 text-gray-600" />
+                      <span className="font-medium">{m}</span>
                     </label>
                   ))}
                 </div>
-
-                <div className="mt-4 p-3 bg-blue-50 rounded border">
-                  <div className="flex items-start gap-2">
-                    <Shield className="w-5 h-5 text-blue-600" />
-                    <div>
-                      <p className="font-medium text-blue-700">Secure Payment</p>
-                      <p className="text-sm text-blue-600">Your payment is processed securely. We never store your payment details.</p>
-                    </div>
-                  </div>
-                </div>
+                <p className="mt-3 text-sm text-gray-500 flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-green-600" />
+                  Secure payment. We do not store your card details.
+                </p>
               </div>
             )}
 
           </div>
 
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-lg p-6 sticky top-4">
-              <h3 className="text-lg font-semibold">
-                {isRefundCase ? "Confirm Edit & Refund" : "Complete Edit"}
+            <div className="bg-white rounded-lg shadow border border-gray-200 p-6 sticky top-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                {isRefundCase ? "Confirm edit & refund" : "Complete edit"}
               </h3>
 
-              <div className="mt-4 space-y-4">
-                {isRefundCase ? (
-                  <>
-                    <div className="p-4 bg-green-50 rounded border">
-                      <div className="flex items-start gap-2">
-                        <Clock className="w-4 h-4 text-green-600"/>
-                        <div>
-                          <p className="font-semibold">Immediate Update</p>
-                          <p className="text-sm">Subscription will be updated immediately after confirmation.</p>
-                        </div>
+              <div className="mb-5 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="space-y-2 text-sm">
+                  {priceCalculation.additionalPayment > 0 && (
+                    <>
+                      <div className="flex justify-between text-gray-700">
+                        <span>Payment amount</span>
+                        <span className="font-semibold">Rs. {formatAmount(priceCalculation.additionalPayment)}</span>
                       </div>
-                    </div>
-                    
-                    <div className="p-4 bg-green-50 rounded border">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 text-green-600" />
-                        <div>
-                          <p className="font-semibold">Refund Timeline</p>
-                          <p className="text-sm">Refund will be processed within 5-7 business days to your original payment method.</p>
-                        </div>
+                      <div className="flex justify-between text-gray-700">
+                        <span>Payment method</span>
+                        <span className="font-semibold">{paymentMethod}</span>
                       </div>
-                    </div>
-                    
-                    {subscription.vendorPhone && (
-                      <div className="p-4 bg-blue-50 rounded border">
-                        <div className="flex items-start gap-2">
-                          <Phone className="w-4 h-4 text-blue-600"/>
-                          <div>
-                            <p className="font-semibold">Vendor Contact</p>
-                            <p className="text-sm">For refund questions: {subscription.vendorName} - {subscription.vendorPhone}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <div className="p-4 bg-yellow-50 rounded border">
-                      <div className="flex items-start gap-2">
-                        <Clock className="w-4 h-4 text-yellow-600"/>
-                        <div>
-                          <p className="font-semibold">Immediate Update</p>
-                          <p className="text-sm">Subscription will be updated after successful payment.</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="p-4 bg-green-50 rounded border">
-                      <div className="flex items-start gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-600"/>
-                        <div>
-                          <p className="font-semibold">Peace of Mind</p>
-                          <p className="text-sm">Changes only apply to future orders.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="my-4 p-4 bg-gray-50 rounded">
-                <div className="space-y-2">
-                  {priceCalculation?.additionalPayment > 0 && (
-                    <div className="flex justify-between">
-                      <span>Payment Amount:</span>
-                      <span className="font-semibold">Rs. {priceCalculation.additionalPayment.toFixed(2)}</span>
-                    </div>
+                    </>
                   )}
-                  {priceCalculation?.additionalPayment > 0 && (
-                    <div className="flex justify-between">
-                      <span>Payment Method:</span>
-                      <span className="font-semibold">{paymentMethod}</span>
-                    </div>
-                  )}
-                  {priceCalculation?.refundAmount > 0 && (
-                    <div className="flex justify-between text-green-600">
-                      <span>Refund Amount:</span>
-                      <span className="font-semibold">Rs. {priceCalculation.refundAmount.toFixed(2)}</span>
+                  {priceCalculation.refundAmount > 0 && (
+                    <div className="flex justify-between text-green-700">
+                      <span>Refund amount</span>
+                      <span className="font-semibold">Rs. {formatAmount(priceCalculation.refundAmount)}</span>
                     </div>
                   )}
                 </div>
-                
-                <div className="pt-2 border-t mt-2">
-                  <div className="flex justify-between text-lg font-bold">
-                    <span>Net Amount:</span>
-                    <span className={priceCalculation?.additionalPayment > 0 ? "text-yellow-600" : "text-green-600"}>
-                      {priceCalculation?.additionalPayment > 0 
-                        ? `Rs. ${priceCalculation.additionalPayment.toFixed(2)} to pay`
-                        : priceCalculation?.refundAmount > 0
-                          ? `Rs. ${priceCalculation.refundAmount.toFixed(2)} refund`
+                <div className="pt-3 mt-3 border-t border-gray-200">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-gray-900">Net amount</span>
+                    <span
+                      className={`text-base font-bold ${
+                        priceCalculation.additionalPayment > 0 ? "text-amber-600" : priceCalculation.refundAmount > 0 ? "text-green-600" : "text-gray-700"
+                      }`}
+                    >
+                      {priceCalculation.additionalPayment > 0
+                        ? `Rs. ${formatAmount(priceCalculation.additionalPayment)} to pay`
+                        : priceCalculation.refundAmount > 0
+                          ? `Rs. ${formatAmount(priceCalculation.refundAmount)} refund`
                           : "No payment required"}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {priceCalculation?.additionalPayment > 0 ? (
-                <button 
-                  onClick={handlePayment} 
+              {priceCalculation.additionalPayment > 0 ? (
+                <button
+                  type="button"
+                  onClick={handlePayment}
                   disabled={processingPayment || loading}
-                  className="w-full py-3 rounded text-white font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed" 
+                  className="w-full py-3 rounded-lg text-white font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2 shadow-sm text-center"
                   style={{ backgroundColor: "#F5B800" }}
                 >
                   {processingPayment || loading ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block"></div>
-                      {processingPayment ? "Processing Payment..." : "Processing..."}
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                      Processing…
                     </>
                   ) : (
                     <>
-                      <CreditCard className="w-5 h-5 mr-2 inline-block" /> 
-                      Pay Rs. {priceCalculation.additionalPayment.toFixed(2)} with {paymentMethod}
+                      <CreditCard className="w-5 h-5 flex-shrink-0 ml-2" />
+                      <span>Pay Rs. {formatAmount(priceCalculation.additionalPayment)} with {paymentMethod}</span>
                     </>
                   )}
                 </button>
               ) : (
-                <button 
-                  onClick={handleNoPaymentEdit} 
+                <button
+                  onClick={handleNoPaymentEdit}
                   disabled={loading}
-                  className="w-full py-3 rounded text-white font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed" 
+                  className="w-full py-3.5 rounded-lg text-white font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2"
                   style={{ backgroundColor: isRefundCase ? "#10B981" : "#3B82F6" }}
                 >
                   {loading ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block"></div>
-                      Applying Changes...
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                      Applying changes…
                     </>
                   ) : (
                     <>
-                      <CheckCircle className="w-5 h-5 mr-2 inline-block" /> 
-                      {isRefundCase 
-                        ? `Confirm Edit & Receive Rs. ${priceCalculation.refundAmount.toFixed(2)} Refund`
-                        : "Apply Changes Now"}
+                      <CheckCircle className="w-5 h-5" />
+                      {isRefundCase
+                        ? `Confirm & receive Rs. ${formatAmount(priceCalculation.refundAmount)} refund`
+                        : "Apply changes now"}
                     </>
                   )}
                 </button>
               )}
 
-              <div className="text-xs text-gray-500 text-center mt-4">
-                {isRefundCase ? (
-                  <p>By confirming, you agree to update your subscription. The refund will be processed to your original payment method within 5-7 business days.</p>
-                ) : (
-                  <p>By completing this payment, you agree to update your subscription with the new schedule.</p>
-                )}
-                <p className="mt-1">You will receive a confirmation email once the update is complete.</p>
-              </div>
+              <p className="text-xs text-gray-500 text-center mt-3">
+                You will receive a confirmation after the update.
+              </p>
             </div>
           </div>
         </div>

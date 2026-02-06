@@ -171,7 +171,10 @@ const Signup = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="min-h-screen flex flex-col md:flex-row overflow-hidden">
+    <form
+      onSubmit={handleSubmit}
+      className="min-h-screen flex flex-col md:flex-row overflow-hidden"
+    >
       {/* Left Section - Background and Branding (Hidden on mobile, shown on md and above) */}
       <div
         className="hidden md:flex md:w-2/5 relative items-center justify-center"
@@ -256,7 +259,7 @@ const Signup = () => {
               className="text-3xl font-bold mb-2"
               style={{
                 fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
-                color: "#4A8C39"
+                color: "#4A8C39",
               }}
             >
               Tiffin Sathi
@@ -270,7 +273,9 @@ const Signup = () => {
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-2">
             Create Account
           </h2>
-          <p className="text-gray-600 text-sm sm:text-base mb-6 sm:mb-8">Sign up to get started</p>
+          <p className="text-gray-600 text-sm sm:text-base mb-6 sm:mb-8">
+            Sign up to get started
+          </p>
 
           {/* Success Message */}
           {successMessage && (
@@ -306,20 +311,23 @@ const Signup = () => {
                     value={formData.name}
                     onChange={handleChange}
                     required
+                    tabIndex={1}
                     className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-sm sm:text-base"
                     style={{ borderColor: errors.name ? "#ef4444" : "#CCCCCC" }}
                     placeholder="Enter your full name"
                   />
                 </div>
                 {errors.name && (
-                  <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.name}</p>
+                  <p className="text-red-500 text-xs sm:text-sm mt-1">
+                    {errors.name}
+                  </p>
                 )}
               </div>
 
               {/* Phone */}
               <div>
                 <label className="block text-left text-gray-700 font-medium mb-1 sm:mb-2 text-sm sm:text-base">
-                  Phone<span className="text-red-500">*</span>
+                  Phone No.<span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <HiPhone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
@@ -329,6 +337,7 @@ const Signup = () => {
                     value={formData.phone}
                     onChange={handleChange}
                     required
+                    tabIndex={3}
                     className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-sm sm:text-base"
                     style={{
                       borderColor: errors.phone ? "#ef4444" : "#CCCCCC",
@@ -337,7 +346,9 @@ const Signup = () => {
                   />
                 </div>
                 {errors.phone && (
-                  <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.phone}</p>
+                  <p className="text-red-500 text-xs sm:text-sm mt-1">
+                    {errors.phone}
+                  </p>
                 )}
               </div>
 
@@ -354,6 +365,7 @@ const Signup = () => {
                     value={formData.password}
                     onChange={handleChange}
                     required
+                    tabIndex={5}
                     className="w-full pl-9 sm:pl-10 pr-10 sm:pr-12 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-sm sm:text-base"
                     style={{
                       borderColor: errors.password ? "#ef4444" : "#CCCCCC",
@@ -373,7 +385,9 @@ const Signup = () => {
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.password}</p>
+                  <p className="text-red-500 text-xs sm:text-sm mt-1">
+                    {errors.password}
+                  </p>
                 )}
               </div>
             </div>
@@ -393,6 +407,7 @@ const Signup = () => {
                     value={formData.email}
                     onChange={handleChange}
                     required
+                    tabIndex={2}
                     className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-sm sm:text-base"
                     style={{
                       borderColor: errors.email ? "#ef4444" : "#CCCCCC",
@@ -401,7 +416,9 @@ const Signup = () => {
                   />
                 </div>
                 {errors.email && (
-                  <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.email}</p>
+                  <p className="text-red-500 text-xs sm:text-sm mt-1">
+                    {errors.email}
+                  </p>
                 )}
               </div>
 
@@ -418,6 +435,7 @@ const Signup = () => {
                     value={formData.address}
                     onChange={handleChange}
                     required
+                    tabIndex={4}
                     className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-sm sm:text-base"
                     style={{
                       borderColor: errors.address ? "#ef4444" : "#CCCCCC",
@@ -426,7 +444,9 @@ const Signup = () => {
                   />
                 </div>
                 {errors.address && (
-                  <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.address}</p>
+                  <p className="text-red-500 text-xs sm:text-sm mt-1">
+                    {errors.address}
+                  </p>
                 )}
               </div>
 
@@ -443,6 +463,7 @@ const Signup = () => {
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     required
+                    tabIndex={6}
                     className="w-full pl-9 sm:pl-10 pr-10 sm:pr-12 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-sm sm:text-base"
                     style={{
                       borderColor: errors.confirmPassword

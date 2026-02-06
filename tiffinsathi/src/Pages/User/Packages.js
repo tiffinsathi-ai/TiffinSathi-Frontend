@@ -165,6 +165,57 @@ const Packages = () => {
     return null;
   };
 
+  // Unique tagline per package (used when pkg.description is missing). Picks a variant by package id/name so each card is different.
+  const getPackageDescription = (pkg) => {
+    if (!pkg || typeof pkg !== "object") return "Fresh homemade meals delivered to your door.";
+    const durationDays = Number(pkg.durationDays);
+    const name = String(pkg.name || "").toLowerCase();
+    const idNum = Number(pkg.packageId) || 0;
+    const nameSum = (pkg.name || "").split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+    const seed = idNum + nameSum;
+    const pick = (arr) => {
+      if (!Array.isArray(arr) || arr.length === 0) return "Fresh homemade meals delivered to your door.";
+      const idx = Math.abs(seed) % arr.length;
+      return arr[idx] || arr[0];
+    };
+
+    if (name.includes("student")) return "Pocket-friendly meals for students. Nutritious and affordable.";
+    if (name.includes("premium")) return "Premium ingredients and curated menus for a special dining experience.";
+    if (name.includes("family")) return "Generous portions and family favourites. One plan for the whole household.";
+
+    if (durationDays === 1) {
+      const options = [
+        "Daily fresh tiffins delivered to your door. Perfect for trying new flavours every day.",
+        "One day at a time—fresh meals every day. No commitment, just great taste.",
+        "Start with a single day. Change your menu anytime.",
+      ];
+      return pick(options);
+    }
+    if (durationDays === 7) {
+      const options = [
+        "A week of planned meals with variety and convenience. Ideal for busy schedules.",
+        "Seven days of curated meals. Fresh, balanced, and delivered on your schedule.",
+        "Weekly plans that fit your routine. One subscription, a full week of meals.",
+        "Your week sorted. Different meals each day, one simple plan.",
+      ];
+      return pick(options);
+    }
+    if (durationDays === 30) {
+      const options = [
+        "Monthly plans for the best value. Consistent quality and savings on every meal.",
+        "Subscribe for a month and save. Fresh tiffins every day without the hassle.",
+        "Thirty days of meals, one plan. Best value for regular tiffin lovers.",
+      ];
+      return pick(options);
+    }
+
+    const defaults = [
+      "Fresh homemade meals with authentic taste. Choose your plan and enjoy hassle-free delivery.",
+      "Quality meals, flexible plans. Find the option that works for you.",
+    ];
+    return pick(defaults) || defaults[0];
+  };
+
   const calculateOriginalPrice = (currentPrice) => {
     // Add 20-30% markup for original price
     return Math.round(currentPrice * 1.25);
@@ -236,8 +287,11 @@ const Packages = () => {
             <span style={{ color: "#F5B800" }}>Meal Package</span>
           </h1>
           <p className="text-lg md:text-xl text-white mb-8 max-w-2xl mx-auto drop-shadow-md">
-            From daily fresh tiffins to monthly premium plans, find the perfect
-            meal solution for your lifestyle.
+            {activeFilter === "All Packages" && "From daily fresh tiffins to monthly premium plans, find the perfect meal solution for your lifestyle."}
+            {activeFilter === "Daily" && "Start with daily plans—fresh tiffins every day. Try different meals and find your favourites."}
+            {activeFilter === "Weekly" && "Weekly meal plans for a balanced routine. One week of variety, one subscription."}
+            {activeFilter === "Monthly" && "Monthly packages for the best value. Consistent quality and more savings."}
+            {activeFilter === "Special" && "Student offers, family packs, and premium plans. Special options for every need."}
           </p>
         </div>
       </section>
@@ -401,8 +455,7 @@ const Packages = () => {
 
                       {/* Description */}
                       <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                        {pkg.description ||
-                          "Fresh homemade meals delivered daily with authentic taste and variety"}
+                        {(pkg.description && String(pkg.description).trim()) || getPackageDescription(pkg)}
                       </p>
 
                       {/* Rating */}

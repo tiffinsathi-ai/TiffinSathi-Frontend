@@ -313,8 +313,6 @@ const EditSchedule = () => {
         refundAmount: priceCalculation?.refundAmount || 0
       };
 
-      console.log("Applying edit with request:", request);
-
       // Always call apply endpoint first to create/edit the edit history
       const applyResponse = await axios.post(
         "http://localhost:8080/api/subscriptions/edit/apply", 
@@ -327,18 +325,22 @@ const EditSchedule = () => {
         }
       );
 
-      console.log("Apply response:", applyResponse.data);
-
       // Check the response status
       const responseData = applyResponse.data;
       
       if (responseData.editStatus === "PENDING_PAYMENT") {
-        // Navigate to checkout with payment required
+        // Pass both calculate (price breakdown) and apply response so checkout has oldCost/newCost and editHistoryId
         navigate("/subscription/edit/checkout", {
           state: {
             subscription: subscriptionDetails,
             newSchedule,
-            priceCalculation: responseData,
+            priceCalculation: {
+              ...responseData,
+              oldCost: priceCalculation.oldCost ?? responseData.oldCost,
+              newCost: priceCalculation.newCost ?? responseData.newCost,
+              additionalPayment: priceCalculation.additionalPayment ?? responseData.additionalPayment ?? 0,
+              refundAmount: priceCalculation.refundAmount ?? responseData.refundAmount ?? 0,
+            },
             editReason,
             editHistoryId: responseData.editHistoryId || null,
             paymentId: responseData.paymentId || null
@@ -475,25 +477,6 @@ const EditSchedule = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Reason for Edit</h3>
-            <button 
-              onClick={resetChanges}
-              className="px-3 py-1 text-sm border rounded hover:bg-gray-50 flex items-center gap-1"
-            >
-              <RefreshCw className="w-3 h-3" /> Reset Changes
-            </button>
-          </div>
-          <textarea 
-            value={editReason} 
-            onChange={e => setEditReason(e.target.value)} 
-            rows={3}
-            className="w-full mt-3 p-3 border rounded focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-            placeholder="Why are you editing this subscription? (e.g., dietary change, schedule conflict)"
-          />
-        </div>
-
         {showRefundInfo && priceCalculation?.refundAmount > 0 && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
             <div className="flex items-start gap-3">
@@ -609,6 +592,25 @@ const EditSchedule = () => {
               );
             })}
           </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Reason for Edit</h3>
+            <button 
+              onClick={resetChanges}
+              className="px-3 py-1 text-sm border rounded hover:bg-gray-50 flex items-center gap-1"
+            >
+              <RefreshCw className="w-3 h-3" /> Reset Changes
+            </button>
+          </div>
+          <textarea 
+            value={editReason} 
+            onChange={e => setEditReason(e.target.value)} 
+            rows={3}
+            className="w-full mt-3 p-3 border rounded focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+            placeholder="Why are you editing this subscription? (e.g., dietary change, schedule conflict)"
+          />
         </div>
 
         {priceCalculation && (
