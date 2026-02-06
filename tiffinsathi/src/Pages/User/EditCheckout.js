@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { CreditCard, AlertCircle, CheckCircle, ArrowLeft, Shield, Phone } from "lucide-react";
 import axios from "axios";
 import { authStorage } from "../../helpers/api";
+import esewaLogo from "../../assets/esewa.png";
+import khaltiLogo from "../../assets/khalti.png";
 import { toast } from "react-toastify";
 
 // Safe display helpers — avoid NaN, undefined, null
@@ -74,8 +76,8 @@ const EditCheckout = () => {
           if (paymentData.paymentUrl) {
             window.location.href = paymentData.paymentUrl;
           } else {
-            toast.error("Payment URL missing for Khalti");
             setProcessingPayment(false);
+            navigate(`/payment/failure?subscriptionId=${subscription.subscriptionId}&message=${encodeURIComponent("Payment URL missing for Khalti")}&from=edit`);
           }
         }
         return;
@@ -101,16 +103,16 @@ const EditCheckout = () => {
         if (paymentData.paymentUrl) {
           window.location.href = paymentData.paymentUrl;
         } else {
-          toast.error("Payment URL missing for Khalti");
           setProcessingPayment(false);
+          navigate(`/payment/failure?subscriptionId=${subscription.subscriptionId}&message=${encodeURIComponent("Payment URL missing for Khalti")}&from=edit`);
         }
       }
 
     } catch (error) {
       console.error("Error processing payment:", error);
       const msg = error.response?.data?.message || error.message || "Failed to process payment";
-      toast.error(msg);
       setProcessingPayment(false);
+      navigate(`/payment/failure?subscriptionId=${subscription.subscriptionId}&message=${encodeURIComponent(msg)}&from=edit`);
     }
   };
 
@@ -133,8 +135,8 @@ const EditCheckout = () => {
     } else if (paymentData.paymentUrl) {
       window.location.href = paymentData.paymentUrl;
     } else {
-      toast.error("Payment data missing. Please try again.");
       setProcessingPayment(false);
+      navigate(`/payment/failure?subscriptionId=${subscription.subscriptionId}&message=${encodeURIComponent("Payment data missing. Please try again.")}&from=edit`);
     }
   };
 
@@ -335,8 +337,14 @@ const EditCheckout = () => {
                         onChange={(e) => setPaymentMethod(e.target.value)}
                         className="w-4 h-4 accent-yellow-500"
                       />
-                      <CreditCard className="w-4 h-4 text-gray-600" />
-                      <span className="font-medium">{m}</span>
+                      {m === "ESEWA" ? (
+                        <img src={esewaLogo} alt="eSewa" className="h-7 w-7 object-contain" />
+                      ) : m === "KHALTI" ? (
+                        <img src={khaltiLogo} alt="Khalti" className="h-7 w-7 object-contain" />
+                      ) : (
+                        <CreditCard className="w-4 h-4 text-gray-600" />
+                      )}
+                      <span className="font-medium">{m === "ESEWA" ? "eSewa" : m === "KHALTI" ? "Khalti" : m}</span>
                     </label>
                   ))}
                 </div>
@@ -365,7 +373,7 @@ const EditCheckout = () => {
                       </div>
                       <div className="flex justify-between text-gray-700">
                         <span>Payment method</span>
-                        <span className="font-semibold">{paymentMethod}</span>
+                        <span className="font-semibold">{paymentMethod === "ESEWA" ? "eSewa" : paymentMethod === "KHALTI" ? "Khalti" : paymentMethod}</span>
                       </div>
                     </>
                   )}
@@ -399,18 +407,24 @@ const EditCheckout = () => {
                   type="button"
                   onClick={handlePayment}
                   disabled={processingPayment || loading}
-                  className="w-full py-3 rounded-lg text-white font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2 shadow-sm text-center"
+                  className="w-full py-3.5 rounded-xl text-white font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-3 text-center"
                   style={{ backgroundColor: "#F5B800" }}
                 >
                   {processingPayment || loading ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
                       Processing…
                     </>
                   ) : (
                     <>
-                      <CreditCard className="w-5 h-5 flex-shrink-0 ml-2" />
-                      <span>Pay Rs. {formatAmount(priceCalculation.additionalPayment)} with {paymentMethod}</span>
+                      {paymentMethod === "ESEWA" ? (
+                        <img src={esewaLogo} alt="eSewa" className="h-7 w-7 object-contain flex-shrink-0" />
+                      ) : paymentMethod === "KHALTI" ? (
+                        <img src={khaltiLogo} alt="Khalti" className="h-7 w-7 object-contain flex-shrink-0" />
+                      ) : (
+                        <CreditCard className="w-5 h-5 flex-shrink-0 text-white" />
+                      )}
+                      <span>Pay with {paymentMethod === "ESEWA" ? "eSewa" : paymentMethod === "KHALTI" ? "Khalti" : paymentMethod}</span>
                     </>
                   )}
                 </button>

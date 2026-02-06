@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { XCircle, RefreshCw, Home, AlertTriangle, CreditCard } from 'lucide-react';
 import homeBg from "../../assets/home.jpg";
+import esewaLogo from "../../assets/esewa.png";
+import khaltiLogo from "../../assets/khalti.png";
 
 
 const PaymentFailure = () => {
@@ -11,6 +13,8 @@ const PaymentFailure = () => {
   const paymentId = searchParams.get('paymentId');
   const subscriptionId = searchParams.get('subscriptionId');
   const error = searchParams.get('error');
+  const message = searchParams.get('message'); // raw error message (e.g. from EditCheckout)
+  const from = searchParams.get('from'); // 'edit' when coming from subscription edit checkout
 
   const handleRetry = () => {
     setRetrying(true);
@@ -27,6 +31,7 @@ const PaymentFailure = () => {
     'timeout': 'Payment request timed out. Please try again.',
     'invalid_card': 'Invalid card details provided.',
     'user_cancelled': 'You cancelled the payment.',
+    'payment_cancelled': 'Payment was cancelled. You can try again when you\'re ready.',
   };
 
   return (
@@ -78,9 +83,11 @@ const PaymentFailure = () => {
                     <div>
                       <h4 className="font-medium text-red-900">Payment Not Completed</h4>
                       <p className="text-sm text-red-700 mt-1">
-                        {error && commonErrors[error] 
-                          ? commonErrors[error] 
-                          : 'An error occurred while processing your payment. Please try again or use a different payment method.'}
+                        {message
+                          ? (() => { try { return decodeURIComponent(message); } catch { return message; } })()
+                          : error && commonErrors[error]
+                            ? commonErrors[error]
+                            : 'An error occurred while processing your payment. Please try again or use a different payment method.'}
                       </p>
                       {paymentId && (
                         <p className="text-xs text-red-600 mt-2">
@@ -140,9 +147,15 @@ const PaymentFailure = () => {
                           handleRetry();
                         }}
                       >
-                        <div className="h-12 w-12 rounded-lg flex items-center justify-center mx-auto mb-2"
+                        <div className="h-12 w-12 rounded-lg flex items-center justify-center mx-auto mb-2 overflow-hidden"
                              style={{ backgroundColor: "#FFF9E6" }}>
-                          <span className="text-gray-700 font-medium">{method.charAt(0)}</span>
+                          {method === 'eSewa' ? (
+                            <img src={esewaLogo} alt="eSewa" className="h-10 w-10 object-contain" />
+                          ) : method === 'Khalti' ? (
+                            <img src={khaltiLogo} alt="Khalti" className="h-10 w-10 object-contain" />
+                          ) : (
+                            <span className="text-gray-700 font-medium">{method.charAt(0)}</span>
+                          )}
                         </div>
                         <span className="text-sm text-gray-600">{method}</span>
                       </div>
@@ -173,20 +186,24 @@ const PaymentFailure = () => {
               {retrying ? 'Retrying...' : 'Try Again'}
             </button>
             
-            <Link
-              to="/user"
-              className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <Home className="h-5 w-5 mr-2" />
-              Back to Dashboard
-            </Link>
+            {from === 'edit' ? (
+              <Link
+                to="/user/subscriptions"
+                className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Home className="h-5 w-5 mr-2" />
+                My Subscriptions
+              </Link>
+            ) : (
+              <Link
+                to="/user"
+                className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Home className="h-5 w-5 mr-2" />
+                Back to Dashboard
+              </Link>
+            )}
             
-            <Link
-              to="/contact"
-              className="inline-flex items-center justify-center px-6 py-3 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors"
-            >
-              Contact Support
-            </Link>
           </div>
 
           {/* Support Section */}

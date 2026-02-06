@@ -13,6 +13,8 @@ import {
 import axios from "axios";
 import { authStorage } from "../../helpers/api";
 import homeBg from "../../assets/home.jpg";
+import esewaLogo from "../../assets/esewa.png";
+import khaltiLogo from "../../assets/khalti.png";
 import { toast } from "react-toastify";
 
 // Leaflet imports
@@ -755,9 +757,15 @@ const Checkout = () => {
                           style={{ accentColor: "#F5B800" }}
                         />
                         <div className="flex items-center gap-2">
-                          <CreditCard className="w-5 h-5 text-gray-600" />
+                          {method === "ESEWA" ? (
+                            <img src={esewaLogo} alt="eSewa" className="h-7 w-7 object-contain" />
+                          ) : method === "KHALTI" ? (
+                            <img src={khaltiLogo} alt="Khalti" className="h-7 w-7 object-contain" />
+                          ) : (
+                            <CreditCard className="w-5 h-5 text-gray-600" />
+                          )}
                           <span className="text-gray-700 font-medium">
-                            {method.replace("_", " ")}
+                            {method === "ESEWA" ? "eSewa" : method === "KHALTI" ? "Khalti" : method.replace("_", " ")}
                           </span>
                         </div>
                       </label>
@@ -892,10 +900,20 @@ const Checkout = () => {
                     </>
                   ) : (
                     <>
-                      <CreditCard className="w-5 h-5" />
+                      {paymentMethod === "ESEWA" ? (
+                        <img src={esewaLogo} alt="eSewa" className="h-7 w-7 object-contain" />
+                      ) : paymentMethod === "KHALTI" ? (
+                        <img src={khaltiLogo} alt="Khalti" className="h-7 w-7 object-contain" />
+                      ) : (
+                        <CreditCard className="w-5 h-5" />
+                      )}
                       {paymentMethod === "CASH_ON_DELIVERY"
                         ? "Complete Subscription"
-                        : `Pay with ${paymentMethod}`}
+                        : paymentMethod === "ESEWA"
+                          ? "Pay with eSewa"
+                          : paymentMethod === "KHALTI"
+                            ? "Pay with Khalti"
+                            : `Pay with ${paymentMethod.replace("_", " ")}`}
                     </>
                   )}
                 </button>

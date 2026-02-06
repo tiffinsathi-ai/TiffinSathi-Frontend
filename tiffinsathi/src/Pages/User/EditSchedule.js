@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Calendar, Plus, Minus, Save, X, Calculator, CreditCard, AlertCircle, RefreshCw } from "lucide-react";
+import { Calendar, Plus, Minus, Save, X, Calculator, CreditCard, AlertCircle, RefreshCw, ChevronDown } from "lucide-react";
 import axios from "axios";
 import { authStorage } from "../../helpers/api";
 import { toast } from "react-toastify";
@@ -161,6 +161,17 @@ const EditSchedule = () => {
       if (i !== dayIndex) return d;
       if (!d.enabled) { toast.error("Please enable the day first"); return d; }
       return { ...d, meals: [...(d.meals || []), { setId: "", quantity: 1, name: "", price: 0 }] };
+    });
+    setNewSchedule(updated);
+    setPriceCalculation(null);
+  };
+
+  const addMealWithSetId = (dayIndex, setId) => {
+    if (!setId) return;
+    const updated = newSchedule.map((d, i) => {
+      if (i !== dayIndex) return d;
+      if (!d.enabled) return d;
+      return { ...d, meals: [...(d.meals || []), { setId, quantity: 1, name: "", price: 0 }] };
     });
     setNewSchedule(updated);
     setPriceCalculation(null);
@@ -497,100 +508,160 @@ const EditSchedule = () => {
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow mb-6">
-          <div className="p-6 border-b">
-            <h3 className="text-lg font-semibold">Weekly Schedule</h3>
-            <p className="text-sm text-gray-600 mt-1">Update your meal selections for each day</p>
+        <div className="bg-white rounded-lg shadow mb-6 overflow-hidden">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900">Weekly schedule</h2>
           </div>
 
-          <div className="p-6">
-            {daysOfWeek.map((day, dayIndex) => {
-              const daySchedule = newSchedule[dayIndex] || { enabled: false, meals: [] };
-              return (
-                <div key={day} className="mb-6 border-b pb-6 last:border-0 last:mb-0">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center">
-                      <input 
-                        type="checkbox" 
-                        checked={daySchedule.enabled} 
-                        onChange={() => toggleDay(dayIndex)} 
-                        className="w-5 h-5 text-yellow-600 rounded focus:ring-yellow-500" 
-                      />
-                      <label className="ml-2 font-medium">{day.charAt(0) + day.slice(1).toLowerCase()}</label>
-                    </div>
-                    {daySchedule.enabled && (
-                      <button 
-                        onClick={() => addMealToDay(dayIndex)} 
-                        className="flex items-center gap-1 text-yellow-600 hover:text-yellow-700"
-                      >
-                        <Plus className="w-4 h-4" /> Add Meal
-                      </button>
-                    )}
+          <div className="p-6 space-y-8">
+            {/* Available Meal Sets */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-700">Available Meal Sets:</h3>
+                <span className="text-sm text-gray-500">{mealSets.length} meals available</span>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {mealSets.map((ms) => (
+                  <div
+                    key={ms.setId}
+                    className="px-4 py-3 rounded-xl border border-gray-200 bg-gray-50/50 min-w-[140px]"
+                  >
+                    <p className="font-medium text-gray-900">{ms.name || "Meal"}</p>
+                    <span className={`inline-block mt-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${(ms.type || "").toUpperCase() === "NON VEG" || (ms.type || "").toUpperCase() === "NONVEG" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
+                      {(ms.type || "VEG").toUpperCase().replace("NONVEG", "NON VEG")}
+                    </span>
+                    <p className="mt-2 text-sm font-semibold text-gray-800">Rs. {Number(ms.price) || 0}</p>
                   </div>
+                ))}
+              </div>
+            </div>
 
-                  {daySchedule.enabled && (
-                    <div className="ml-6 space-y-4">
-                      {(daySchedule.meals || []).map((meal, mealIndex) => (
-                        <div key={mealIndex} className="flex gap-4 items-start p-4 bg-gray-50 rounded">
-                          <div className="flex-1">
-                            <select 
-                              value={meal.setId || ""} 
-                              onChange={(e) => updateMealSelection(dayIndex, mealIndex, "setId", e.target.value)}
-                              className="w-full p-2 border rounded focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+            {/* Selected Meals by Day */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-4">Selected Meals by Day:</h3>
+              <div className="space-y-4">
+                {daysOfWeek.map((day, dayIndex) => {
+                  const daySchedule = newSchedule[dayIndex] || { enabled: false, meals: [] };
+                  const isActive = daySchedule.enabled;
+                  return (
+                    <div
+                      key={day}
+                      className={`rounded-xl border-2 p-4 ${isActive ? "border-green-200 bg-green-50/30" : "border-gray-200 bg-gray-50/50"}`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <span className={`flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-bold ${isActive ? "bg-green-500" : "bg-gray-400"}`}>
+                            {dayIndex + 1}
+                          </span>
+                          <span className="font-bold text-gray-900">{day}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className={`text-sm font-medium ${isActive ? "text-green-600" : "text-gray-500"}`}>
+                            {isActive ? "Active" : "Inactive"}
+                          </span>
+                          {!isActive && (
+                            <button
+                              type="button"
+                              onClick={() => toggleDay(dayIndex)}
+                              className="text-sm font-medium text-green-600 hover:text-green-700"
                             >
-                              <option value="">Select a meal set</option>
-                              {mealSets.map(ms => (
+                              Enable
+                            </button>
+                          )}
+                          {isActive && (
+                            <button
+                              type="button"
+                              onClick={() => toggleDay(dayIndex)}
+                              className="text-sm font-medium text-gray-500 hover:text-gray-700"
+                            >
+                              Disable
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {isActive ? (
+                        <>
+                          <div className="relative">
+                            <select
+                              value=""
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val) addMealWithSetId(dayIndex, val);
+                                e.target.value = "";
+                              }}
+                              className="w-full py-2.5 pl-3 pr-10 border-2 rounded-lg bg-white appearance-none cursor-pointer focus:ring-2 focus:ring-green-400 focus:border-green-400 text-gray-700"
+                              style={{ borderColor: "rgb(187 247 208)" }}
+                            >
+                              <option value="">+ Add a meal to this day</option>
+                              {mealSets.map((ms) => (
                                 <option key={ms.setId} value={ms.setId}>
                                   {ms.name} ({ms.type}) - Rs. {ms.price}
                                 </option>
                               ))}
                             </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                           </div>
-
-                          <div style={{width: 140}}>
-                            <div className="flex items-center border rounded">
-                              <button 
-                                onClick={() => updateMealSelection(dayIndex, mealIndex, "quantity", meal.quantity - 1)} 
-                                disabled={meal.quantity <= 1} 
-                                className="px-3 py-1 bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
-                              >
-                                -
-                              </button>
-                              <input 
-                                type="number" 
-                                min="1" 
-                                value={meal.quantity} 
-                                onChange={(e) => updateMealSelection(dayIndex, mealIndex, "quantity", e.target.value)} 
-                                className="w-16 text-center p-1 border-x" 
-                              />
-                              <button 
-                                onClick={() => updateMealSelection(dayIndex, mealIndex, "quantity", meal.quantity + 1)} 
-                                className="px-3 py-1 bg-gray-100 hover:bg-gray-200"
-                              >
-                                +
-                              </button>
+                          {(daySchedule.meals || []).length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              {(daySchedule.meals || []).map((meal, mealIndex) => (
+                                <div key={mealIndex} className="flex gap-3 items-center p-3 bg-white rounded-lg border border-green-100">
+                                  <select
+                                    value={meal.setId || ""}
+                                    onChange={(e) => updateMealSelection(dayIndex, mealIndex, "setId", e.target.value)}
+                                    className="flex-1 py-2 px-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                                  >
+                                    <option value="">Select a meal set</option>
+                                    {mealSets.map((ms) => (
+                                      <option key={ms.setId} value={ms.setId}>
+                                        {ms.name} ({ms.type}) - Rs. {ms.price}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <div className="flex items-center border border-gray-200 rounded-lg">
+                                    <button
+                                      type="button"
+                                      onClick={() => updateMealSelection(dayIndex, mealIndex, "quantity", meal.quantity - 1)}
+                                      disabled={meal.quantity <= 1}
+                                      className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-sm"
+                                    >
+                                      -
+                                    </button>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      value={meal.quantity}
+                                      onChange={(e) => updateMealSelection(dayIndex, mealIndex, "quantity", e.target.value)}
+                                      className="w-12 text-center py-1.5 border-x border-gray-200 text-sm"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => updateMealSelection(dayIndex, mealIndex, "quantity", meal.quantity + 1)}
+                                      className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-sm"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeMealFromDay(dayIndex, mealIndex)}
+                                    className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ))}
                             </div>
-                          </div>
-
-                          <button 
-                            onClick={() => removeMealFromDay(dayIndex, mealIndex)} 
-                            className="text-red-600 hover:text-red-700 p-1"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </div>
-                      ))}
-
-                      {(daySchedule.meals || []).length === 0 && (
-                        <p className="text-sm text-gray-500 italic">
-                          No meals selected for this day. Add at least one meal or disable the day.
-                        </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm text-gray-500">Enable this day to select meals</p>
                       )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
 

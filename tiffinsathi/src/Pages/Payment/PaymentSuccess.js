@@ -236,13 +236,6 @@ const PaymentSuccess = () => {
               View Subscriptions
             </Link>
             <Link
-              to="/user/orders"
-              className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <Receipt className="h-5 w-5 mr-2" />
-              View Orders
-            </Link>
-            <Link
               to="/packages"
               className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >

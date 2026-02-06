@@ -1,7 +1,7 @@
 // src/App.js
 import React from "react";
 import "./App.css";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import ScrollToTop from "./Components/ScrollToTop";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -64,6 +64,20 @@ import EditSchedule from "./Pages/User/EditSchedule";
 import EditCheckout from "./Pages/User/EditCheckout";
 import EditSuccess from "./Pages/User/EditSuccess";
 
+// Redirect subscription edit failure URL (from backend/gateway) to payment failure page
+function SubscriptionEditFailureRedirect() {
+  const [searchParams] = useSearchParams();
+  const error = searchParams.get("error");
+  const type = searchParams.get("type");
+  const subscriptionId = searchParams.get("subscriptionId");
+  const params = new URLSearchParams();
+  if (error) params.set("error", error);
+  if (type) params.set("type", type);
+  if (subscriptionId) params.set("subscriptionId", subscriptionId);
+  params.set("from", "edit");
+  return <Navigate to={`/payment/failure?${params.toString()}`} replace />;
+}
+
 function App() {
   return (
     <Router>
@@ -103,7 +117,8 @@ function App() {
                 element={<ScheduleCustomization />}
               />
               <Route path="/subscription/edit" element={<EditSchedule />} />
-              <Route path="/subscription/edit/checkout" element={<EditCheckout />} /> 
+              <Route path="/subscription/edit/checkout" element={<EditCheckout />} />
+              <Route path="/subscription/edit/failure" element={<SubscriptionEditFailureRedirect />} />
               <Route path="/subscription/edit/success" element={<EditSuccess />} />
             </Route>
 
