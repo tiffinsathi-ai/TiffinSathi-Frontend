@@ -101,6 +101,7 @@ const UserManagement = () => {
   const updateUserStatus = async (userId, status) => {
     setIsLoadingAction(true);
     try {
+      // Send status as a string (e.g., "BLOCK" or "ACTIVE")
       const updatedUser = await AdminApi.updateUserStatus(userId, status);
       setUsers(users.map(user => 
         user.id === userId ? updatedUser : user
@@ -194,9 +195,7 @@ const UserManagement = () => {
   const roleOptions = [
     { value: 'ALL', label: 'All Roles' },
     { value: 'USER', label: 'User' },
-    { value: 'VENDOR', label: 'Vendor' },
-    { value: 'ADMIN', label: 'Admin' },
-    { value: 'DELIVERY', label: 'Delivery' }
+    { value: 'ADMIN', label: 'Admin' }
   ];
 
   // Event handlers
@@ -753,9 +752,7 @@ const UserManagement = () => {
               className="block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
             >
               <option value="USER">USER</option>
-              <option value="VENDOR">VENDOR</option>
               <option value="ADMIN">ADMIN</option>
-              <option value="DELIVERY">DELIVERY</option>
             </select>
           </div>
           

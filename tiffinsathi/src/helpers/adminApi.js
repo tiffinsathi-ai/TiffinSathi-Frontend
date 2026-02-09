@@ -15,6 +15,9 @@ class AdminApi {
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
+      if (!config.headers['Content-Type']) {
+        config.headers['Content-Type'] = 'application/json';
+      }
       return config;
     });
 
@@ -126,8 +129,11 @@ class AdminApi {
     }
   }
 
+  // FIXED: Update user status - send status as string value
   async updateUserStatus(userId, status) {
     try {
+      // Send status as a string value (e.g., "BLOCK" or "ACTIVE")
+      // The backend expects the Status enum value as a string in the request body
       const response = await this.api.put(`/users/${userId}/status`, status);
       return response.data;
     } catch (error) {
@@ -218,71 +224,114 @@ class AdminApi {
     }
   }
 
-  // Add to AdminApi class
-async getActivities() {
-  try {
-    // TODO: Replace with actual activities endpoint when available
-    // For now, return mock data or implement if you have an endpoint
-    const response = await this.api.get('/activities');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching activities:', error);
-    throw error;
-  }
-}
-
-// Add to AdminApi class
-async getPayments() {
-  try {
-    const response = await this.api.get('/payments/admin/all');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching payments:', error);
-    throw error;
-  }
-}
-
-async updatePaymentStatus(paymentId, status, transactionId = null) {
-  try {
-    const payload = { status };
-    if (transactionId) {
-      payload.transactionId = transactionId;
+  // Activities API
+  async getActivities() {
+    try {
+      // TODO: Replace with actual activities endpoint when available
+      // For now, return mock data or implement if you have an endpoint
+      const response = await this.api.get('/activities');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+      throw error;
     }
-    
-    const response = await this.api.put(`/payments/${paymentId}/status`, payload);
-    return response.data;
-  } catch (error) {
-    console.error('Error updating payment status:', error);
-    throw error;
   }
-}
 
-async getPaymentStats() {
-  try {
-    const payments = await this.getPayments();
-    
-    const totalRevenue = payments
-      .filter(p => p.paymentStatus === 'COMPLETED')
-      .reduce((sum, payment) => sum + (payment.amount || 0), 0);
-
-    const pendingPayments = payments
-      .filter(p => p.paymentStatus === 'PENDING')
-      .reduce((sum, payment) => sum + (payment.amount || 0), 0);
-
-    const completedPayments = payments.filter(p => p.paymentStatus === 'COMPLETED').length;
-    const failedPayments = payments.filter(p => p.paymentStatus === 'FAILED').length;
-
-    return {
-      totalRevenue,
-      pendingPayments,
-      completedPayments,
-      failedPayments
-    };
-  } catch (error) {
-    console.error('Error calculating payment stats:', error);
-    throw error;
+  // Payments API
+  async getPayments() {
+    try {
+      const response = await this.api.get('/payments/admin/all');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+      throw error;
+    }
   }
-}
+
+  async updatePaymentStatus(paymentId, status, transactionId = null) {
+    try {
+      const payload = { status };
+      if (transactionId) {
+        payload.transactionId = transactionId;
+      }
+      
+      const response = await this.api.put(`/payments/${paymentId}/status`, payload);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      throw error;
+    }
+  }
+
+  async getPaymentStats() {
+    try {
+      const payments = await this.getPayments();
+      
+      const totalRevenue = payments
+        .filter(p => p.paymentStatus === 'COMPLETED')
+        .reduce((sum, payment) => sum + (payment.amount || 0), 0);
+
+      const pendingPayments = payments
+        .filter(p => p.paymentStatus === 'PENDING')
+        .reduce((sum, payment) => sum + (payment.amount || 0), 0);
+
+      const completedPayments = payments.filter(p => p.paymentStatus === 'COMPLETED').length;
+      const failedPayments = payments.filter(p => p.paymentStatus === 'FAILED').length;
+
+      return {
+        totalRevenue,
+        pendingPayments,
+        completedPayments,
+        failedPayments
+      };
+    } catch (error) {
+      console.error('Error calculating payment stats:', error);
+      throw error;
+    }
+  }
+
+  // Search users by email or name
+  async searchUsers(query) {
+    try {
+      const response = await this.api.get(`/users/search?q=${encodeURIComponent(query)}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error searching users:', error);
+      throw error;
+    }
+  }
+
+  // Get user statistics
+  async getUserStats() {
+    try {
+      const users = await this.getUsers();
+      
+      const activeUsers = users.filter(u => u.status === 'ACTIVE').length;
+      const blockedUsers = users.filter(u => u.status === 'BLOCK').length;
+      const userRoles = {
+        USER: users.filter(u => u.role === 'USER').length,
+        VENDOR: users.filter(u => u.role === 'VENDOR').length,
+        ADMIN: users.filter(u => u.role === 'ADMIN').length,
+        DELIVERY: users.filter(u => u.role === 'DELIVERY').length
+      };
+      
+      // Calculate new users in last 7 days
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const newUsers = users.filter(u => new Date(u.createdAt) >= sevenDaysAgo).length;
+
+      return {
+        totalUsers: users.length,
+        activeUsers,
+        blockedUsers,
+        userRoles,
+        newUsers
+      };
+    } catch (error) {
+      console.error('Error calculating user stats:', error);
+      throw error;
+    }
+  }
 }
 
 const adminApiInstance = new AdminApi();
