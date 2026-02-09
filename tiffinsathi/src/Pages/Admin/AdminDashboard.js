@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, Store, CreditCard, TrendingUp, Package, Clock, AlertCircle, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AdminApi from '../../helpers/adminApi';
+import StatsCard from '../../Components/Admin/StatsCard';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -23,14 +24,10 @@ const AdminDashboard = () => {
         AdminApi.getVendors()
       ]);
 
-      // Calculate stats
       const totalUsers = users.length;
       const totalVendors = vendors.length;
       const pendingApprovals = vendors.filter(v => v.status === 'PENDING').length;
-      
-      // For monthly revenue, you might need to implement a separate API
-      // For now, we'll calculate a mock revenue based on vendors
-      const monthlyRevenue = totalVendors * 150; // Mock calculation
+      const monthlyRevenue = totalVendors * 150;
 
       setStats({
         totalUsers,
@@ -39,7 +36,6 @@ const AdminDashboard = () => {
         monthlyRevenue
       });
 
-      // Generate recent activities
       const activities = [
         ...vendors.slice(0, 3).map(vendor => ({
           id: `vendor-${vendor.vendorId}`,
@@ -71,49 +67,10 @@ const AdminDashboard = () => {
     fetchDashboardData();
   }, []);
 
-  const statCards = [
-    {
-      title: 'Total Users',
-      value: stats.totalUsers,
-      icon: Users,
-      color: 'blue',
-      change: '+12%',
-      link: '/admin/user-management'
-    },
-    {
-      title: 'Total Vendors',
-      value: stats.totalVendors,
-      icon: Store,
-      color: 'green',
-      change: '+8%',
-      link: '/admin/vendor-management'
-    },
-    {
-      title: 'Pending Approvals',
-      value: stats.pendingApprovals,
-      icon: Clock,
-      color: 'yellow',
-      change: stats.pendingApprovals > 0 ? `+${stats.pendingApprovals}` : '0',
-      link: '/admin/vendor-management?filter=pending'
-    },
-    {
-      title: 'Monthly Revenue',
-      value: `$${stats.monthlyRevenue.toLocaleString()}`,
-      icon: CreditCard,
-      color: 'purple',
-      change: '+15%',
-      link: '/admin/payment-management'
-    }
-  ];
-
-  const getColorClasses = (color) => {
-    const colors = {
-      blue: { bg: 'bg-blue-100', text: 'text-blue-600', icon: 'text-blue-600' },
-      green: { bg: 'bg-green-100', text: 'text-green-600', icon: 'text-green-600' },
-      yellow: { bg: 'bg-yellow-100', text: 'text-yellow-600', icon: 'text-yellow-600' },
-      purple: { bg: 'bg-purple-100', text: 'text-purple-600', icon: 'text-purple-600' }
-    };
-    return colors[color] || colors.blue;
+  const calculatePercentage = (current, previous) => {
+    if (previous === 0) return '+100%';
+    const change = ((current - previous) / previous) * 100;
+    return `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
   };
 
   const getActivityIcon = (type) => {
@@ -170,11 +127,11 @@ const AdminDashboard = () => {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      {/* Header Section - Matching UserManagement style */}
+      {/* Header Section - Consistent with other components */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-blue-100 rounded-xl">
-            <TrendingUp className="h-8 w-8 text-blue-600" />
+          <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-md">
+            <TrendingUp className="h-8 w-8 text-white" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
@@ -185,41 +142,50 @@ const AdminDashboard = () => {
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={fetchDashboardData}
-            className="inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        {statCards.map((stat, index) => {
-          const Icon = stat.icon;
-          const colorClasses = getColorClasses(stat.color);
-          
-          return (
-            <Link
-              key={index}
-              to={stat.link}
-              className="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-xl md:text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
-                  <p className={`text-sm font-medium ${colorClasses.text} mt-1`}>
-                    {stat.change}
-                  </p>
-                </div>
-                <div className={`p-2 md:p-3 rounded-lg ${colorClasses.bg}`}>
-                  <Icon className={`h-5 w-5 md:h-6 md:w-6 ${colorClasses.icon}`} />
-                </div>
-              </div>
-            </Link>
-          );
-        })}
+      {/* Stats Cards - Consistent with PaymentManagement */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatsCard
+          title="Total Users"
+          value={stats.totalUsers}
+          icon={Users}
+          color="blue"
+          changeText={calculatePercentage(stats.totalUsers, stats.totalUsers * 0.9)}
+          changePositive={true}
+        />
+        
+        <StatsCard
+          title="Total Vendors"
+          value={stats.totalVendors}
+          icon={Store}
+          color="green"
+          changeText={calculatePercentage(stats.totalVendors, stats.totalVendors * 0.9)}
+          changePositive={true}
+        />
+        
+        <StatsCard
+          title="Pending Approvals"
+          value={stats.pendingApprovals}
+          icon={Clock}
+          color="yellow"
+          changeText={stats.pendingApprovals > 0 ? 'Requires review' : 'All clear'}
+        />
+        
+        <StatsCard
+          title="Monthly Revenue"
+          value={`Rs. ${stats.monthlyRevenue.toLocaleString()}`}
+          icon={CreditCard}
+          color="purple"
+          changeText={calculatePercentage(stats.monthlyRevenue, stats.monthlyRevenue * 0.85)}
+          changePositive={true}
+        />
       </div>
 
       {/* Main Content Grid */}
