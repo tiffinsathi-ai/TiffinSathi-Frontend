@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Store, 
   Eye, 
@@ -38,8 +39,11 @@ const VendorManagement = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionMenu, setActionMenu] = useState(null);
   const [isLoadingAction, setIsLoadingAction] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({});
   
   const actionMenuRefs = useRef({});
+  const actionButtonRefs = useRef({});
+  const menuPortalRef = useRef(null);
   const itemsPerPage = 8;
 
   // Status badge component
@@ -71,6 +75,78 @@ const VendorManagement = () => {
         {config.label}
       </span>
     );
+  };
+
+  // Create portal container for menus
+  useEffect(() => {
+    const portalContainer = document.createElement('div');
+    portalContainer.style.position = 'fixed';
+    portalContainer.style.top = '0';
+    portalContainer.style.left = '0';
+    portalContainer.style.zIndex = '9999';
+    portalContainer.style.pointerEvents = 'none';
+    document.body.appendChild(portalContainer);
+    menuPortalRef.current = portalContainer;
+
+    return () => {
+      if (menuPortalRef.current && document.body.contains(menuPortalRef.current)) {
+        document.body.removeChild(menuPortalRef.current);
+      }
+    };
+  }, []);
+
+  // Calculate menu position
+  const calculateMenuPosition = (vendorId) => {
+    const button = actionButtonRefs.current[vendorId];
+    if (!button) return {};
+
+    const rect = button.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    const menuHeight = 200; // Approximate menu height
+    const menuWidth = 192; // Menu width (w-48 = 192px)
+
+    let top = rect.bottom + 4;
+    let left = rect.right - menuWidth;
+    
+    // Adjust if menu would go off the bottom of the screen
+    if (top + menuHeight > viewportHeight) {
+      top = rect.top - menuHeight - 4;
+    }
+    
+    // Adjust if menu would go off the right side of the screen
+    if (left + menuWidth > viewportWidth) {
+      left = viewportWidth - menuWidth - 10;
+    }
+    
+    // Adjust if menu would go off the left side of the screen
+    if (left < 10) {
+      left = 10;
+    }
+
+    return {
+      top: `${top}px`,
+      left: `${left}px`,
+      position: 'fixed',
+      zIndex: 9999,
+    };
+  };
+
+  // Toggle action menu with position calculation
+  const toggleActionMenu = (vendorId) => {
+    if (actionMenu === vendorId) {
+      setActionMenu(null);
+    } else {
+      setActionMenu(vendorId);
+      // Calculate position after a small delay to ensure DOM is updated
+      setTimeout(() => {
+        const position = calculateMenuPosition(vendorId);
+        setMenuPosition(prev => ({
+          ...prev,
+          [vendorId]: position
+        }));
+      }, 10);
+    }
   };
 
   // API functions
@@ -125,11 +201,18 @@ const VendorManagement = () => {
   // Close action menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      const isOutside = Object.values(actionMenuRefs.current).every(ref => {
-        return ref && !ref.contains(event.target);
+      // Check if click is inside any action button
+      const isButtonClick = Object.values(actionButtonRefs.current).some(ref => {
+        return ref && ref.contains(event.target);
       });
       
-      if (isOutside) {
+      // Check if click is inside any action menu (via portal)
+      const menuElements = document.querySelectorAll('[data-action-menu]');
+      const isMenuClick = Array.from(menuElements).some(element => 
+        element.contains(event.target)
+      );
+      
+      if (!isButtonClick && !isMenuClick) {
         setActionMenu(null);
       }
     };
@@ -137,6 +220,27 @@ const VendorManagement = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Recalculate menu positions on scroll and resize
+  useEffect(() => {
+    const handleScrollResize = () => {
+      if (actionMenu) {
+        const position = calculateMenuPosition(actionMenu);
+        setMenuPosition(prev => ({
+          ...prev,
+          [actionMenu]: position
+        }));
+      }
+    };
+
+    window.addEventListener('scroll', handleScrollResize, true);
+    window.addEventListener('resize', handleScrollResize);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScrollResize, true);
+      window.removeEventListener('resize', handleScrollResize);
+    };
+  }, [actionMenu]);
 
   // Filter and search vendors
   const filteredVendors = useMemo(() => {
@@ -273,6 +377,56 @@ const VendorManagement = () => {
           View
         </a>
       </div>
+    );
+  };
+
+  // Action Menu Portal Component
+  const ActionMenuPortal = ({ vendor, isOpen, position }) => {
+    if (!isOpen || !menuPortalRef.current) return null;
+
+    return createPortal(
+      <div 
+        data-action-menu
+        className="fixed bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 pointer-events-auto"
+        style={position}
+      >
+        <button
+          onClick={() => handleView(vendor)}
+          className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          <Eye className="h-4 w-4" />
+          View Details
+        </button>
+        
+        {vendor.status === 'PENDING' && (
+          <>
+            <button
+              onClick={() => handleApprove(vendor)}
+              className="flex items-center gap-3 w-full px-4 py-2 text-sm text-green-600 hover:bg-green-50 transition-colors"
+            >
+              <CheckCircle className="h-4 w-4" />
+              Approve
+            </button>
+            <button
+              onClick={() => handleReject(vendor)}
+              className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <XCircle className="h-4 w-4" />
+              Reject
+            </button>
+          </>
+        )}
+        
+        <div className="border-t border-gray-100 my-1"></div>
+        <button
+          onClick={() => handleDelete(vendor)}
+          className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+        >
+          <XCircle className="h-4 w-4" />
+          Delete Vendor
+        </button>
+      </div>,
+      menuPortalRef.current
     );
   };
 
@@ -474,56 +628,14 @@ const VendorManagement = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end">
-                          <div 
-                            ref={el => actionMenuRefs.current[vendor.vendorId] = el}
-                            className="relative"
-                          >
+                          <div className="relative">
                             <button
-                              onClick={() => setActionMenu(actionMenu === vendor.vendorId ? null : vendor.vendorId)}
+                              ref={el => actionButtonRefs.current[vendor.vendorId] = el}
+                              onClick={() => toggleActionMenu(vendor.vendorId)}
                               className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                             >
                               <MoreVertical className="h-4 w-4 text-gray-600" />
                             </button>
-                            
-                            {actionMenu === vendor.vendorId && (
-                              <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50 py-1">
-                                <button
-                                  onClick={() => handleView(vendor)}
-                                  className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                  View Details
-                                </button>
-                                
-                                {vendor.status === 'PENDING' && (
-                                  <>
-                                    <button
-                                      onClick={() => handleApprove(vendor)}
-                                      className="flex items-center gap-3 w-full px-4 py-2 text-sm text-green-600 hover:bg-green-50 transition-colors"
-                                    >
-                                      <CheckCircle className="h-4 w-4" />
-                                      Approve
-                                    </button>
-                                    <button
-                                      onClick={() => handleReject(vendor)}
-                                      className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                                    >
-                                      <XCircle className="h-4 w-4" />
-                                      Reject
-                                    </button>
-                                  </>
-                                )}
-                                
-                                <div className="border-t border-gray-100 my-1"></div>
-                                <button
-                                  onClick={() => handleDelete(vendor)}
-                                  className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                  Delete Vendor
-                                </button>
-                              </div>
-                            )}
                           </div>
                         </div>
                       </td>
@@ -557,6 +669,16 @@ const VendorManagement = () => {
           </>
         )}
       </div>
+
+      {/* Action Menus via Portal */}
+      {paginatedVendors.map((vendor) => (
+        <ActionMenuPortal
+          key={`menu-${vendor.vendorId}`}
+          vendor={vendor}
+          isOpen={actionMenu === vendor.vendorId}
+          position={menuPosition[vendor.vendorId]}
+        />
+      ))}
 
       {/* View Vendor Modal */}
       <Modal
