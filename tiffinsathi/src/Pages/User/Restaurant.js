@@ -41,7 +41,7 @@ const Restaurant = () => {
       setLoading(true);
       setError(null);
       const res = await axios.get(
-        "http://localhost:8080/api/vendors/public/approved"
+        "http://localhost:8080/api/vendors/public/approved",
       );
       const data = Array.isArray(res.data) ? res.data : [];
       setVendors(data);
@@ -60,19 +60,19 @@ const Restaurant = () => {
     // Sort
     if (sortBy === "Most Popular") {
       filtered.sort(
-        (a, b) => (b.yearsInBusiness || 0) - (a.yearsInBusiness || 0)
+        (a, b) => (b.yearsInBusiness || 0) - (a.yearsInBusiness || 0),
       );
     } else if (sortBy === "Most Experienced") {
       filtered.sort(
-        (a, b) => (b.yearsInBusiness || 0) - (a.yearsInBusiness || 0)
+        (a, b) => (b.yearsInBusiness || 0) - (a.yearsInBusiness || 0),
       );
     } else if (sortBy === "Name: A to Z") {
       filtered.sort((a, b) =>
-        (a.businessName || "").localeCompare(b.businessName || "")
+        (a.businessName || "").localeCompare(b.businessName || ""),
       );
     } else if (sortBy === "Name: Z to A") {
       filtered.sort((a, b) =>
-        (b.businessName || "").localeCompare(a.businessName || "")
+        (b.businessName || "").localeCompare(a.businessName || ""),
       );
     }
 
@@ -95,7 +95,7 @@ const Restaurant = () => {
     // convert experience into a stable rating-like value [3.8..5.0]
     const rating = Math.min(
       5,
-      Math.max(3.8, 3.8 + (yearsInBusiness || 0) * 0.12)
+      Math.max(3.8, 3.8 + (yearsInBusiness || 0) * 0.12),
     );
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;
@@ -106,7 +106,7 @@ const Restaurant = () => {
         <HiStar
           key={`full-${i}`}
           className="w-4 h-4 text-yellow-400 fill-current"
-        />
+        />,
       );
     }
     if (hasHalfStar) {
@@ -114,13 +114,13 @@ const Restaurant = () => {
         <HiStar
           key="half"
           className="w-4 h-4 text-yellow-400 fill-current opacity-50"
-        />
+        />,
       );
     }
     const emptyStars = 5 - Math.ceil(rating);
     for (let i = 0; i < emptyStars; i++) {
       stars.push(
-        <HiStar key={`empty-${i}`} className="w-4 h-4 text-gray-300" />
+        <HiStar key={`empty-${i}`} className="w-4 h-4 text-gray-300" />,
       );
     }
     return { rating, stars };
@@ -205,10 +205,6 @@ const Restaurant = () => {
             </div>
           </div>
 
-          <div className="mt-4 text-sm text-gray-600">
-            Showing {filteredVendors.length} restaurant
-            {filteredVendors.length !== 1 ? "s" : ""}
-          </div>
         </div>
       </section>
 
@@ -251,7 +247,6 @@ const Restaurant = () => {
                           {(v.cuisineType || "Cuisine").toUpperCase()}
                         </span>
                       </div>
-
                     </div>
 
                     {/* Content Section */}

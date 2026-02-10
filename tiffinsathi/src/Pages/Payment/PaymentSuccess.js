@@ -182,7 +182,7 @@ const PaymentSuccess = () => {
                   )}
 
                   {/* Delivery Timeline */}
-                  <div className="border-t pt-6 mt-6">
+                  <div className="border-t pt-6 mt-6 text-left">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">What happens next?</h3>
                     <div className="space-y-4">
                       <div className="flex items-start">

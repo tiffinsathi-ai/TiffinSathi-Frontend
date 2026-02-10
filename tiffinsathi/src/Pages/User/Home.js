@@ -3,7 +3,6 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { HiHeart, HiTruck, HiTag, HiSearch, HiCube, HiCog, HiEmojiHappy, HiStar } from "react-icons/hi";
 import { FaLeaf } from "react-icons/fa";
-import { Heart } from "lucide-react";
 import { authStorage } from "../../helpers/api";
 import homeBg from "../../assets/home.jpg";
 
@@ -13,14 +12,13 @@ const Home = () => {
   const [packages, setPackages] = useState([]);
   const [loadingPackages, setLoadingPackages] = useState(true);
   const [packagesError, setPackagesError] = useState(null);
-  const [favorites, setFavorites] = useState(new Set());
 
   useEffect(() => {
     const fetchPackages = async () => {
       try {
         setLoadingPackages(true);
         const response = await axios.get(
-          "http://localhost:8080/api/meal-packages"
+          "http://localhost:8080/api/meal-packages",
         );
 
         const packagesData = Array.isArray(response.data) ? response.data : [];
@@ -29,8 +27,8 @@ const Home = () => {
           features: Array.isArray(pkg.features)
             ? pkg.features
             : pkg.features
-            ? [pkg.features]
-            : [],
+              ? [pkg.features]
+              : [],
           packageSets: Array.isArray(pkg.packageSets) ? pkg.packageSets : [],
         }));
 
@@ -45,16 +43,6 @@ const Home = () => {
 
     fetchPackages();
   }, []);
-
-  const toggleFavorite = (packageId) => {
-    const newFavorites = new Set(favorites);
-    if (newFavorites.has(packageId)) {
-      newFavorites.delete(packageId);
-    } else {
-      newFavorites.add(packageId);
-    }
-    setFavorites(newFavorites);
-  };
 
   const getDurationLabel = (durationDays) => {
     if (durationDays === 1) return "Daily";
@@ -90,7 +78,7 @@ const Home = () => {
 
     for (let i = 0; i < fullStars; i++) {
       stars.push(
-        <HiStar key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+        <HiStar key={i} className="w-4 h-4 text-yellow-400 fill-current" />,
       );
     }
     if (hasHalfStar) {
@@ -98,13 +86,13 @@ const Home = () => {
         <HiStar
           key="half"
           className="w-4 h-4 text-yellow-400 fill-current opacity-50"
-        />
+        />,
       );
     }
     const emptyStars = 5 - Math.ceil(rating);
     for (let i = 0; i < emptyStars; i++) {
       stars.push(
-        <HiStar key={`empty-${i}`} className="w-4 h-4 text-gray-300" />
+        <HiStar key={`empty-${i}`} className="w-4 h-4 text-gray-300" />,
       );
     }
     return stars;
@@ -149,7 +137,9 @@ const Home = () => {
                 className="px-8 py-3 rounded-lg flex items-center gap-2 font-medium border-2 border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors"
                 onClick={() => {
                   if (howItWorksRef.current) {
-                    howItWorksRef.current.scrollIntoView({ behavior: "smooth" });
+                    howItWorksRef.current.scrollIntoView({
+                      behavior: "smooth",
+                    });
                   }
                 }}
               >
@@ -182,12 +172,11 @@ const Home = () => {
                   const durationLabel = getDurationLabel(pkg.durationDays);
                   const specialTag = getSpecialTag(pkg, packages);
                   const originalPrice = calculateOriginalPrice(
-                    pkg.pricePerSet || 0
+                    pkg.pricePerSet || 0,
                   );
                   const rating = pkg.rating || 4.5;
                   const reviewCount =
-                    pkg.reviewCount ||
-                    Math.floor(Math.random() * 200) + 50;
+                    pkg.reviewCount || Math.floor(Math.random() * 200) + 50;
 
                   return (
                     <div
@@ -232,19 +221,6 @@ const Home = () => {
                             </span>
                           )}
                         </div>
-                        {/* Favorite Button */}
-                        <button
-                          onClick={() => toggleFavorite(pkg.packageId)}
-                          className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors shadow-sm"
-                        >
-                          <Heart
-                            className={`w-5 h-5 ${
-                              favorites.has(pkg.packageId)
-                                ? "fill-red-500 text-red-500"
-                                : "text-gray-400"
-                            }`}
-                          />
-                        </button>
                       </div>
 
                       {/* Content Section */}
@@ -414,10 +390,7 @@ const Home = () => {
         </section>
 
         {/* How It Works Section */}
-        <section
-          className="py-16 px-6 bg-gray-50"
-          ref={howItWorksRef}
-        >
+        <section className="py-16 px-6 bg-gray-50" ref={howItWorksRef}>
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-4xl font-bold text-gray-800 mb-4">
@@ -436,18 +409,10 @@ const Home = () => {
                     className="w-20 h-20 rounded-full flex items-center justify-center"
                     style={{ backgroundColor: "#FFF4E6" }}
                   >
-                    <div className="relative">
-                      <span
-                        className="text-3xl font-bold absolute -top-2 -left-2"
-                        style={{ color: "#F5B800" }}
-                      >
-                        1
-                      </span>
-                      <HiCube
-                        className="w-10 h-10"
-                        style={{ color: "#4A8C39" }}
-                      />
-                    </div>
+                    <HiCube
+                      className="w-10 h-10"
+                      style={{ color: "#4A8C39" }}
+                    />
                   </div>
                 </div>
                 <h3 className="text-2xl font-bold text-gray-800 mb-3">
@@ -466,18 +431,10 @@ const Home = () => {
                     className="w-20 h-20 rounded-full flex items-center justify-center"
                     style={{ backgroundColor: "#FFF4E6" }}
                   >
-                    <div className="relative">
-                      <span
-                        className="text-3xl font-bold absolute -top-2 -left-2"
-                        style={{ color: "#F5B800" }}
-                      >
-                        2
-                      </span>
-                      <HiCog
-                        className="w-10 h-10"
-                        style={{ color: "#4A8C39" }}
-                      />
-                    </div>
+                    <HiCog
+                      className="w-10 h-10"
+                      style={{ color: "#4A8C39" }}
+                    />
                   </div>
                 </div>
                 <h3 className="text-2xl font-bold text-gray-800 mb-3">
@@ -496,18 +453,10 @@ const Home = () => {
                     className="w-20 h-20 rounded-full flex items-center justify-center"
                     style={{ backgroundColor: "#FFF4E6" }}
                   >
-                    <div className="relative">
-                      <span
-                        className="text-3xl font-bold absolute -top-2 -left-2"
-                        style={{ color: "#F5B800" }}
-                      >
-                        3
-                      </span>
-                      <HiEmojiHappy
-                        className="w-10 h-10"
-                        style={{ color: "#4A8C39" }}
-                      />
-                    </div>
+                    <HiEmojiHappy
+                      className="w-10 h-10"
+                      style={{ color: "#4A8C39" }}
+                    />
                   </div>
                 </div>
                 <h3 className="text-2xl font-bold text-gray-800 mb-3">

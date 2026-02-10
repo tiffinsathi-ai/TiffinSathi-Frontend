@@ -41,7 +41,7 @@ const UserProfile = () => {
         "http://localhost:8080/api/users/profile",
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
       setUser(response.data);
       setFormData({
@@ -91,7 +91,7 @@ const UserProfile = () => {
         updateData,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       setUser(response.data);
@@ -114,7 +114,7 @@ const UserProfile = () => {
         passwordData,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       setMessage("Password changed successfully!");
@@ -327,9 +327,11 @@ const UserProfile = () => {
                       placeholder="Enter your phone number"
                     />
                   ) : (
-                    <div className="flex items-center gap-2 text-gray-900 p-2">
+                    <div className="flex items-center justify-center gap-2 text-gray-900 p-2">
                       <Phone className="w-4 h-4" />
-                      {user.phoneNumber || "Not provided"}
+                      <span className="text-center">
+                        {user.phoneNumber || "Not provided"}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -339,7 +341,7 @@ const UserProfile = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Account Status
                   </label>
-                  <div className="flex items-center gap-2 p-2">
+                  <div className="flex items-center justify-center gap-2 p-2">
                     <div
                       className={`w-3 h-3 rounded-full ${
                         user.status === "ACTIVE" ? "bg-green-500" : "bg-red-500"

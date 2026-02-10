@@ -21,7 +21,9 @@ const Packages = () => {
     const sp = new URLSearchParams(location.search || "");
     const vendorIdFromQuery = sp.get("vendorId");
     const vendorIdFromState = location.state?.vendorId;
-    const vendorId = vendorIdFromState ?? (vendorIdFromQuery ? Number(vendorIdFromQuery) : null);
+    const vendorId =
+      vendorIdFromState ??
+      (vendorIdFromQuery ? Number(vendorIdFromQuery) : null);
     const vendorName = location.state?.vendorName;
     return {
       vendorId: Number.isFinite(vendorId) ? vendorId : null,
@@ -70,7 +72,7 @@ const Packages = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        "http://localhost:8080/api/meal-packages"
+        "http://localhost:8080/api/meal-packages",
       );
 
       // Ensure response.data is an array and normalize the data structure
@@ -82,8 +84,8 @@ const Packages = () => {
         features: Array.isArray(pkg.features)
           ? pkg.features
           : pkg.features
-          ? [pkg.features]
-          : [],
+            ? [pkg.features]
+            : [],
         packageSets: Array.isArray(pkg.packageSets) ? pkg.packageSets : [],
       }));
 
@@ -103,7 +105,9 @@ const Packages = () => {
 
     // Optional filter by vendor (coming from Restaurants -> View Packages)
     if (vendorContext.vendorId != null) {
-      filtered = filtered.filter((pkg) => getPackageVendorId(pkg) === vendorContext.vendorId);
+      filtered = filtered.filter(
+        (pkg) => getPackageVendorId(pkg) === vendorContext.vendorId,
+      );
     }
 
     // Apply filter
@@ -120,7 +124,7 @@ const Packages = () => {
         filtered = filtered.filter(
           (pkg) =>
             pkg.name?.toLowerCase().includes("special") ||
-            pkg.name?.toLowerCase().includes("premium")
+            pkg.name?.toLowerCase().includes("premium"),
         );
       } else {
         filtered = filtered.filter((pkg) => pkg.durationDays === filterValue);
@@ -167,21 +171,28 @@ const Packages = () => {
 
   // Unique tagline per package (used when pkg.description is missing). Picks a variant by package id/name so each card is different.
   const getPackageDescription = (pkg) => {
-    if (!pkg || typeof pkg !== "object") return "Fresh homemade meals delivered to your door.";
+    if (!pkg || typeof pkg !== "object")
+      return "Fresh homemade meals delivered to your door.";
     const durationDays = Number(pkg.durationDays);
     const name = String(pkg.name || "").toLowerCase();
     const idNum = Number(pkg.packageId) || 0;
-    const nameSum = (pkg.name || "").split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+    const nameSum = (pkg.name || "")
+      .split("")
+      .reduce((a, c) => a + c.charCodeAt(0), 0);
     const seed = idNum + nameSum;
     const pick = (arr) => {
-      if (!Array.isArray(arr) || arr.length === 0) return "Fresh homemade meals delivered to your door.";
+      if (!Array.isArray(arr) || arr.length === 0)
+        return "Fresh homemade meals delivered to your door.";
       const idx = Math.abs(seed) % arr.length;
       return arr[idx] || arr[0];
     };
 
-    if (name.includes("student")) return "Pocket-friendly meals for students. Nutritious and affordable.";
-    if (name.includes("premium")) return "Premium ingredients and curated menus for a special dining experience.";
-    if (name.includes("family")) return "Generous portions and family favourites. One plan for the whole household.";
+    if (name.includes("student"))
+      return "Pocket-friendly meals for students. Nutritious and affordable.";
+    if (name.includes("premium"))
+      return "Premium ingredients and curated menus for a special dining experience.";
+    if (name.includes("family"))
+      return "Generous portions and family favourites. One plan for the whole household.";
 
     if (durationDays === 1) {
       const options = [
@@ -228,7 +239,7 @@ const Packages = () => {
 
     for (let i = 0; i < fullStars; i++) {
       stars.push(
-        <HiStar key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+        <HiStar key={i} className="w-4 h-4 text-yellow-400 fill-current" />,
       );
     }
     if (hasHalfStar) {
@@ -236,13 +247,13 @@ const Packages = () => {
         <HiStar
           key="half"
           className="w-4 h-4 text-yellow-400 fill-current opacity-50"
-        />
+        />,
       );
     }
     const emptyStars = 5 - Math.ceil(rating);
     for (let i = 0; i < emptyStars; i++) {
       stars.push(
-        <HiStar key={`empty-${i}`} className="w-4 h-4 text-gray-300" />
+        <HiStar key={`empty-${i}`} className="w-4 h-4 text-gray-300" />,
       );
     }
     return stars;
@@ -287,11 +298,16 @@ const Packages = () => {
             <span style={{ color: "#F5B800" }}>Meal Package</span>
           </h1>
           <p className="text-lg md:text-xl text-white mb-8 max-w-2xl mx-auto drop-shadow-md">
-            {activeFilter === "All Packages" && "From daily fresh tiffins to monthly premium plans, find the perfect meal solution for your lifestyle."}
-            {activeFilter === "Daily" && "Start with daily plans—fresh tiffins every day. Try different meals and find your favourites."}
-            {activeFilter === "Weekly" && "Weekly meal plans for a balanced routine. One week of variety, one subscription."}
-            {activeFilter === "Monthly" && "Monthly packages for the best value. Consistent quality and more savings."}
-            {activeFilter === "Special" && "Student offers, family packs, and premium plans. Special options for every need."}
+            {activeFilter === "All Packages" &&
+              "From daily fresh tiffins to monthly premium plans, find the perfect meal solution for your lifestyle."}
+            {activeFilter === "Daily" &&
+              "Start with daily plans—fresh tiffins every day. Try different meals and find your favourites."}
+            {activeFilter === "Weekly" &&
+              "Weekly meal plans for a balanced routine. One week of variety, one subscription."}
+            {activeFilter === "Monthly" &&
+              "Monthly packages for the best value. Consistent quality and more savings."}
+            {activeFilter === "Special" &&
+              "Student offers, family packs, and premium plans. Special options for every need."}
           </p>
         </div>
       </section>
@@ -304,7 +320,8 @@ const Packages = () => {
               <div className="text-sm text-gray-700">
                 Showing packages for{" "}
                 <span className="font-semibold">
-                  {vendorContext.vendorName || `Restaurant #${vendorContext.vendorId}`}
+                  {vendorContext.vendorName ||
+                    `Restaurant #${vendorContext.vendorId}`}
                 </span>
               </div>
               <button
@@ -337,7 +354,7 @@ const Packages = () => {
                   >
                     {filter}
                   </button>
-                )
+                ),
               )}
             </div>
 
@@ -376,11 +393,6 @@ const Packages = () => {
             </div>
           </div>
 
-          {/* Package Count */}
-          <div className="mt-4 text-sm text-gray-600">
-            Showing {filteredPackages.length} package
-            {filteredPackages.length !== 1 ? "s" : ""}
-          </div>
         </div>
       </section>
 
@@ -436,8 +448,8 @@ const Packages = () => {
                               specialTag === "Premium"
                                 ? "bg-green-600"
                                 : specialTag === "Student Offer"
-                                ? "bg-blue-600"
-                                : "bg-red-500"
+                                  ? "bg-blue-600"
+                                  : "bg-red-500"
                             }`}
                           >
                             {specialTag}
@@ -455,7 +467,8 @@ const Packages = () => {
 
                       {/* Description */}
                       <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                        {(pkg.description && String(pkg.description).trim()) || getPackageDescription(pkg)}
+                        {(pkg.description && String(pkg.description).trim()) ||
+                          getPackageDescription(pkg)}
                       </p>
 
                       {/* Rating */}

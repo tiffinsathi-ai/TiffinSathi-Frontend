@@ -21,25 +21,28 @@ import {
   Edit,
 } from "lucide-react";
 import homeBg from "../../assets/home.jpg";
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 // API Configuration
-const API_BASE_URL = process.env.REACT_APP_API_BASE || 'http://localhost:8080/api';
+const API_BASE_URL =
+  process.env.REACT_APP_API_BASE || "http://localhost:8080/api";
 
 // Create API service
 const createApi = () => {
-  const token = localStorage.getItem('token');
-  
+  const token = localStorage.getItem("token");
+
   const headers = {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
   };
 
   const handleResponse = async (response) => {
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Something went wrong' }));
-      throw new Error(error.message || 'Request failed');
+      const error = await response
+        .json()
+        .catch(() => ({ message: "Something went wrong" }));
+      throw new Error(error.message || "Request failed");
     }
     return response.json();
   };
@@ -48,73 +51,94 @@ const createApi = () => {
     // Subscription APIs
     fetchUserSubscriptions: async () => {
       const response = await fetch(`${API_BASE_URL}/subscriptions/user`, {
-        method: 'GET',
+        method: "GET",
         headers,
       });
       return handleResponse(response);
     },
 
     fetchSubscriptionDetails: async (subscriptionId) => {
-      const response = await fetch(`${API_BASE_URL}/subscriptions/${subscriptionId}/details`, {
-        method: 'GET',
-        headers,
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/subscriptions/${subscriptionId}/details`,
+        {
+          method: "GET",
+          headers,
+        },
+      );
       return handleResponse(response);
     },
 
     pauseSubscription: async (subscriptionId) => {
-      const response = await fetch(`${API_BASE_URL}/subscriptions/${subscriptionId}/pause`, {
-        method: 'PUT',
-        headers,
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/subscriptions/${subscriptionId}/pause`,
+        {
+          method: "PUT",
+          headers,
+        },
+      );
       return handleResponse(response);
     },
 
     resumeSubscription: async (subscriptionId) => {
-      const response = await fetch(`${API_BASE_URL}/subscriptions/${subscriptionId}/resume`, {
-        method: 'PUT',
-        headers,
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/subscriptions/${subscriptionId}/resume`,
+        {
+          method: "PUT",
+          headers,
+        },
+      );
       return handleResponse(response);
     },
 
     cancelSubscription: async (subscriptionId) => {
-      const response = await fetch(`${API_BASE_URL}/subscriptions/${subscriptionId}`, {
-        method: 'DELETE',
-        headers,
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/subscriptions/${subscriptionId}`,
+        {
+          method: "DELETE",
+          headers,
+        },
+      );
       return handleResponse(response);
     },
 
     fetchSubscriptionOrders: async (subscriptionId) => {
-      const response = await fetch(`${API_BASE_URL}/subscriptions/${subscriptionId}/orders`, {
-        method: 'GET',
-        headers,
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/subscriptions/${subscriptionId}/orders`,
+        {
+          method: "GET",
+          headers,
+        },
+      );
       return handleResponse(response);
     },
 
     fetchSubscriptionById: async (subscriptionId) => {
-      const response = await fetch(`${API_BASE_URL}/subscriptions/${subscriptionId}`, {
-        method: 'GET',
-        headers,
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/subscriptions/${subscriptionId}`,
+        {
+          method: "GET",
+          headers,
+        },
+      );
       return handleResponse(response);
     },
 
     fetchMealPackages: async () => {
       const response = await fetch(`${API_BASE_URL}/meal-packages`, {
-        method: 'GET',
+        method: "GET",
         headers,
       });
       return handleResponse(response);
     },
 
     fetchMealPackageById: async (packageId) => {
-      const response = await fetch(`${API_BASE_URL}/meal-packages/${packageId}`, {
-        method: 'GET',
-        headers,
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/meal-packages/${packageId}`,
+        {
+          method: "GET",
+          headers,
+        },
+      );
       return handleResponse(response);
     },
   };
@@ -163,11 +187,11 @@ const MySubscription = () => {
       setLoading(true);
       const data = await api.fetchUserSubscriptions();
       setSubscriptions(data);
-      
+
       // Fetch package images for subscriptions
       const subscriptionsWithImages = await Promise.all(
         data.map(async (sub) => {
-          if (sub.packageId && (!sub.package?.image && !sub.image)) {
+          if (sub.packageId && !sub.package?.image && !sub.image) {
             try {
               const packageData = await api.fetchMealPackageById(sub.packageId);
               return {
@@ -184,30 +208,36 @@ const MySubscription = () => {
             }
           }
           return sub;
-        })
+        }),
       );
-      
+
       setSubscriptions(subscriptionsWithImages);
-      
+
       // Prepare subscription history (cancelled and completed subscriptions)
-      const history = data.filter(sub => 
-        sub.status?.toUpperCase() === "CANCELLED" || 
-        sub.status?.toUpperCase() === "COMPLETED"
-      ).map(sub => ({
-        package: sub.packageName || "Meal Package",
-        type: sub.planType || "Monthly",
-        duration: `${formatDate(sub.startDate)} - ${formatDate(sub.endDate)}`,
-        status: sub.status,
-        price: `₹${sub.totalAmount || 0}`,
-        rating: 4, // Default rating, can be fetched from backend if available
-      }));
+      const history = data
+        .filter(
+          (sub) =>
+            sub.status?.toUpperCase() === "CANCELLED" ||
+            sub.status?.toUpperCase() === "COMPLETED",
+        )
+        .map((sub) => ({
+          package: sub.packageName || "Meal Package",
+          type: sub.planType || "Monthly",
+          duration: `${formatDate(sub.startDate)} - ${formatDate(sub.endDate)}`,
+          status: sub.status,
+        price: `Rs. ${sub.totalAmount || 0}`,
+          rating: 4, // Default rating, can be fetched from backend if available
+        }));
       setSubscriptionHistory(history);
-      
+
       // Generate upcoming meals based on active subscriptions
-      generateUpcomingMeals(data.filter(sub => 
-        sub.status?.toUpperCase() === "ACTIVE" || 
-        sub.status?.toUpperCase() === "PAUSED"
-      ));
+      generateUpcomingMeals(
+        data.filter(
+          (sub) =>
+            sub.status?.toUpperCase() === "ACTIVE" ||
+            sub.status?.toUpperCase() === "PAUSED",
+        ),
+      );
     } catch (err) {
       setError(err.message);
     } finally {
@@ -234,7 +264,7 @@ const MySubscription = () => {
           weekday: "long",
           month: "long",
           day: "numeric",
-          year: "numeric"
+          year: "numeric",
         }),
       },
       {
@@ -243,7 +273,7 @@ const MySubscription = () => {
           weekday: "long",
           month: "long",
           day: "numeric",
-          year: "numeric"
+          year: "numeric",
         }),
       },
       {
@@ -252,7 +282,7 @@ const MySubscription = () => {
           weekday: "long",
           month: "long",
           day: "numeric",
-          year: "numeric"
+          year: "numeric",
         }),
       },
     ];
@@ -273,13 +303,13 @@ const MySubscription = () => {
         meals: [
           {
             ...mealOptions[mealIndex % mealOptions.length],
-            time: "12:00 PM"
+            time: "12:00 PM",
           },
           {
             ...mealOptions[(mealIndex + 1) % mealOptions.length],
-            time: "7:00 PM"
-          }
-        ]
+            time: "7:00 PM",
+          },
+        ],
       };
     });
 
@@ -297,7 +327,7 @@ const MySubscription = () => {
       } catch (err) {
         console.warn(
           "fetchSubscriptionDetails failed, falling back to fetchSubscriptionById:",
-          err
+          err,
         );
         // Fallback to basic subscription endpoint if /details is not available
         details = await api.fetchSubscriptionById(subscriptionId);
@@ -313,7 +343,10 @@ const MySubscription = () => {
         console.warn("Error fetching subscription orders:", err);
       }
     } catch (err) {
-      console.error("Error fetching subscription details (after fallback):", err);
+      console.error(
+        "Error fetching subscription details (after fallback):",
+        err,
+      );
       toast.error("Failed to load subscription details");
     } finally {
       setDetailsLoading(false);
@@ -339,11 +372,14 @@ const MySubscription = () => {
     try {
       setActionLoading(subscriptionId);
       await api.pauseSubscription(subscriptionId);
-      toast.success('Subscription paused successfully');
+      toast.success("Subscription paused successfully");
       fetchSubscriptions();
-      
+
       // Refresh modal if it's open for this subscription
-      if (selectedSubscription && selectedSubscription.subscriptionId === subscriptionId) {
+      if (
+        selectedSubscription &&
+        selectedSubscription.subscriptionId === subscriptionId
+      ) {
         await fetchSubscriptionDetailData(subscriptionId);
       }
     } catch (err) {
@@ -357,11 +393,14 @@ const MySubscription = () => {
     try {
       setActionLoading(subscriptionId);
       await api.resumeSubscription(subscriptionId);
-      toast.success('Subscription resumed successfully');
+      toast.success("Subscription resumed successfully");
       fetchSubscriptions();
-      
+
       // Refresh modal if it's open for this subscription
-      if (selectedSubscription && selectedSubscription.subscriptionId === subscriptionId) {
+      if (
+        selectedSubscription &&
+        selectedSubscription.subscriptionId === subscriptionId
+      ) {
         await fetchSubscriptionDetailData(subscriptionId);
       }
     } catch (err) {
@@ -382,24 +421,28 @@ const MySubscription = () => {
     try {
       setActionLoading(subscriptionToCancel.subscriptionId);
       await api.cancelSubscription(subscriptionToCancel.subscriptionId);
-      toast.success('Subscription cancelled successfully');
-      
+      toast.success("Subscription cancelled successfully");
+
       // Update local state
       setSubscriptions((prev) =>
         prev.map((sub) =>
           sub.subscriptionId === subscriptionToCancel.subscriptionId
             ? { ...sub, status: "CANCELLED" }
-            : sub
-        )
+            : sub,
+        ),
       );
       setShowCancelModal(false);
       setSubscriptionToCancel(null);
-      
+
       // Close details modal if it's open for this subscription
-      if (selectedSubscription && selectedSubscription.subscriptionId === subscriptionToCancel.subscriptionId) {
+      if (
+        selectedSubscription &&
+        selectedSubscription.subscriptionId ===
+          subscriptionToCancel.subscriptionId
+      ) {
         closeDetailsModal();
       }
-      
+
       // Refresh subscription history
       fetchSubscriptions();
     } catch (err) {
@@ -416,16 +459,19 @@ const MySubscription = () => {
 
   const handleEditSchedule = () => {
     if (!selectedSubscription) return;
-    navigate(`/user/subscriptions/${selectedSubscription.subscriptionId}/edit`, {
-      state: { subscription: selectedSubscription },
-    });
+    navigate(
+      `/user/subscriptions/${selectedSubscription.subscriptionId}/edit`,
+      {
+        state: { subscription: selectedSubscription },
+      },
+    );
     closeDetailsModal();
   };
 
   const handleRefreshDetails = async () => {
     if (!selectedSubscription) return;
     await fetchSubscriptionDetailData(selectedSubscription.subscriptionId);
-    toast.success('Subscription details refreshed');
+    toast.success("Subscription details refreshed");
   };
 
   const formatDate = (dateString) => {
@@ -554,7 +600,13 @@ const MySubscription = () => {
     if (!subscriptionDetails?.schedule) return 0;
     return subscriptionDetails.schedule.reduce((total, day) => {
       if (day.enabled && day.meals) {
-        return total + day.meals.reduce((dayTotal, meal) => dayTotal + (meal.quantity || 0), 0);
+        return (
+          total +
+          day.meals.reduce(
+            (dayTotal, meal) => dayTotal + (meal.quantity || 0),
+            0,
+          )
+        );
       }
       return total;
     }, 0);
@@ -570,12 +622,12 @@ const MySubscription = () => {
 
   const canEditSubscription = () => {
     if (!selectedSubscription) return false;
-    
+
     const status = selectedSubscription.status;
     const endDate = new Date(selectedSubscription.endDate);
     const today = new Date();
-    
-    return (status === 'ACTIVE' || status === 'PAUSED') && endDate > today;
+
+    return (status === "ACTIVE" || status === "PAUSED") && endDate > today;
   };
 
   // Render Overview Tab
@@ -594,7 +646,8 @@ const MySubscription = () => {
                 <div>
                   <p className="font-medium">You can edit your subscription</p>
                   <p className="text-sm mt-1">
-                    Update meal schedule, delivery time, and instructions. Changes will apply to future orders only.
+                    Update meal schedule, delivery time, and instructions.
+                    Changes will apply to future orders only.
                   </p>
                 </div>
               </div>
@@ -614,7 +667,9 @@ const MySubscription = () => {
           <div className="flex items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-3">
               <Package className="h-5 w-5 text-blue-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Package Information</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Package Information
+              </h3>
             </div>
             {canEditSubscription() && (
               <span className="text-xs font-medium px-2 py-1 bg-green-100 text-green-800 rounded-full">
@@ -622,14 +677,14 @@ const MySubscription = () => {
               </span>
             )}
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <div className="flex items-center gap-3 mb-3">
                 {subscription.packageImage ? (
-                  <img 
-                    src={subscription.packageImage} 
-                    alt={subscription.packageName || 'Package'} 
+                  <img
+                    src={subscription.packageImage}
+                    alt={subscription.packageName || "Package"}
                     className="w-20 h-20 object-cover rounded-lg border"
                   />
                 ) : (
@@ -638,12 +693,16 @@ const MySubscription = () => {
                   </div>
                 )}
                 <div>
-                  <h4 className="font-semibold text-gray-900">{subscription.packageName || 'N/A'}</h4>
-                  <p className="text-sm text-gray-600">Package ID: {subscription.packageId || 'N/A'}</p>
+                  <h4 className="font-semibold text-gray-900">
+                    {subscription.packageName || "N/A"}
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    Package ID: {subscription.packageId || "N/A"}
+                  </p>
                 </div>
               </div>
             </div>
-            
+
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-600">Duration:</span>
@@ -651,18 +710,24 @@ const MySubscription = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Total Meals:</span>
-                <span className="font-medium">{calculateTotalMeals()} meals</span>
+                <span className="font-medium">
+                  {calculateTotalMeals()} meals
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Status:</span>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(subscription.status)}`}>
+                <span
+                  className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(subscription.status)}`}
+                >
                   {subscription.status}
                 </span>
               </div>
               {subscription.vendorBusinessName && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">Vendor:</span>
-                  <span className="font-medium">{subscription.vendorBusinessName}</span>
+                  <span className="font-medium">
+                    {subscription.vendorBusinessName}
+                  </span>
                 </div>
               )}
             </div>
@@ -674,7 +739,9 @@ const MySubscription = () => {
           <div className="flex items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-3">
               <Calendar className="h-5 w-5 text-purple-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Delivery Schedule</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Delivery Schedule
+              </h3>
             </div>
             {canEditSubscription() && (
               <button
@@ -686,42 +753,66 @@ const MySubscription = () => {
               </button>
             )}
           </div>
-          
+
           <div className="mb-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <div className="text-center">
                 <div className="text-sm text-gray-600">Start Date</div>
-                <div className="font-semibold">{formatDate(subscription.startDate)}</div>
+                <div className="font-semibold">
+                  {formatDate(subscription.startDate)}
+                </div>
               </div>
               <div className="text-center">
                 <div className="text-sm text-gray-600">End Date</div>
-                <div className="font-semibold">{formatDate(subscription.endDate)}</div>
+                <div className="font-semibold">
+                  {formatDate(subscription.endDate)}
+                </div>
               </div>
               <div className="text-center">
                 <div className="text-sm text-gray-600">Delivery Time</div>
-                <div className="font-semibold">{subscription.preferredDeliveryTime || 'Not specified'}</div>
+                <div className="font-semibold">
+                  {subscription.preferredDeliveryTime || "Not specified"}
+                </div>
               </div>
               <div className="text-center">
                 <div className="text-sm text-gray-600">Days Active</div>
                 <div className="font-semibold">
-                  {subscription.schedule?.filter(day => day.enabled).length || 0} days/week
+                  {subscription.schedule?.filter((day) => day.enabled).length ||
+                    0}{" "}
+                  days/week
                 </div>
               </div>
             </div>
 
             {/* Weekly Schedule */}
             <div className="mt-4">
-              <h4 className="font-medium text-gray-900 mb-2">Weekly Delivery Days</h4>
+              <h4 className="font-medium text-gray-900 mb-2">
+                Weekly Delivery Days
+              </h4>
               <div className="grid grid-cols-7 gap-2">
-                {['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'].map((day) => {
-                  const daySchedule = subscription.schedule?.find(d => d.dayOfWeek === day);
+                {[
+                  "MONDAY",
+                  "TUESDAY",
+                  "WEDNESDAY",
+                  "THURSDAY",
+                  "FRIDAY",
+                  "SATURDAY",
+                  "SUNDAY",
+                ].map((day) => {
+                  const daySchedule = subscription.schedule?.find(
+                    (d) => d.dayOfWeek === day,
+                  );
                   const isEnabled = daySchedule?.enabled;
-                  
+
                   return (
                     <div key={day} className="text-center">
-                      <div className={`h-10 w-10 rounded-full mx-auto flex items-center justify-center ${
-                        isEnabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'
-                      }`}>
+                      <div
+                        className={`h-10 w-10 rounded-full mx-auto flex items-center justify-center ${
+                          isEnabled
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-400"
+                        }`}
+                      >
                         <span className="font-semibold">{day.charAt(0)}</span>
                       </div>
                       <div className="text-xs mt-1 text-gray-600">
@@ -729,7 +820,8 @@ const MySubscription = () => {
                       </div>
                       {isEnabled && daySchedule.meals && (
                         <div className="text-xs text-green-600 mt-1">
-                          {daySchedule.meals.length} meal{daySchedule.meals.length !== 1 ? 's' : ''}
+                          {daySchedule.meals.length} meal
+                          {daySchedule.meals.length !== 1 ? "s" : ""}
                         </div>
                       )}
                     </div>
@@ -745,7 +837,9 @@ const MySubscription = () => {
           <div className="flex items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-3">
               <MapPin className="h-5 w-5 text-red-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Delivery Information</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Delivery Information
+              </h3>
             </div>
             {canEditSubscription() && (
               <span className="text-xs font-medium px-2 py-1 bg-green-100 text-green-800 rounded-full">
@@ -753,46 +847,52 @@ const MySubscription = () => {
               </span>
             )}
           </div>
-          
+
           <div className="space-y-3">
             <div>
               <div className="text-sm text-gray-600">Delivery Address</div>
-              <div className="font-medium">{subscription.deliveryAddress || 'N/A'}</div>
+              <div className="font-medium">
+                {subscription.deliveryAddress || "N/A"}
+              </div>
             </div>
-            
+
             {subscription.landmark && (
               <div>
                 <div className="text-sm text-gray-600">Landmark</div>
                 <div className="font-medium">{subscription.landmark}</div>
               </div>
             )}
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <div className="text-sm text-gray-600">Include Packaging</div>
                 <div className="font-medium">
-                  {subscription.includePackaging ? 'Yes' : 'No'}
+                  {subscription.includePackaging ? "Yes" : "No"}
                 </div>
               </div>
               <div>
                 <div className="text-sm text-gray-600">Include Cutlery</div>
                 <div className="font-medium">
-                  {subscription.includeCutlery ? 'Yes' : 'No'}
+                  {subscription.includeCutlery ? "Yes" : "No"}
                 </div>
               </div>
             </div>
-            
+
             {subscription.dietaryNotes && (
               <div>
                 <div className="text-sm text-gray-600">Dietary Notes</div>
                 <div className="font-medium">{subscription.dietaryNotes}</div>
               </div>
             )}
-            
+
             {subscription.specialInstructions && (
               <div>
-                <div className="text-sm text-gray-600">Special Instructions</div>
-                <div className="font-medium">{subscription.specialInstructions}</div>
+                <div className="text-sm text-gray-600">
+                  Special Instructions
+                </div>
+                <div className="font-medium">
+                  {subscription.specialInstructions}
+                </div>
               </div>
             )}
           </div>
@@ -811,7 +911,9 @@ const MySubscription = () => {
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
             <Calendar className="h-5 w-5 text-purple-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Meal Schedule Details</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Meal Schedule Details
+            </h3>
           </div>
           {canEditSubscription() && (
             <button
@@ -823,7 +925,7 @@ const MySubscription = () => {
             </button>
           )}
         </div>
-        
+
         {subscription.schedule.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             No schedule information available
@@ -831,38 +933,63 @@ const MySubscription = () => {
         ) : (
           <div className="space-y-4">
             {subscription.schedule
-              .filter(day => day.enabled)
+              .filter((day) => day.enabled)
               .map((day) => (
-                <div key={day.dayOfWeek} className="border border-gray-200 rounded-lg p-4">
+                <div
+                  key={day.dayOfWeek}
+                  className="border border-gray-200 rounded-lg p-4"
+                >
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold text-gray-900">{day.dayOfWeek}</h4>
+                    <h4 className="font-semibold text-gray-900">
+                      {day.dayOfWeek}
+                    </h4>
                     <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
                       Active
                     </span>
                   </div>
-                  
+
                   {day.meals && day.meals.length > 0 ? (
                     <div className="space-y-3">
                       {day.meals.map((meal, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                        >
                           <div className="flex-1">
-                            <div className="font-medium text-gray-900">{meal.mealSetName}</div>
+                            <div className="font-medium text-gray-900">
+                              {meal.mealSetName}
+                            </div>
                             <div className="text-sm text-gray-600">
-                              Type: {meal.mealSetType} • Quantity: {meal.quantity}
+                              Type: {meal.mealSetType} • Quantity:{" "}
+                              {meal.quantity}
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="font-semibold">Rs. {meal.unitPrice?.toFixed(2) || '0.00'}</div>
-                            <div className="text-sm text-gray-600">per meal</div>
+                            <div className="font-semibold">
+                              Rs. {meal.unitPrice?.toFixed(2) || "0.00"}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              per meal
+                            </div>
                           </div>
                         </div>
                       ))}
-                      
+
                       <div className="pt-3 border-t border-gray-200">
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Total for {day.dayOfWeek}:</span>
+                          <span className="text-gray-600">
+                            Total for {day.dayOfWeek}:
+                          </span>
                           <span className="font-semibold">
-                            Rs. {day.meals.reduce((total, meal) => total + ((meal.unitPrice || 0) * (meal.quantity || 0)), 0).toFixed(2)}
+                            Rs.{" "}
+                            {day.meals
+                              .reduce(
+                                (total, meal) =>
+                                  total +
+                                  (meal.unitPrice || 0) * (meal.quantity || 0),
+                                0,
+                              )
+                              .toFixed(2)}
                           </span>
                         </div>
                       </div>
@@ -874,15 +1001,20 @@ const MySubscription = () => {
                   )}
                 </div>
               ))}
-            
-            {subscription.schedule.filter(day => !day.enabled).length > 0 && (
+
+            {subscription.schedule.filter((day) => !day.enabled).length > 0 && (
               <div className="mt-4">
-                <h4 className="font-medium text-gray-900 mb-2">Inactive Days</h4>
+                <h4 className="font-medium text-gray-900 mb-2">
+                  Inactive Days
+                </h4>
                 <div className="flex flex-wrap gap-2">
                   {subscription.schedule
-                    .filter(day => !day.enabled)
+                    .filter((day) => !day.enabled)
                     .map((day) => (
-                      <span key={day.dayOfWeek} className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm">
+                      <span
+                        key={day.dayOfWeek}
+                        className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm"
+                      >
                         {day.dayOfWeek}
                       </span>
                     ))}
@@ -904,9 +1036,11 @@ const MySubscription = () => {
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <div className="flex items-center gap-3 mb-4">
           <CreditCard className="h-5 w-5 text-green-600" />
-          <h3 className="text-lg font-semibold text-gray-900">Payment Information</h3>
+          <h3 className="text-lg font-semibold text-gray-900">
+            Payment Information
+          </h3>
         </div>
-        
+
         {!subscription.payment ? (
           <div className="text-center py-8 text-gray-500">
             No payment information available
@@ -917,63 +1051,86 @@ const MySubscription = () => {
               <div className="space-y-3">
                 <div>
                   <div className="text-sm text-gray-600">Payment ID</div>
-                  <div className="font-medium">{subscription.payment.paymentId || 'N/A'}</div>
+                  <div className="font-medium">
+                    {subscription.payment.paymentId || "N/A"}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-600">Payment Method</div>
-                  <div className="font-medium capitalize">{subscription.payment.paymentMethod?.toLowerCase() || 'N/A'}</div>
+                  <div className="font-medium capitalize">
+                    {subscription.payment.paymentMethod?.toLowerCase() || "N/A"}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-600">Payment Status</div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPaymentStatusColor(subscription.payment.paymentStatus)}`}>
-                    {subscription.payment.paymentStatus || 'N/A'}
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${getPaymentStatusColor(subscription.payment.paymentStatus)}`}
+                  >
+                    {subscription.payment.paymentStatus || "N/A"}
                   </span>
                 </div>
               </div>
-              
+
               <div className="space-y-3">
                 <div>
                   <div className="text-sm text-gray-600">Transaction ID</div>
-                  <div className="font-medium">{subscription.payment.transactionId || 'N/A'}</div>
+                  <div className="font-medium">
+                    {subscription.payment.transactionId || "N/A"}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-600">Paid At</div>
                   <div className="font-medium">
-                    {formatDate(subscription.payment.paidAt)} {formatTime(subscription.payment.paidAt)}
+                    {formatDate(subscription.payment.paidAt)}{" "}
+                    {formatTime(subscription.payment.paidAt)}
                   </div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-600">Amount</div>
-                  <div className="font-semibold text-lg">Rs. {subscription.payment.amount?.toFixed(2) || '0.00'}</div>
+                  <div className="font-semibold text-lg">
+                    Rs. {subscription.payment.amount?.toFixed(2) || "0.00"}
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Billing Summary */}
             <div className="border-t border-gray-200 pt-4 mt-4">
-              <h4 className="font-medium text-gray-900 mb-3">Billing Summary</h4>
+              <h4 className="font-medium text-gray-900 mb-3">
+                Billing Summary
+              </h4>
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal:</span>
-                  <span>Rs. {subscription.subtotalAmount?.toFixed(2) || '0.00'}</span>
+                  <span>
+                    Rs. {subscription.subtotalAmount?.toFixed(2) || "0.00"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Delivery Fee:</span>
-                  <span>Rs. {subscription.deliveryFee?.toFixed(2) || '0.00'}</span>
+                  <span>
+                    Rs. {subscription.deliveryFee?.toFixed(2) || "0.00"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Tax:</span>
-                  <span>Rs. {subscription.taxAmount?.toFixed(2) || '0.00'}</span>
+                  <span>
+                    Rs. {subscription.taxAmount?.toFixed(2) || "0.00"}
+                  </span>
                 </div>
                 {subscription.discountAmount > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>Discount:</span>
-                    <span>-Rs. {subscription.discountAmount?.toFixed(2) || '0.00'}</span>
+                    <span>
+                      -Rs. {subscription.discountAmount?.toFixed(2) || "0.00"}
+                    </span>
                   </div>
                 )}
                 <div className="flex justify-between border-t border-gray-200 pt-2 mt-2 font-semibold text-lg">
                   <span>Total Amount:</span>
-                  <span>Rs. {subscription.totalAmount?.toFixed(2) || '0.00'}</span>
+                  <span>
+                    Rs. {subscription.totalAmount?.toFixed(2) || "0.00"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -992,36 +1149,57 @@ const MySubscription = () => {
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <div className="flex items-center gap-3 mb-4">
           <User className="h-5 w-5 text-blue-600" />
-          <h3 className="text-lg font-semibold text-gray-900">Customer Information</h3>
+          <h3 className="text-lg font-semibold text-gray-900">
+            Customer Information
+          </h3>
         </div>
-        
+
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <div className="text-sm text-gray-600">Full Name</div>
-              <div className="font-medium">{subscription.customer?.userName || subscription.user?.name || 'N/A'}</div>
+              <div className="font-medium">
+                {subscription.customer?.userName ||
+                  subscription.user?.name ||
+                  "N/A"}
+              </div>
             </div>
             <div>
               <div className="text-sm text-gray-600">User ID</div>
-              <div className="font-medium">{subscription.customer?.userId || subscription.user?.userId || 'N/A'}</div>
+              <div className="font-medium">
+                {subscription.customer?.userId ||
+                  subscription.user?.userId ||
+                  "N/A"}
+              </div>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <div className="text-sm text-gray-600">Email Address</div>
-              <div className="font-medium">{subscription.customer?.email || subscription.user?.email || 'N/A'}</div>
+              <div className="font-medium">
+                {subscription.customer?.email ||
+                  subscription.user?.email ||
+                  "N/A"}
+              </div>
             </div>
             <div>
               <div className="text-sm text-gray-600">Phone Number</div>
-              <div className="font-medium">{subscription.customer?.phoneNumber || subscription.user?.phone || 'N/A'}</div>
+              <div className="font-medium">
+                {subscription.customer?.phoneNumber ||
+                  subscription.user?.phone ||
+                  "N/A"}
+              </div>
             </div>
           </div>
-          
+
           <div className="pt-4 border-t border-gray-200">
-            <h4 className="font-medium text-gray-900 mb-2">Subscription History</h4>
+            <h4 className="font-medium text-gray-900 mb-2">
+              Subscription History
+            </h4>
             <div className="text-sm text-gray-600">
-              Created on {formatDate(subscription.createdAt)} at {formatTime(subscription.createdAt)}
+              Created on {formatDate(subscription.createdAt)} at{" "}
+              {formatTime(subscription.createdAt)}
             </div>
           </div>
         </div>
@@ -1047,33 +1225,45 @@ const MySubscription = () => {
           <Calendar className="h-5 w-5 text-blue-600" />
           <h3 className="text-lg font-semibold text-gray-900">Order History</h3>
         </div>
-        
+
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Order ID</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Date</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Amount</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">
+                  Order ID
+                </th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">
+                  Date
+                </th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">
+                  Status
+                </th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">
+                  Amount
+                </th>
               </tr>
             </thead>
             <tbody>
               {orders.map((order) => (
                 <tr key={order.orderId} className="border-b last:border-0">
                   <td className="py-3 px-4">
-                    <p className="font-medium text-gray-900">#{order.orderId}</p>
+                    <p className="font-medium text-gray-900">
+                      #{order.orderId}
+                    </p>
                   </td>
                   <td className="py-3 px-4 text-sm text-gray-600">
                     {formatDate(order.deliveryDate || order.createdAt)}
                   </td>
                   <td className="py-3 px-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}
+                    >
                       {order.status}
                     </span>
                   </td>
                   <td className="py-3 px-4 text-sm font-medium">
-                    Rs. {order.totalAmount?.toFixed(2) || '0.00'}
+                    Rs. {order.totalAmount?.toFixed(2) || "0.00"}
                   </td>
                 </tr>
               ))}
@@ -1089,7 +1279,7 @@ const MySubscription = () => {
     .filter(
       (sub) =>
         sub.status?.toUpperCase() === "ACTIVE" ||
-        sub.status?.toUpperCase() === "PAUSED"
+        sub.status?.toUpperCase() === "PAUSED",
     )
     // Sort so the most recent subscription appears first
     .sort((a, b) => {
@@ -1097,9 +1287,9 @@ const MySubscription = () => {
       const bDate = new Date(b.createdAt || b.startDate || 0).getTime();
       return bDate - aDate;
     });
-  
+
   const cancelledSubscriptions = subscriptions.filter(
-    (sub) => sub.status?.toUpperCase() === "CANCELLED"
+    (sub) => sub.status?.toUpperCase() === "CANCELLED",
   );
 
   if (loading) {
@@ -1116,7 +1306,7 @@ const MySubscription = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <ToastContainer />
-      
+
       {/* Hero Section */}
       <section className="relative min-h-[300px] flex items-center justify-center overflow-hidden py-12 px-6">
         <div
@@ -1190,7 +1380,7 @@ const MySubscription = () => {
                     {activeSubscriptions.map((sub) => {
                       const progress = calculateProgress(
                         sub.startDate,
-                        sub.endDate
+                        sub.endDate,
                       );
                       const isActive = sub.status?.toUpperCase() === "ACTIVE";
                       const isPaused = sub.status?.toUpperCase() === "PAUSED";
@@ -1229,7 +1419,7 @@ const MySubscription = () => {
                                 </div>
                                 <span
                                   className={`text-xs px-2 py-1 rounded ${getStatusColor(
-                                    sub.status
+                                    sub.status,
                                   )}`}
                                 >
                                   {sub.status || "Active"}
@@ -1248,7 +1438,8 @@ const MySubscription = () => {
                                     className="bg-green-500 h-2 rounded-full"
                                     style={{
                                       width: `${
-                                        (progress.current / progress.total) * 100
+                                        (progress.current / progress.total) *
+                                        100
                                       }%`,
                                     }}
                                   ></div>
@@ -1262,14 +1453,16 @@ const MySubscription = () => {
                                   </p>
                                   <p className="font-medium">
                                     {formatDate(
-                                      sub.nextDeliveryDate || sub.startDate
+                                      sub.nextDeliveryDate || sub.startDate,
                                     )}
                                   </p>
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-gray-500 text-xs">Price:</p>
+                                  <p className="text-gray-500 text-xs">
+                                    Price:
+                                  </p>
                                   <p className="font-medium text-green-600">
-                                    ₹{sub.totalAmount || 0}
+                                    Rs. {sub.totalAmount || 0}
                                   </p>
                                 </div>
                               </div>
@@ -1280,7 +1473,9 @@ const MySubscription = () => {
                                     e.stopPropagation();
                                     handleCancelClick(sub);
                                   }}
-                                  disabled={actionLoading === sub.subscriptionId}
+                                  disabled={
+                                    actionLoading === sub.subscriptionId
+                                  }
                                   className="flex-1 bg-yellow-500 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-yellow-600 disabled:opacity-50"
                                 >
                                   Cancel
@@ -1342,7 +1537,7 @@ const MySubscription = () => {
                   {cancelledSubscriptions.map((sub) => {
                     const progress = calculateProgress(
                       sub.startDate,
-                      sub.endDate
+                      sub.endDate,
                     );
 
                     return (
@@ -1379,7 +1574,7 @@ const MySubscription = () => {
                               </div>
                               <span
                                 className={`text-xs px-2 py-1 rounded ${getStatusColor(
-                                  sub.status
+                                  sub.status,
                                 )}`}
                               >
                                 {sub.status || "Cancelled"}
@@ -1417,7 +1612,7 @@ const MySubscription = () => {
                               <div className="text-right">
                                 <p className="text-gray-500 text-xs">Price:</p>
                                 <p className="font-medium text-gray-600">
-                                  ₹{sub.totalAmount || 0}
+                                  Rs. {sub.totalAmount || 0}
                                 </p>
                               </div>
                             </div>
@@ -1440,9 +1635,12 @@ const MySubscription = () => {
             {/* Header */}
             <div className="flex justify-between items-center p-6 border-b">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Subscription Details</h2>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Subscription Details
+                </h2>
                 <p className="text-sm text-gray-600 mt-1">
-                  #{selectedSubscription.subscriptionId} • Created {formatDate(selectedSubscription.createdAt)}
+                  #{selectedSubscription.subscriptionId} • Created{" "}
+                  {formatDate(selectedSubscription.createdAt)}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -1451,7 +1649,9 @@ const MySubscription = () => {
                   disabled={detailsLoading}
                   className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  <RefreshCw className={`h-4 w-4 ${detailsLoading ? 'animate-spin' : ''}`} />
+                  <RefreshCw
+                    className={`h-4 w-4 ${detailsLoading ? "animate-spin" : ""}`}
+                  />
                   <span>Refresh</span>
                 </button>
                 <button
@@ -1464,15 +1664,20 @@ const MySubscription = () => {
             </div>
 
             {/* Status Banner */}
-            <div className={`px-6 py-3 ${getStatusColor(selectedSubscription.status).replace('text', 'bg').replace('bg-', 'bg-')} border-b`}>
+            <div
+              className={`px-6 py-3 ${getStatusColor(selectedSubscription.status).replace("text", "bg").replace("bg-", "bg-")} border-b`}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5" />
-                  <span className="font-medium">Subscription is {selectedSubscription.status}</span>
+                  <span className="font-medium">
+                    Subscription is {selectedSubscription.status}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-sm">
-                    {formatDate(selectedSubscription.startDate)} to {formatDate(selectedSubscription.endDate)}
+                    {formatDate(selectedSubscription.startDate)} to{" "}
+                    {formatDate(selectedSubscription.endDate)}
                   </div>
                   {canEditSubscription() && (
                     <div className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded">
@@ -1486,14 +1691,20 @@ const MySubscription = () => {
             {/* Tabs */}
             <div className="border-b">
               <div className="px-6 flex space-x-4 overflow-x-auto">
-                {['Overview', 'Meal Schedule', 'Payment', 'Customer Info', 'Order History'].map((tab) => (
+                {[
+                  "Overview",
+                  "Meal Schedule",
+                  "Payment",
+                  "Customer Info",
+                  "Order History",
+                ].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
                     className={`px-4 py-3 font-medium text-sm whitespace-nowrap ${
                       activeTab === tab
-                        ? 'text-blue-600 border-b-2 border-blue-600'
-                        : 'text-gray-600 hover:text-gray-900'
+                        ? "text-blue-600 border-b-2 border-blue-600"
+                        : "text-gray-600 hover:text-gray-900"
                     }`}
                   >
                     {tab}
@@ -1510,11 +1721,11 @@ const MySubscription = () => {
                 </div>
               ) : (
                 <>
-                  {activeTab === 'Overview' && renderOverview()}
-                  {activeTab === 'Meal Schedule' && renderMealSchedule()}
-                  {activeTab === 'Payment' && renderPayment()}
-                  {activeTab === 'Customer Info' && renderCustomer()}
-                  {activeTab === 'Order History' && renderOrdersHistory()}
+                  {activeTab === "Overview" && renderOverview()}
+                  {activeTab === "Meal Schedule" && renderMealSchedule()}
+                  {activeTab === "Payment" && renderPayment()}
+                  {activeTab === "Customer Info" && renderCustomer()}
+                  {activeTab === "Order History" && renderOrdersHistory()}
                 </>
               )}
             </div>
@@ -1523,9 +1734,14 @@ const MySubscription = () => {
             <div className="border-t px-6 py-4">
               <div className="flex justify-between items-center">
                 <div className="text-sm text-gray-600">
-                  Total: <span className="font-semibold">Rs. {selectedSubscription.totalAmount?.toFixed(2) || '0.00'}</span>
+                  Total:{" "}
+                  <span className="font-semibold">
+                    Rs. {selectedSubscription.totalAmount?.toFixed(2) || "0.00"}
+                  </span>
                   {canEditSubscription() && (
-                    <span className="ml-2 text-xs text-blue-600">• Changes may affect future billing</span>
+                    <span className="ml-2 text-xs text-blue-600">
+                      • Changes may affect future billing
+                    </span>
                   )}
                 </div>
                 <div className="flex space-x-3">
@@ -1595,7 +1811,7 @@ const MySubscription = () => {
                   Plan Type: {subscriptionToCancel.planType || "Daily"}
                 </p>
                 <p className="text-sm text-gray-600">
-                  Amount: ₹{subscriptionToCancel.totalAmount || 0}
+                  Amount: Rs. {subscriptionToCancel.totalAmount || 0}
                 </p>
               </div>
 
