@@ -1,6 +1,5 @@
 // src/Pages/Vendor/Settings.js
 import React, { useState, useEffect } from "react";
-import { readData, writeData } from "../../helpers/storage";
 import { toast } from "react-toastify";
 import { 
   Save,
@@ -19,111 +18,148 @@ import {
   Package,
   DollarSign,
   Users,
-  CheckCircle
+  CheckCircle,
+  Eye,
+  EyeOff,
+  Loader2
 } from "lucide-react";
+import { vendorApi } from "../../helpers/api";
 
 const Settings = () => {
-  const [settings, setSettings] = useState({});
   const [activeTab, setActiveTab] = useState("profile");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState("");
+  const [settings, setSettings] = useState({
+    profile: {
+      businessName: "",
+      ownerName: "",
+      email: "",
+      phone: "",
+      address: "",
+      description: "",
+      businessImage: "",
+      bank: {
+        bankName: "",
+        accountNumber: "",
+        branch: "",
+        holderName: ""
+      }
+    },
+    notifications: {
+      emailNotifications: true,
+      orderAlerts: true,
+      promotionAlerts: false,
+      weeklyReports: true,
+      reviewAlerts: true,
+      deliveryUpdates: true
+    },
+    preferences: {
+      autoAcceptOrders: false,
+      advanceOrderNotice: 2,
+      maxDailyOrders: 50,
+      currency: "NPR",
+      timezone: "Asia/Kathmandu",
+      businessHours: "9:00 AM - 9:00 PM"
+    }
+  });
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
 
   useEffect(() => {
     loadSettings();
   }, []);
 
-  useEffect(() => {
-    if (!error) return;
-    toast.error(error);
-    setError("");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [error]);
-
-  useEffect(() => {
-    if (!saved) return;
-    toast.success("Settings saved successfully!");
-    setSaved(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saved]);
-
-  const loadSettings = () => {
-    setLoading(true);
-    setError("");
+  const loadSettings = async () => {
     try {
-      const data = readData();
-      setSettings({
-        profile: data.vendorProfile || {
-          businessName: "My Tiffin Service",
-          ownerName: "",
-          email: "",
-          phone: "",
-          address: "",
-          businessImage: "",
-          bank: {
-            bankName: "",
-            accountNumber: "",
-            branch: "",
-            holderName: ""
+      setLoading(true);
+      const response = await vendorApi.getVendorSettings();
+      
+      if (response.ok && response.data) {
+        setSettings(prev => ({
+          ...prev,
+          profile: {
+            ...prev.profile,
+            ...response.data,
+            bank: response.data.bank || prev.profile.bank
           }
-        },
-        notifications: {
-          emailNotifications: true,
-          orderAlerts: true,
-          promotionAlerts: false,
-          weeklyReports: true,
-          reviewAlerts: true,
-          deliveryUpdates: true
-        },
-        preferences: {
-          autoAcceptOrders: false,
-          advanceOrderNotice: 2,
-          maxDailyOrders: 50,
-          currency: "NPR",
-          timezone: "Asia/Kathmandu",
-          businessHours: "9:00 AM - 9:00 PM"
+        }));
+        
+        // Update localStorage with fresh vendor data
+        if (response.data.businessName) {
+          localStorage.setItem("businessName", response.data.businessName);
         }
-      });
-    } catch (err) {
-      setError("Failed to load settings: " + err.message);
-      console.error("Error loading settings:", err);
+        
+        // Dispatch event to update navbar
+        const vendorData = {
+          businessName: response.data.businessName,
+          ownerName: response.data.ownerName,
+          businessEmail: response.data.email,
+          status: response.data.status || "ACTIVE",
+          profilePicture: response.data.businessImage
+        };
+        localStorage.setItem("vendor", JSON.stringify(vendorData));
+        window.dispatchEvent(new CustomEvent('vendorDataUpdated', { detail: vendorData }));
+        
+        toast.success("Settings loaded successfully!");
+      } else {
+        toast.error("Failed to load settings");
+      }
+    } catch (error) {
+      console.error("Error loading settings:", error);
+      toast.error("Error loading settings");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSave = () => {
-    setSaving(true);
-    setError("");
-    
+  const handleSave = async () => {
     // Validation
     if (!settings.profile?.businessName?.trim()) {
-      setError("Business name is required");
-      setSaving(false);
+      toast.error("Business name is required");
       return;
     }
 
     if (!settings.profile?.email?.trim() || !/\S+@\S+\.\S+/.test(settings.profile.email)) {
-      setError("Valid email is required");
-      setSaving(false);
+      toast.error("Valid email is required");
       return;
     }
 
-    // Simulate API call
-    setTimeout(() => {
-      try {
-        const data = readData();
-        data.vendorProfile = settings.profile;
-        writeData(data);
+    try {
+      setSaving(true);
+      const response = await vendorApi.updateVendorSettings(settings.profile);
+      
+      if (response.ok) {
+        toast.success("Settings saved successfully!");
         
-        setSaving(false);
-        setSaved(true);
-      } catch (err) {
-        setError("Failed to save settings: " + err.message);
-        setSaving(false);
+        // Update localStorage
+        if (settings.profile.businessName) {
+          localStorage.setItem("businessName", settings.profile.businessName);
+        }
+        
+        // Dispatch event to update navbar
+        const vendorData = {
+          businessName: settings.profile.businessName,
+          ownerName: settings.profile.ownerName,
+          businessEmail: settings.profile.email,
+          status: "ACTIVE",
+          profilePicture: settings.profile.businessImage
+        };
+        localStorage.setItem("vendor", JSON.stringify(vendorData));
+        window.dispatchEvent(new CustomEvent('vendorDataUpdated', { detail: vendorData }));
+      } else {
+        toast.error("Failed to save settings");
       }
-    }, 1000);
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      toast.error("Error saving settings");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleProfileChange = (field, value) => {
@@ -156,28 +192,92 @@ const Settings = () => {
     }));
   };
 
-  const handleLogoUpload = (event) => {
+  const handleLogoUpload = async (event) => {
     const file = event.target.files[0];
-    if (file) {
-      if (!file.type.startsWith("image/")) {
-        setError("Please select an image file");
-        return;
-      }
+    if (!file) return;
 
-      if (file.size > 5 * 1024 * 1024) {
-        setError("Image size should be less than 5MB");
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        handleProfileChange("businessImage", e.target.result);
-      };
-      reader.onerror = () => {
-        setError("Error reading image file");
-      };
-      reader.readAsDataURL(file);
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file (JPG, PNG, GIF)");
+      return;
     }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size should be less than 5MB");
+      return;
+    }
+
+    try {
+      const response = await vendorApi.uploadLogo(file);
+      if (response.ok && response.data?.imageUrl) {
+        handleProfileChange("businessImage", response.data.imageUrl);
+        toast.success("Logo uploaded successfully!");
+      } else {
+        toast.error("Failed to upload logo");
+      }
+    } catch (error) {
+      console.error("Error uploading logo:", error);
+      toast.error("Error uploading logo");
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (!passwordData.currentPassword || !passwordData.newPassword) {
+      toast.error("Please fill in all password fields");
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error("New passwords do not match");
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    try {
+      const response = await vendorApi.updatePassword(
+        passwordData.currentPassword,
+        passwordData.newPassword
+      );
+      
+      if (response.ok) {
+        toast.success("Password updated successfully!");
+        setPasswordData({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: ""
+        });
+      } else {
+        toast.error(response.data?.message || "Failed to update password");
+      }
+    } catch (error) {
+      console.error("Error updating password:", error);
+      toast.error("Error updating password");
+    }
+  };
+
+  const handleEnable2FA = async () => {
+    try {
+      const response = await vendorApi.enableTwoFactorAuth();
+      if (response.ok) {
+        toast.success("Two-factor authentication enabled!");
+      } else {
+        toast.error("Failed to enable 2FA");
+      }
+    } catch (error) {
+      console.error("Error enabling 2FA:", error);
+      toast.error("Error enabling 2FA");
+    }
+  };
+
+  const handleLogoutAllDevices = () => {
+    // Clear all tokens and redirect to login
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.href = "/login";
+    toast.info("Logged out from all devices");
   };
 
   const tabs = [
@@ -190,8 +290,8 @@ const Settings = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <RefreshCw className="animate-spin text-blue-600 mr-2" size={24} />
+      <div className="flex flex-col items-center justify-center h-96">
+        <Loader2 className="animate-spin text-green-600 h-12 w-12 mb-4" />
         <span className="text-gray-600">Loading settings...</span>
       </div>
     );
@@ -209,7 +309,7 @@ const Settings = () => {
           <button
             onClick={loadSettings}
             disabled={loading}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
             <span>Reload</span>
@@ -220,7 +320,7 @@ const Settings = () => {
             className="flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
           >
             {saving ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <Loader2 className="animate-spin h-5 w-5" />
             ) : (
               <Save size={16} />
             )}
@@ -229,21 +329,21 @@ const Settings = () => {
         </div>
       </div>
 
-      {/* Settings Summary */}
+      {/* Settings Summary Cards - Professional Design */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-xl border shadow-sm">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 rounded-lg bg-blue-50 text-blue-600">
               <Building className="h-6 w-6" />
             </div>
           </div>
           <h3 className="text-2xl font-bold text-gray-900 mb-1">
-            {settings.profile?.businessName ? "✓ Configured" : "Not Set"}
+            {settings.profile?.businessName ? "✓" : "—"}
           </h3>
           <p className="text-sm text-gray-600">Business Profile</p>
         </div>
 
-        <div className="bg-white p-6 rounded-xl border shadow-sm">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 rounded-lg bg-green-50 text-green-600">
               <Bell className="h-6 w-6" />
@@ -255,7 +355,7 @@ const Settings = () => {
           <p className="text-sm text-gray-600">Active Notifications</p>
         </div>
 
-        <div className="bg-white p-6 rounded-xl border shadow-sm">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 rounded-lg bg-purple-50 text-purple-600">
               <Globe className="h-6 w-6" />
@@ -267,7 +367,7 @@ const Settings = () => {
           <p className="text-sm text-gray-600">Currency</p>
         </div>
 
-        <div className="bg-white p-6 rounded-xl border shadow-sm">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 rounded-lg bg-orange-50 text-orange-600">
               <Shield className="h-6 w-6" />
@@ -283,7 +383,7 @@ const Settings = () => {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Sidebar */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sticky top-24">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sticky top-24">
             <nav className="space-y-2">
               {tabs.map(tab => (
                 <button
@@ -291,7 +391,7 @@ const Settings = () => {
                   onClick={() => setActiveTab(tab.id)}
                   className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${
                     activeTab === tab.id
-                      ? "bg-blue-50 text-blue-700 border border-blue-200"
+                      ? "bg-green-50 text-green-700 border border-green-200"
                       : "text-gray-600 hover:bg-gray-50"
                   }`}
                 >
@@ -305,7 +405,7 @@ const Settings = () => {
 
         {/* Content */}
         <div className="lg:col-span-3">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
             {activeTab === "profile" && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
@@ -355,7 +455,7 @@ const Settings = () => {
                       type="text"
                       value={settings.profile?.ownerName || ""}
                       onChange={(e) => handleProfileChange("ownerName", e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       placeholder="Enter owner's full name"
                     />
                   </div>
@@ -367,7 +467,7 @@ const Settings = () => {
                       type="text"
                       value={settings.profile?.businessName || ""}
                       onChange={(e) => handleProfileChange("businessName", e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       placeholder="Enter your business name"
                     />
                   </div>
@@ -379,7 +479,7 @@ const Settings = () => {
                       type="email"
                       value={settings.profile?.email || ""}
                       onChange={(e) => handleProfileChange("email", e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       placeholder="business@example.com"
                     />
                   </div>
@@ -391,7 +491,7 @@ const Settings = () => {
                       type="tel"
                       value={settings.profile?.phone || ""}
                       onChange={(e) => handleProfileChange("phone", e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       placeholder="98XXXXXXXX"
                     />
                   </div>
@@ -403,7 +503,7 @@ const Settings = () => {
                       value={settings.profile?.address || ""}
                       onChange={(e) => handleProfileChange("address", e.target.value)}
                       rows="3"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       placeholder="Enter complete business address"
                     />
                   </div>
@@ -419,7 +519,7 @@ const Settings = () => {
                     onChange={(e) => handleProfileChange("description", e.target.value)}
                     placeholder="Tell customers about your business, cuisine specialties, and what makes you unique..."
                     rows="4"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                   <p className="text-sm text-gray-500 mt-1">
                     This will be visible to customers on your profile page
@@ -487,7 +587,7 @@ const Settings = () => {
                           onChange={(e) => handleNotificationChange(item.field, e.target.checked)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                       </label>
                     </div>
                   ))}
@@ -513,7 +613,7 @@ const Settings = () => {
                         onChange={(e) => handlePreferenceChange("autoAcceptOrders", e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                     </label>
                   </div>
 
@@ -525,7 +625,7 @@ const Settings = () => {
                     <select
                       value={settings.preferences?.advanceOrderNotice || 2}
                       onChange={(e) => handlePreferenceChange("advanceOrderNotice", parseInt(e.target.value))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     >
                       <option value={1}>1 Hour</option>
                       <option value={2}>2 Hours</option>
@@ -546,7 +646,7 @@ const Settings = () => {
                       type="number"
                       value={settings.preferences?.maxDailyOrders || 50}
                       onChange={(e) => handlePreferenceChange("maxDailyOrders", parseInt(e.target.value))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       min="1"
                       max="1000"
                     />
@@ -561,7 +661,7 @@ const Settings = () => {
                     <select
                       value={settings.preferences?.currency || "NPR"}
                       onChange={(e) => handlePreferenceChange("currency", e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     >
                       <option value="NPR">Nepalese Rupee (Rs)</option>
                       <option value="USD">US Dollar ($)</option>
@@ -579,7 +679,7 @@ const Settings = () => {
                       type="text"
                       value={settings.preferences?.businessHours || "9:00 AM - 9:00 PM"}
                       onChange={(e) => handlePreferenceChange("businessHours", e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       placeholder="e.g., 9:00 AM - 9:00 PM"
                     />
                     <p className="text-sm text-gray-500 mt-1">Displayed to customers</p>
@@ -597,22 +697,49 @@ const Settings = () => {
                   <div className="p-4 border border-gray-200 rounded-lg">
                     <h4 className="font-medium text-gray-900 mb-3">Change Password</h4>
                     <div className="space-y-3">
-                      <input
-                        type="password"
-                        placeholder="Current Password"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                      <input
-                        type="password"
-                        placeholder="New Password"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showCurrentPassword ? "text" : "password"}
+                          placeholder="Current Password"
+                          value={passwordData.currentPassword}
+                          onChange={(e) => setPasswordData(prev => ({...prev, currentPassword: e.target.value}))}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                        >
+                          {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type={showNewPassword ? "text" : "password"}
+                          placeholder="New Password"
+                          value={passwordData.newPassword}
+                          onChange={(e) => setPasswordData(prev => ({...prev, newPassword: e.target.value}))}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                        >
+                          {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
                       <input
                         type="password"
                         placeholder="Confirm New Password"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        value={passwordData.confirmPassword}
+                        onChange={(e) => setPasswordData(prev => ({...prev, confirmPassword: e.target.value}))}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       />
-                      <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                      <button 
+                        onClick={handlePasswordChange}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      >
                         Update Password
                       </button>
                     </div>
@@ -627,7 +754,10 @@ const Settings = () => {
                     <p className="text-sm text-yellow-700 mb-3">
                       Enhance your account security by enabling two-factor authentication. You'll need to enter a code from your authenticator app when signing in.
                     </p>
-                    <button className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors">
+                    <button 
+                      onClick={handleEnable2FA}
+                      className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                    >
                       Enable 2FA
                     </button>
                   </div>
@@ -638,7 +768,10 @@ const Settings = () => {
                     <p className="text-sm text-gray-600 mb-3">
                       Manage your active login sessions across devices
                     </p>
-                    <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                    <button 
+                      onClick={handleLogoutAllDevices}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    >
                       Logout from All Devices
                     </button>
                   </div>
@@ -669,7 +802,7 @@ const Settings = () => {
                               bankName: e.target.value
                             })
                           }
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                           placeholder="e.g., Nepal Bank"
                         />
                       </div>
@@ -684,7 +817,7 @@ const Settings = () => {
                               accountNumber: e.target.value
                             })
                           }
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                           placeholder="XXXXXXXXXXXX"
                         />
                       </div>
@@ -699,7 +832,7 @@ const Settings = () => {
                               branch: e.target.value
                             })
                           }
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                           placeholder="e.g., Kathmandu Branch"
                         />
                       </div>
@@ -714,7 +847,7 @@ const Settings = () => {
                               holderName: e.target.value
                             })
                           }
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                           placeholder="Account holder name"
                         />
                       </div>

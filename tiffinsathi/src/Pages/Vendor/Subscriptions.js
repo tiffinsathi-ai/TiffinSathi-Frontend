@@ -20,7 +20,13 @@ import {
   ChevronDown,
   ChevronUp,
   Shield,
-  CalendarDays
+  CalendarDays,
+  TrendingUp,
+  TrendingDown,
+  Pause,
+  Play,
+  XCircle,
+  CheckCircle
 } from "lucide-react";
 
 const Subscriptions = () => {
@@ -34,6 +40,14 @@ const Subscriptions = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
   const [expandedCards, setExpandedCards] = useState({});
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    paused: 0,
+    cancelled: 0,
+    completed: 0,
+    pending: 0
+  });
 
   useEffect(() => {
     loadSubscriptions();
@@ -47,7 +61,6 @@ const Subscriptions = () => {
     setLoading(true);
     setError("");
     try {
-      // Always fetch all subscriptions, we'll filter locally
       const response = await vendorApi.getVendorSubscriptions("ALL");
       
       if (response.ok && response.data) {
@@ -66,6 +79,18 @@ const Subscriptions = () => {
         });
         
         setSubscriptions(updatedSubs);
+        
+        // Calculate stats
+        const statsData = {
+          total: updatedSubs.length,
+          active: updatedSubs.filter(s => s.displayStatus === "ACTIVE").length,
+          paused: updatedSubs.filter(s => s.displayStatus === "PAUSED").length,
+          cancelled: updatedSubs.filter(s => s.displayStatus === "CANCELLED").length,
+          completed: updatedSubs.filter(s => s.displayStatus === "COMPLETED").length,
+          pending: updatedSubs.filter(s => s.displayStatus === "PENDING").length
+        };
+        
+        setStats(statsData);
       } else {
         setError("Failed to load subscriptions");
         setSubscriptions([]);
@@ -73,7 +98,7 @@ const Subscriptions = () => {
       }
     } catch (err) {
       console.error("Error loading subscriptions:", err);
-      setError("Error loading subscriptions: " + err.message);
+      setError("Error loading subscriptions");
       setSubscriptions([]);
       setFilteredSubscriptions([]);
     } finally {
@@ -109,32 +134,16 @@ const Subscriptions = () => {
 
   // Calculate status counts for tabs
   const statusCounts = useMemo(() => {
-    const counts = {
-      ALL: subscriptions.length,
-      ACTIVE: 0,
-      PAUSED: 0,
-      CANCELLED: 0,
-      COMPLETED: 0,
-      PENDING: 0
-    };
-    
-    subscriptions.forEach(sub => {
-      const status = sub.displayStatus || sub.status;
-      if (status in counts) {
-        counts[status]++;
-      }
-    });
-    
-    return counts;
-  }, [subscriptions]);
+    return stats;
+  }, [stats]);
 
   const statusTabs = [
-    { value: "ALL", label: "All" },
-    { value: "ACTIVE", label: "Active" },
-    { value: "PAUSED", label: "Paused" },
-    { value: "CANCELLED", label: "Cancelled" },
-    { value: "COMPLETED", label: "Completed" },
-    { value: "PENDING", label: "Pending" }
+    { value: "ALL", label: "All", count: stats.total },
+    { value: "ACTIVE", label: "Active", count: stats.active },
+    { value: "PAUSED", label: "Paused", count: stats.paused },
+    { value: "CANCELLED", label: "Cancelled", count: stats.cancelled },
+    { value: "COMPLETED", label: "Completed", count: stats.completed },
+    { value: "PENDING", label: "Pending", count: stats.pending }
   ];
 
   const handlePauseResume = async (subscription) => {
@@ -156,7 +165,7 @@ const Subscriptions = () => {
       }
     } catch (err) {
       console.error("Error updating subscription:", err);
-      setError("Error updating subscription: " + err.message);
+      setError("Error updating subscription");
     } finally {
       setActionLoading(null);
     }
@@ -181,7 +190,7 @@ const Subscriptions = () => {
       }
     } catch (err) {
       console.error("Error cancelling subscription:", err);
-      setError("Error cancelling subscription: " + err.message);
+      setError("Error cancelling subscription");
     } finally {
       setActionLoading(null);
     }
@@ -201,13 +210,13 @@ const Subscriptions = () => {
 
   const getStatusColor = (status) => {
     const colors = {
-      ACTIVE: "bg-green-100 text-green-800 border-green-200",
-      PAUSED: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      CANCELLED: "bg-red-100 text-red-800 border-red-200",
-      COMPLETED: "bg-emerald-100 text-emerald-800 border-emerald-200",
-      PENDING: "bg-blue-100 text-blue-800 border-blue-200"
+      ACTIVE: "bg-green-50 text-green-700 border-green-200",
+      PAUSED: "bg-yellow-50 text-yellow-700 border-yellow-200",
+      CANCELLED: "bg-red-50 text-red-700 border-red-200",
+      COMPLETED: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      PENDING: "bg-blue-50 text-blue-700 border-blue-200"
     };
-    return colors[status] || "bg-gray-100 text-gray-800 border-gray-200";
+    return colors[status] || "bg-gray-50 text-gray-700 border-gray-200";
   };
 
   const formatDate = (dateString) => {
@@ -215,7 +224,7 @@ const Subscriptions = () => {
     try {
       const d = new Date(dateString);
       if (Number.isNaN(d.getTime())) return "N/A";
-      return d.toLocaleDateString('en-NP', {
+      return d.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
@@ -226,9 +235,9 @@ const Subscriptions = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-NP', {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'NPR'
+      currency: 'INR'
     }).format(amount || 0);
   };
 
@@ -241,117 +250,179 @@ const Subscriptions = () => {
     return diffDays > 0 ? diffDays : 0;
   };
 
+  // Professional StatCard Component
+  const StatCard = ({ title, value, icon: Icon, color, onClick, trendValue }) => {
+    const colors = {
+      blue: "text-blue-600 bg-blue-50",
+      green: "text-green-600 bg-green-50",
+      purple: "text-purple-600 bg-purple-50",
+      orange: "text-orange-600 bg-orange-50",
+      emerald: "text-emerald-600 bg-emerald-50"
+    };
+
+    return (
+      <div 
+        className={`bg-white p-6 rounded-xl border border-gray-200 hover:shadow-lg transition-all duration-200 ${onClick ? 'cursor-pointer hover:border-green-300' : ''}`}
+        onClick={onClick}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className={`p-3 rounded-lg ${colors[color]}`}>
+            <Icon className="h-6 w-6" />
+          </div>
+          {trendValue !== undefined && (
+            <div className={`flex items-center text-sm ${trendValue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {trendValue >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+              <span className="ml-1 font-medium">{Math.abs(trendValue)}%</span>
+            </div>
+          )}
+        </div>
+        <h3 className="text-2xl font-bold text-gray-900 mb-1">{value}</h3>
+        <p className="text-sm font-medium text-gray-600">{title}</p>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div className="text-left">
-          <h2 className="text-2xl font-bold text-gray-900">Subscriptions</h2>
-          <p className="text-gray-600">Manage customer meal plan subscriptions</p>
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Subscription Management</h1>
+            <p className="text-gray-600 mt-1">Manage customer meal plan subscriptions</p>
+          </div>
+          <button
+            onClick={loadSubscriptions}
+            disabled={loading}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
         </div>
-        
-        <button
-          onClick={loadSubscriptions}
-          disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
       </div>
 
       {/* Error Display */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
-          <div className="flex items-center">
-            <AlertCircle className="h-5 w-5 mr-2" />
-            {error}
-          </div>
-          <button
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center">
+          <AlertCircle className="h-5 w-5 text-red-600 mr-3" />
+          <p className="text-red-700 text-sm">{error}</p>
+          <button 
             onClick={() => setError("")}
-            className="text-red-700 hover:text-red-900"
+            className="ml-auto text-red-500 hover:text-red-700"
           >
-            <X className="h-5 w-5" />
+            <X size={20} />
           </button>
         </div>
       )}
 
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-        <div className="flex flex-col space-y-4">
-          {/* Top row with Search and Filter */}
-          <div className="flex items-center gap-4">
-            <div className="flex-1 relative">
-              <Search
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                size={20}
-              />
-              <input
-                type="text"
-                placeholder="Search by customer name, email, phone, or subscription ID..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            
-            <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
-              <Filter size={16} className="text-gray-400" />
-              <select
-                className="bg-transparent text-sm focus:outline-none"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                {statusTabs.map((tab) => (
-                  <option key={tab.value} value={tab.value}>
-                    {tab.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <StatCard
+          title="Total"
+          value={stats.total}
+          icon={Package}
+          color="blue"
+        />
+        <StatCard
+          title="Active"
+          value={stats.active}
+          icon={CheckCircle}
+          color="green"
+        />
+        <StatCard
+          title="Paused"
+          value={stats.paused}
+          icon={Pause}
+          color="orange"
+        />
+        <StatCard
+          title="Cancelled"
+          value={stats.cancelled}
+          icon={XCircle}
+          color="red"
+        />
+        <StatCard
+          title="Completed"
+          value={stats.completed}
+          icon={CheckCircle}
+          color="emerald"
+        />
+        <StatCard
+          title="Pending"
+          value={stats.pending}
+          icon={Clock}
+          color="purple"
+        />
+      </div>
 
-          {/* Status Tabs */}
-          <div className="flex border-b border-gray-200 overflow-x-auto">
+      {/* Search and Filter */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search subscriptions by customer, package, or ID..."
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center space-x-2">
+            <Filter size={20} className="text-gray-500" />
+            <select
+              className="border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              {statusTabs.map((tab) => (
+                <option key={tab.value} value={tab.value}>
+                  {tab.label} ({tab.count})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Status Tabs */}
+        <div className="mt-6 border-b border-gray-200">
+          <nav className="flex space-x-4 md:space-x-8 overflow-x-auto pb-2">
             {statusTabs.map((tab) => (
               <button
                 key={tab.value}
                 onClick={() => setStatusFilter(tab.value)}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 whitespace-nowrap ${
                   statusFilter === tab.value
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    ? "border-green-500 text-green-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
-                {tab.label}
-                <span className={`px-2 py-0.5 rounded-full text-xs ${
-                  statusFilter === tab.value
-                    ? "bg-blue-100 text-blue-600"
-                    : "bg-gray-100 text-gray-600"
+                <span>{tab.label}</span>
+                <span className={`px-2 py-0.5 text-xs rounded-full ${
+                  statusFilter === tab.value ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-600"
                 }`}>
-                  {statusCounts[tab.value] || 0}
+                  {tab.count}
                 </span>
               </button>
             ))}
-          </div>
+          </nav>
         </div>
       </div>
 
       {/* Loading State */}
       {loading ? (
         <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading subscriptions...</p>
+          <RefreshCw className="animate-spin text-green-600 mx-auto mb-4" size={32} />
+          <p className="text-gray-600">Loading subscriptions...</p>
         </div>
       ) : filteredSubscriptions.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Package size={32} className="text-gray-400" />
-          </div>
+          <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             No {statusFilter === 'ALL' ? '' : statusFilter.toLowerCase() + ' '}subscriptions found
           </h3>
-          <p className="text-gray-600 max-w-md mx-auto">
+          <p className="text-gray-600">
             {searchTerm 
               ? "No subscriptions match your search criteria" 
               : "Once customers subscribe to your meal plans, their subscriptions will appear here."}
@@ -367,7 +438,7 @@ const Subscriptions = () => {
             return (
               <div
                 key={subscription.subscriptionId}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-shadow"
               >
                 {/* Subscription Header */}
                 <div 
@@ -376,8 +447,8 @@ const Subscriptions = () => {
                 >
                   <div className="flex justify-between items-center">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-lg text-gray-900">
+                      <div className="flex items-center gap-3 mb-3">
+                        <h3 className="font-bold text-lg text-gray-900">
                           #{subscription.subscriptionId}
                         </h3>
                         <span
@@ -388,36 +459,42 @@ const Subscriptions = () => {
                           {displayStatus}
                         </span>
                         {remainingDays !== null && displayStatus === 'ACTIVE' && (
-                          <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
+                          <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full border border-blue-200">
                             {remainingDays} days remaining
                           </span>
                         )}
                         {displayStatus === 'COMPLETED' && subscription.isCompletedByDate && (
-                          <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full">
-                            Completed (End date passed)
+                          <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full border border-emerald-200">
+                            Completed
                           </span>
                         )}
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-gray-400" />
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-blue-50 rounded-lg">
+                            <User className="h-4 w-4 text-blue-600" />
+                          </div>
                           <div>
                             <p className="font-medium text-gray-900">{subscription.customer?.userName || "Customer"}</p>
                             <p className="text-sm text-gray-500">{subscription.customer?.phoneNumber || "N/A"}</p>
                           </div>
                         </div>
                         
-                        <div className="flex items-center gap-2">
-                          <Package className="h-4 w-4 text-gray-400" />
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-purple-50 rounded-lg">
+                            <Package className="h-4 w-4 text-purple-600" />
+                          </div>
                           <div>
                             <p className="font-medium text-gray-900">{subscription.packageName || "Meal Package"}</p>
                             <p className="text-sm text-gray-500">{subscription.billingCycle || "Monthly"}</p>
                           </div>
                         </div>
                         
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-gray-400" />
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-green-50 rounded-lg">
+                            <DollarSign className="h-4 w-4 text-green-600" />
+                          </div>
                           <div>
                             <p className="font-medium text-gray-900">{formatCurrency(subscription.totalAmount || subscription.packagePrice)}</p>
                             <p className="text-sm text-gray-500">
@@ -445,36 +522,36 @@ const Subscriptions = () => {
                       {/* Left Column */}
                       <div className="space-y-4">
                         {/* Customer Info */}
-                        <div className="bg-gray-50 p-4 rounded-lg">
+                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                           <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
                             <User className="h-4 w-4" />
                             Customer Information
                           </h4>
                           <div className="space-y-2">
                             <div className="flex items-center gap-2">
-                              <Mail className="h-4 w-4 text-gray-400" />
+                              <Mail className="h-4 w-4 text-gray-500" />
                               <span className="text-sm">{subscription.customer?.email || "N/A"}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Phone className="h-4 w-4 text-gray-400" />
+                              <Phone className="h-4 w-4 text-gray-500" />
                               <span className="text-sm">{subscription.customer?.phoneNumber || "N/A"}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Shield className="h-4 w-4 text-gray-400" />
+                              <Shield className="h-4 w-4 text-gray-500" />
                               <span className="text-sm">Customer ID: {subscription.customer?.userId || "N/A"}</span>
                             </div>
                           </div>
                         </div>
 
                         {/* Delivery Details */}
-                        <div className="bg-gray-50 p-4 rounded-lg">
+                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                           <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
                             <Truck className="h-4 w-4" />
                             Delivery Details
                           </h4>
                           <div className="space-y-2">
                             <div className="flex items-start gap-2">
-                              <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
+                              <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
                               <div>
                                 <p className="text-sm font-medium">Address</p>
                                 <p className="text-sm text-gray-600">{subscription.deliveryAddress || "N/A"}</p>
@@ -484,7 +561,7 @@ const Subscriptions = () => {
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-gray-400" />
+                              <Clock className="h-4 w-4 text-gray-500" />
                               <span className="text-sm">Delivery Time: {subscription.preferredDeliveryTime || "Flexible"}</span>
                             </div>
                           </div>
@@ -546,7 +623,7 @@ const Subscriptions = () => {
                         )}
 
                         {/* Timeline */}
-                        <div className="bg-blue-50 p-4 rounded-lg">
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                           <h4 className="font-medium text-blue-900 mb-3 flex items-center gap-2">
                             <CalendarDays className="h-4 w-4" />
                             Subscription Timeline
@@ -586,27 +663,36 @@ const Subscriptions = () => {
                       </button>
                       
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => handlePauseResume(subscription)}
-                          disabled={displayStatus === "CANCELLED" || 
-                                   displayStatus === "COMPLETED" ||
-                                   actionLoading === subscription.subscriptionId}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium border ${
-                            displayStatus === "PAUSED"
-                              ? "border-green-500 text-green-700 hover:bg-green-50"
-                              : "border-yellow-500 text-yellow-700 hover:bg-yellow-50"
-                          } disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2`}
-                        >
-                          {displayStatus === "PAUSED" ? "Resume" : "Pause"}
-                        </button>
+                        {displayStatus === "PAUSED" ? (
+                          <button
+                            onClick={() => handlePauseResume(subscription)}
+                            disabled={actionLoading === subscription.subscriptionId}
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 flex items-center gap-2"
+                          >
+                            <Play size={16} />
+                            Resume
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handlePauseResume(subscription)}
+                            disabled={displayStatus === "CANCELLED" || 
+                                     displayStatus === "COMPLETED" ||
+                                     actionLoading === subscription.subscriptionId}
+                            className="px-4 py-2 bg-yellow-600 text-white rounded-lg text-sm font-medium hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50 flex items-center gap-2"
+                          >
+                            <Pause size={16} />
+                            Pause
+                          </button>
+                        )}
                         <button
                           onClick={() => handleCancel(subscription)}
                           disabled={displayStatus === "CANCELLED" || 
                                    displayStatus === "COMPLETED" ||
                                    actionLoading === subscription.subscriptionId}
-                          className="px-4 py-2 rounded-lg text-sm font-medium border border-red-500 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 flex items-center gap-2"
                         >
-                          Cancel Subscription
+                          <XCircle size={16} />
+                          Cancel
                         </button>
                       </div>
                     </div>
@@ -620,119 +706,120 @@ const Subscriptions = () => {
 
       {/* Subscription Details Modal */}
       {showDetailsModal && selectedSubscription && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
-            {/* Modal Header */}
-            <div className="flex justify-between items-center mb-6 pb-4 border-b">
-              <div>
-                <h3 className="text-xl font-bold text-gray-900">
-                  Subscription #{selectedSubscription.subscriptionId}
-                </h3>
-                <p className="text-sm text-gray-500 mt-1">Complete subscription details</p>
-              </div>
-              <button
-                onClick={() => setShowDetailsModal(false)}
-                className="text-gray-400 hover:text-gray-600 p-1"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-                <div className="text-center">
-                  <div className="text-sm text-gray-600">Customer</div>
-                  <div className="font-semibold text-gray-900">{selectedSubscription.customer?.userName || "N/A"}</div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    Subscription #{selectedSubscription.subscriptionId}
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">Complete subscription details</p>
                 </div>
-                <div className="text-center">
-                  <div className="text-sm text-gray-600">Status</div>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedSubscription.displayStatus || selectedSubscription.status)}`}>
-                    {selectedSubscription.displayStatus || selectedSubscription.status}
-                  </span>
-                </div>
-                <div className="text-center">
-                  <div className="text-sm text-gray-600">Total Amount</div>
-                  <div className="font-semibold text-gray-900">{formatCurrency(selectedSubscription.totalAmount || selectedSubscription.packagePrice)}</div>
-                </div>
+                <button
+                  onClick={() => setShowDetailsModal(false)}
+                  className="text-gray-400 hover:text-gray-600 p-1"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Customer and Package Info */}
-                <div className="space-y-4">
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <User className="h-5 w-5 text-blue-600" />
-                      Customer Details
-                    </h4>
-                    <div className="space-y-3">
-                      <div>
-                        <div className="text-sm text-gray-600">Full Name</div>
-                        <div className="font-medium">{selectedSubscription.customer?.userName || "N/A"}</div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
+              {/* Modal Content */}
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Customer</div>
+                    <div className="font-semibold text-gray-900">{selectedSubscription.customer?.userName || "N/A"}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Status</div>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedSubscription.displayStatus || selectedSubscription.status)} border`}>
+                      {selectedSubscription.displayStatus || selectedSubscription.status}
+                    </span>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Total Amount</div>
+                    <div className="font-semibold text-gray-900">{formatCurrency(selectedSubscription.totalAmount || selectedSubscription.packagePrice)}</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Customer and Package Info */}
+                  <div className="space-y-4">
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <User className="h-5 w-5 text-blue-600" />
+                        Customer Details
+                      </h4>
+                      <div className="space-y-3">
                         <div>
-                          <div className="text-sm text-gray-600">Phone</div>
-                          <div className="font-medium">{selectedSubscription.customer?.phoneNumber || "N/A"}</div>
+                          <div className="text-sm text-gray-600">Full Name</div>
+                          <div className="font-medium">{selectedSubscription.customer?.userName || "N/A"}</div>
                         </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <div className="text-sm text-gray-600">Phone</div>
+                            <div className="font-medium">{selectedSubscription.customer?.phoneNumber || "N/A"}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-gray-600">Email</div>
+                            <div className="font-medium">{selectedSubscription.customer?.email || "N/A"}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <Package className="h-5 w-5 text-purple-600" />
+                        Package Details
+                      </h4>
+                      <div className="space-y-3">
                         <div>
-                          <div className="text-sm text-gray-600">Email</div>
-                          <div className="font-medium">{selectedSubscription.customer?.email || "N/A"}</div>
+                          <div className="text-sm text-gray-600">Package Name</div>
+                          <div className="font-medium">{selectedSubscription.packageName || "N/A"}</div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <div className="text-sm text-gray-600">Billing Cycle</div>
+                            <div className="font-medium">{selectedSubscription.billingCycle || "N/A"}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-gray-600">Package Price</div>
+                            <div className="font-medium">{formatCurrency(selectedSubscription.packagePrice)}</div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <Package className="h-5 w-5 text-purple-600" />
-                      Package Details
-                    </h4>
-                    <div className="space-y-3">
-                      <div>
-                        <div className="text-sm text-gray-600">Package Name</div>
-                        <div className="font-medium">{selectedSubscription.packageName || "N/A"}</div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
+                  {/* Delivery and Payment Info */}
+                  <div className="space-y-4">
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <Truck className="h-5 w-5 text-orange-600" />
+                        Delivery Information
+                      </h4>
+                      <div className="space-y-3">
                         <div>
-                          <div className="text-sm text-gray-600">Billing Cycle</div>
-                          <div className="font-medium">{selectedSubscription.billingCycle || "N/A"}</div>
+                          <div className="text-sm text-gray-600">Delivery Address</div>
+                          <div className="font-medium">{selectedSubscription.deliveryAddress || "N/A"}</div>
                         </div>
-                        <div>
-                          <div className="text-sm text-gray-600">Package Price</div>
-                          <div className="font-medium">{formatCurrency(selectedSubscription.packagePrice)}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Delivery and Payment Info */}
-                <div className="space-y-4">
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <Truck className="h-5 w-5 text-orange-600" />
-                      Delivery Information
-                    </h4>
-                    <div className="space-y-3">
-                      <div>
-                        <div className="text-sm text-gray-600">Delivery Address</div>
-                        <div className="font-medium">{selectedSubscription.deliveryAddress || "N/A"}</div>
-                      </div>
-                      {selectedSubscription.landmark && (
-                        <div>
-                          <div className="text-sm text-gray-600">Landmark</div>
-                          <div className="font-medium">{selectedSubscription.landmark}</div>
-                        </div>
-                      )}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-sm text-gray-600">Delivery Time</div>
-                          <div className="font-medium">{selectedSubscription.preferredDeliveryTime || "Flexible"}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-gray-600">Days Remaining</div>
-                          <div className="font-medium text-blue-600">{getRemainingDays(selectedSubscription.endDate) || 0} days</div>
+                        {selectedSubscription.landmark && (
+                          <div>
+                            <div className="text-sm text-gray-600">Landmark</div>
+                            <div className="font-medium">{selectedSubscription.landmark}</div>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <div className="text-sm text-gray-600">Delivery Time</div>
+                            <div className="font-medium">{selectedSubscription.preferredDeliveryTime || "Flexible"}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-gray-600">Days Remaining</div>
+                            <div className="font-medium text-blue-600">{getRemainingDays(selectedSubscription.endDate) || 0} days</div>
+                          </div>
                         </div>
                       </div>
                     </div>

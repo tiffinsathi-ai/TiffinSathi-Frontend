@@ -54,11 +54,9 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
       setLoading(true);
       
       // Fetch vendor profile using the provided API
-      console.log("Fetching vendor data...");
       const response = await vendorApi.getVendorProfile();
       
       if (response.ok && response.data) {
-        console.log("Vendor data from API:", response.data);
         setVendor(response.data);
         
         if (response.data.profilePicture || response.data.businessImage) {
@@ -87,7 +85,6 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
           const parsedVendor = JSON.parse(storedVendor);
           setVendor(parsedVendor);
           setProfilePicture(parsedVendor.profilePicture || parsedVendor.businessImage || null);
-          console.log("Using stored vendor data:", parsedVendor);
         } catch (parseError) {
           console.error("Error parsing stored vendor data:", parseError);
           // Create default vendor
@@ -133,7 +130,6 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
 
     // Listen for vendor data updates from profile page
     const handleVendorDataUpdated = (event) => {
-      console.log("Vendor data updated event received:", event.detail);
       if (event.detail) {
         setVendor(event.detail);
         setProfilePicture(event.detail.profilePicture || event.detail.businessImage || null);
@@ -207,17 +203,8 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("vendor");
-    localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("businessName");
-    localStorage.removeItem("vendorId");
-    sessionStorage.removeItem("token");
-    sessionStorage.removeItem("vendor");
-    
-    setVendor(null);
-    setProfilePicture(null);
-    setIsDropdownOpen(false);
+    localStorage.clear();
+    sessionStorage.clear();
     window.location.href = "/login";
   };
 
@@ -317,7 +304,7 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
             <div className="relative" ref={notificationsRef}>
               <button
                 onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                className="relative p-2 rounded-lg transition-all duration-200"
+                className="relative p-2 rounded-lg transition-all duration-200 hover:bg-gray-100"
                 style={{ color: designTokens.colors.text.primary }}
                 onMouseEnter={() => setHoveredItem("bell")}
                 onMouseLeave={() => setHoveredItem(null)}
@@ -334,13 +321,13 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
               </button>
 
               {isNotificationsOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border z-50">
-                  <div className="p-4 border-b">
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <div className="p-4 border-b border-gray-200">
                     <div className="flex justify-between items-center">
                       <h3 className="font-bold text-gray-900">Notifications</h3>
                       <button 
                         onClick={clearAllNotifications} 
-                        className="text-sm text-blue-600 hover:text-blue-800"
+                        className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
                       >
                         Clear All
                       </button>
@@ -350,7 +337,7 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
                     {notifications.map(notification => (
                       <div 
                         key={notification.id} 
-                        className={`p-4 border-b hover:bg-gray-50 ${!notification.read ? 'bg-blue-50' : ''}`}
+                        className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors ${!notification.read ? 'bg-blue-50' : ''}`}
                       >
                         <div className="flex justify-between items-start">
                           <div>
@@ -360,7 +347,7 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
                           {!notification.read && (
                             <button 
                               onClick={() => markNotificationAsRead(notification.id)} 
-                              className="text-xs text-blue-600 hover:text-blue-800"
+                              className="text-xs text-blue-600 hover:text-blue-800 transition-colors"
                             >
                               Mark read
                             </button>
@@ -383,18 +370,17 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center space-x-2 px-2 sm:px-3 py-2 rounded-lg transition-all duration-200"
+                className="flex items-center space-x-2 px-2 sm:px-3 py-2 rounded-lg transition-all duration-200 hover:bg-gray-100"
                 style={{ color: designTokens.colors.text.primary }}
                 onMouseEnter={() => setHoveredItem("profile")}
                 onMouseLeave={() => setHoveredItem(null)}
               >
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center overflow-hidden border-2 border-white bg-gray-200">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center overflow-hidden border-2 border-white bg-gray-100">
                   <img
                     src={getProfilePictureSrc()}
                     alt="Profile"
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      console.log("Image load error, using default");
                       e.target.src = defaultUser;
                     }}
                   />
@@ -433,11 +419,10 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
                 >
                   {/* Vendor Info Section - Centered */}
                   <div
-                    className="px-4 py-4 border-b"
-                    style={{ borderColor: designTokens.colors.border.light }}
+                    className="px-4 py-4 border-b border-gray-200"
                   >
                     <div className="flex flex-col items-center text-center mb-2">
-                      <div className="w-14 h-14 rounded-full flex items-center justify-center overflow-hidden border-2 border-gray-200 bg-gray-200 mb-3">
+                      <div className="w-14 h-14 rounded-full flex items-center justify-center overflow-hidden border-2 border-gray-200 bg-gray-100 mb-3">
                         <img
                           src={getProfilePictureSrc()}
                           alt="Profile"
@@ -501,8 +486,7 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
                   </div>
 
                   <div
-                    className="border-t"
-                    style={{ borderColor: designTokens.colors.border.light }}
+                    className="border-t border-gray-200"
                   >
                     <button
                       onClick={handleLogout}

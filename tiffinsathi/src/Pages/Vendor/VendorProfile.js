@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import {
   User,
   Camera,
@@ -14,13 +14,26 @@ import {
   Briefcase,
   Building,
   Utensils,
-  Users,
+  Users as UsersIcon,
   FileText,
   Eye,
   EyeOff,
+  Loader2,
+  Shield,
+  Star,
+  Package,
+  DollarSign,
+  CheckCircle,
+  XCircle,
+  Globe,
+  Clock,
+  Hash,
+  MessageSquare,
+  AlertCircle
 } from "lucide-react";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { vendorApi } from "../../helpers/api";
 
 const VendorProfile = () => {
   const [vendor, setVendor] = useState(null);
@@ -29,6 +42,7 @@ const VendorProfile = () => {
   const [formData, setFormData] = useState({
     ownerName: "",
     businessName: "",
+    email: "",
     phone: "",
     businessAddress: "",
     alternatePhone: "",
@@ -49,9 +63,19 @@ const VendorProfile = () => {
   const [profileImage, setProfileImage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [stats, setStats] = useState({
+    activeMealSets: 0,
+    totalOrders: 0,
+    deliveryPartners: 0,
+    averageRating: 0,
+    totalRevenue: 0
+  });
+  
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchVendorProfile();
+    fetchVendorStats();
   }, []);
 
   const showToast = (message, type = "info") => {
@@ -82,77 +106,155 @@ const VendorProfile = () => {
 
   const fetchVendorProfile = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:8080/api/vendors/profile", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setVendor(response.data);
-      setFormData({
-        ownerName: response.data.ownerName || "",
-        businessName: response.data.businessName || "",
-        phone: response.data.phone || "",
-        businessAddress: response.data.businessAddress || "",
-        alternatePhone: response.data.alternatePhone || "",
-        cuisineType: response.data.cuisineType || "",
-        capacity: response.data.capacity || "",
-        description: response.data.description || "",
-      });
-      setLoading(false);
-      showToast("Profile loaded successfully", "success");
+      setLoading(true);
+      const response = await vendorApi.getVendorProfile();
+      
+      if (response.ok && response.data) {
+        const vendorData = response.data;
+        setVendor(vendorData);
+        setFormData({
+          ownerName: vendorData.ownerName || "",
+          businessName: vendorData.businessName || "",
+          email: vendorData.email || vendorData.businessEmail || "",
+          phone: vendorData.phone || "",
+          businessAddress: vendorData.businessAddress || vendorData.address || "",
+          alternatePhone: vendorData.alternatePhone || "",
+          cuisineType: vendorData.cuisineType || "",
+          capacity: vendorData.capacity || "",
+          description: vendorData.description || "",
+        });
+        
+        if (vendorData.profilePicture || vendorData.businessImage) {
+          setProfileImage(vendorData.profilePicture || vendorData.businessImage);
+        }
+        
+        // Dispatch event to update navbar with fresh data
+        const navbarData = {
+          businessName: vendorData.businessName,
+          ownerName: vendorData.ownerName,
+          businessEmail: vendorData.email || vendorData.businessEmail,
+          status: vendorData.status || "ACTIVE",
+          profilePicture: vendorData.profilePicture || vendorData.businessImage
+        };
+        localStorage.setItem("vendor", JSON.stringify(navbarData));
+        window.dispatchEvent(new CustomEvent('vendorDataUpdated', { detail: navbarData }));
+        
+        showToast("Profile loaded successfully", "success");
+      } else {
+        showToast("Failed to load profile", "error");
+        // Load from localStorage as fallback
+        const storedVendor = localStorage.getItem("vendor");
+        if (storedVendor) {
+          const parsedVendor = JSON.parse(storedVendor);
+          setVendor(parsedVendor);
+        }
+      }
     } catch (error) {
       console.error("Error fetching vendor profile:", error);
       showToast("Error loading profile", "error");
+      
+      // Fallback to localStorage
+      const storedVendor = localStorage.getItem("vendor");
+      if (storedVendor) {
+        try {
+          const parsedVendor = JSON.parse(storedVendor);
+          setVendor(parsedVendor);
+        } catch (e) {
+          console.error("Error parsing stored vendor:", e);
+        }
+      }
+    } finally {
       setLoading(false);
     }
   };
 
-  const convertToBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
-    });
+  const fetchVendorStats = async () => {
+    try {
+      const analyticsResponse = await vendorApi.getVendorAnalytics("30days");
+      if (analyticsResponse.ok && analyticsResponse.data) {
+        const analytics = analyticsResponse.data;
+        setStats({
+          activeMealSets: analytics.activeMealSets || 0,
+          totalOrders: analytics.totalOrders || 0,
+          deliveryPartners: analytics.deliveryPartners || 0,
+          averageRating: analytics.averageRating || 0,
+          totalRevenue: analytics.totalRevenue || 0
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching vendor stats:", error);
+    }
   };
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        showToast("Image size should be less than 5MB", "warning");
-        return;
-      }
-      try {
-        const base64 = await convertToBase64(file);
-        setProfileImage(base64);
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("Image size should be less than 5MB", "warning");
+      return;
+    }
+
+    try {
+      const response = await vendorApi.uploadLogo(file);
+      if (response.ok && response.data?.imageUrl) {
+        setProfileImage(response.data.imageUrl);
         showToast("Profile image updated", "success");
-      } catch (error) {
-        console.error("Error converting image:", error);
+      } else {
         showToast("Error uploading image", "error");
       }
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      showToast("Error uploading image", "error");
     }
   };
 
   const handleSaveProfile = async () => {
+    if (!formData.businessName.trim()) {
+      showToast("Business name is required", "warning");
+      return;
+    }
+
+    if (!formData.email.trim() || !/\S+@\S+\.\S+/.test(formData.email)) {
+      showToast("Valid email is required", "warning");
+      return;
+    }
+
     setSaving(true);
     try {
-      const token = localStorage.getItem("token");
       const updateData = {
         ...formData,
-        businessImage: profileImage || vendor.profilePicture,
+        businessImage: profileImage || vendor?.businessImage,
+        profilePicture: profileImage || vendor?.profilePicture
       };
 
-      const response = await axios.put(
-        "http://localhost:8080/api/vendors/profile",
-        updateData,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      setVendor(response.data);
-      setIsEditing(false);
-      showToast("Profile updated successfully!", "success");
+      const response = await vendorApi.updateVendorSettings(updateData);
+      
+      if (response.ok) {
+  const updatedVendor = response.data;
+  setVendor(updatedVendor);
+  setIsEditing(false);
+  
+  const newImage = updatedVendor.profilePicture || updatedVendor.businessImage;
+  if (newImage) {
+    setProfileImage(newImage);
+  }
+  
+  // Update navbar data
+  const navbarData = {
+    businessName: updatedVendor.businessName,
+    ownerName: updatedVendor.ownerName,
+    businessEmail: updatedVendor.email || updatedVendor.businessEmail,
+    status: updatedVendor.status || "ACTIVE",
+    profilePicture: newImage
+  };
+  localStorage.setItem("vendor", JSON.stringify(navbarData));
+  window.dispatchEvent(new CustomEvent('vendorDataUpdated', { detail: navbarData }));
+  
+  showToast("Profile updated successfully!", "success");
+} else {
+        showToast("Error updating profile", "error");
+      }
     } catch (error) {
       console.error("Error updating profile:", error);
       showToast("Error updating profile", "error");
@@ -173,33 +275,30 @@ const VendorProfile = () => {
     }
 
     try {
-      const token = localStorage.getItem("token");
-      await axios.put(
-        "http://localhost:8080/api/vendors/change-password",
-        passwordData,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const response = await vendorApi.updatePassword(
+        passwordData.currentPassword,
+        passwordData.newPassword
       );
-
-      showToast("Password changed successfully!", "success");
-      setIsChangePasswordOpen(false);
-      setPasswordData({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
-      setShowPasswords({
-        current: false,
-        new: false,
-        confirm: false,
-      });
+      
+      if (response.ok) {
+        showToast("Password changed successfully!", "success");
+        setIsChangePasswordOpen(false);
+        setPasswordData({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+        setShowPasswords({
+          current: false,
+          new: false,
+          confirm: false,
+        });
+      } else {
+        showToast(response.data?.message || "Error changing password", "error");
+      }
     } catch (error) {
       console.error("Error changing password:", error);
-      showToast(
-        error.response?.data?.message || "Error changing password",
-        "error"
-      );
+      showToast("Error changing password", "error");
     }
   };
 
@@ -210,366 +309,631 @@ const VendorProfile = () => {
     }));
   };
 
+  const handleCancelEdit = () => {
+    if (vendor) {
+      setFormData({
+        ownerName: vendor.ownerName || "",
+        businessName: vendor.businessName || "",
+        email: vendor.email || vendor.businessEmail || "",
+        phone: vendor.phone || "",
+        businessAddress: vendor.businessAddress || vendor.address || "",
+        alternatePhone: vendor.alternatePhone || "",
+        cuisineType: vendor.cuisineType || "",
+        capacity: vendor.capacity || "",
+        description: vendor.description || "",
+      });
+      setProfileImage(vendor.profilePicture || vendor.businessImage);
+    }
+    setIsEditing(false);
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <Loader2 className="animate-spin text-green-600 h-12 w-12 mx-auto mb-4" />
+          <span className="text-gray-600">Loading profile...</span>
+        </div>
       </div>
     );
   }
 
   if (!vendor) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-red-600">Error loading profile</div>
+      <div className="text-center py-12">
+        <User className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Profile Not Found</h3>
+        <p className="text-gray-600 mb-4">Unable to load vendor profile</p>
+        <button
+          onClick={fetchVendorProfile}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-4 md:py-8">
+    <div className="space-y-6">
       <ToastContainer />
       
-      <div className="max-w-6xl mx-auto px-3 sm:px-4">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 mb-4 sm:mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Vendor Profile</h1>
-              <p className="text-gray-600 text-sm sm:text-base">Manage your business information</p>
-            </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Vendor Profile</h2>
+          <p className="text-gray-600">Manage your business information and settings</p>
+        </div>
+        <div className="flex space-x-3">
+          <button
+            onClick={() => setIsChangePasswordOpen(true)}
+            className="flex items-center space-x-2 px-4 py-2 border border-yellow-300 text-yellow-700 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors"
+          >
+            <Lock size={16} />
+            <span>Change Password</span>
+          </button>
+          {isEditing ? (
+            <div className="flex space-x-2">
               <button
-                onClick={() => setIsChangePasswordOpen(true)}
-                className="flex items-center justify-center gap-2 bg-yellow-500 text-white py-2 px-3 sm:px-4 rounded-lg hover:bg-yellow-600 transition text-sm sm:text-base"
+                onClick={handleCancelEdit}
+                className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                <Lock className="w-4 h-4" />
-                <span>Change Password</span>
+                <X size={16} />
+                <span>Cancel</span>
               </button>
               <button
-                onClick={() => isEditing ? handleSaveProfile() : setIsEditing(true)}
+                onClick={handleSaveProfile}
                 disabled={saving}
-                className="flex items-center justify-center gap-2 bg-green-600 text-white py-2 px-3 sm:px-4 rounded-lg hover:bg-green-700 transition disabled:opacity-50 text-sm sm:text-base"
+                className="flex items-center space-x-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
               >
-                {isEditing ? (
-                  <>
-                    <Save className="w-4 h-4" />
-                    {saving ? "Saving..." : "Save"}
-                  </>
+                {saving ? (
+                  <Loader2 className="animate-spin h-5 w-5" />
                 ) : (
-                  <>
-                    <Edit3 className="w-4 h-4" />
-                    Edit Profile
-                  </>
+                  <Save size={16} />
                 )}
+                <span>{saving ? "Saving..." : "Save"}</span>
               </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="flex items-center space-x-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Edit3 size={16} />
+              <span>Edit Profile</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Professional Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 rounded-lg bg-blue-50 text-blue-600">
+              <Package className="h-6 w-6" />
+            </div>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-1">
+            {stats.activeMealSets}
+          </h3>
+          <p className="text-sm text-gray-600">Active Meal Sets</p>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 rounded-lg bg-green-50 text-green-600">
+              <Package className="h-6 w-6" />
+            </div>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-1">
+            {stats.totalOrders}
+          </h3>
+          <p className="text-sm text-gray-600">Total Orders</p>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 rounded-lg bg-purple-50 text-purple-600">
+              <UsersIcon className="h-6 w-6" />
+            </div>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-1">
+            {stats.deliveryPartners}
+          </h3>
+          <p className="text-sm text-gray-600">Delivery Partners</p>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 rounded-lg bg-orange-50 text-orange-600">
+              <Star className="h-6 w-6" />
+            </div>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-1">
+            {stats.averageRating.toFixed(1)}
+          </h3>
+          <p className="text-sm text-gray-600">Average Rating</p>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 rounded-lg bg-emerald-50 text-emerald-600">
+              <DollarSign className="h-6 w-6" />
+            </div>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-1">
+            Rs {stats.totalRevenue}
+          </h3>
+          <p className="text-sm text-gray-600">Total Revenue</p>
+        </div>
+      </div>
+
+      {/* Main Profile Section - Professional Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Profile Image & Status */}
+        <div className="lg:col-span-1 space-y-6">
+          {/* Profile Card */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="flex flex-col items-center">
+              <div className="relative mb-4">
+                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">
+                  {profileImage || vendor.profilePicture || vendor.businessImage ? (
+                    <img
+                      src={profileImage || vendor.profilePicture || vendor.businessImage}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(vendor.businessName || 'Vendor')}&background=16A34A&color=fff&size=256&bold=true`;
+                      }}
+                    />
+                  ) : (
+                    <Building className="w-16 h-16 text-gray-400" />
+                  )}
+                </div>
+                {isEditing && (
+                  <label className="absolute bottom-4 right-4 bg-green-600 text-white p-2 rounded-full cursor-pointer hover:bg-green-700 transition-colors shadow-lg border-2 border-white">
+                    <Camera className="w-4 h-4" />
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                    />
+                  </label>
+                )}
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 text-center mb-1">
+                {vendor.businessName}
+              </h2>
+              <p className="text-gray-600 text-sm mb-3">{vendor.ownerName}</p>
+              <div className={`px-4 py-1.5 rounded-full text-sm font-medium mb-4 ${
+                vendor.status === "APPROVED" || vendor.status === "ACTIVE"
+                  ? "bg-green-100 text-green-800 border border-green-200"
+                  : vendor.status === "PENDING"
+                  ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                  : "bg-red-100 text-red-800 border border-red-200"
+              }`}>
+                {vendor.status === "APPROVED" || vendor.status === "ACTIVE" 
+                  ? "✓ Approved Vendor" 
+                  : vendor.status}
+              </div>
+              
+              {/* Quick Info */}
+              <div className="w-full space-y-3 border-t border-gray-100 pt-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-50 rounded-lg">
+                    <Mail className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500">Email</p>
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {vendor.email || vendor.businessEmail || "Not set"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-50 rounded-lg">
+                    <Phone className="w-4 h-4 text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500">Phone</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {vendor.phone || "Not set"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-50 rounded-lg">
+                    <Calendar className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500">Joined</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {vendor.createdAt ? new Date(vendor.createdAt).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                      }) : "N/A"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Account Status Card */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Shield className="w-5 h-5 text-gray-600" />
+              Account Status
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${
+                    vendor.status === "APPROVED" || vendor.status === "ACTIVE"
+                      ? "bg-green-100"
+                      : "bg-yellow-100"
+                  }`}>
+                    {vendor.status === "APPROVED" || vendor.status === "ACTIVE" ? (
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-yellow-600" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Verification</p>
+                    <p className="text-sm text-gray-600">
+                      {vendor.status === "APPROVED" || vendor.status === "ACTIVE"
+                        ? "Account verified"
+                        : "Pending verification"}
+                    </p>
+                  </div>
+                </div>
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                  vendor.status === "APPROVED" || vendor.status === "ACTIVE"
+                    ? "bg-green-100 text-green-800"
+                    : "bg-yellow-100 text-yellow-800"
+                }`}>
+                  {vendor.status === "APPROVED" || vendor.status === "ACTIVE" ? "Complete" : "Pending"}
+                </span>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <FileText className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Documents</p>
+                    <p className="text-sm text-gray-600">
+                      {vendor.fssaiLicenseUrl && vendor.panCardUrl ? "All uploaded" : "Incomplete"}
+                    </p>
+                  </div>
+                </div>
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                  vendor.fssaiLicenseUrl && vendor.panCardUrl
+                    ? "bg-green-100 text-green-800"
+                    : "bg-yellow-100 text-yellow-800"
+                }`}>
+                  {vendor.fssaiLicenseUrl && vendor.panCardUrl ? "2/2" : "0/2"}
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
-          {/* Profile Image Section */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
-              <div className="flex flex-col items-center">
-                <div className="relative mb-4">
-                  <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                    {vendor.profilePicture || profileImage ? (
-                      <img
-                        src={profileImage || vendor.profilePicture}
-                        alt="Profile"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <Building className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400" />
-                    )}
-                  </div>
-                  {isEditing && (
-                    <label className="absolute bottom-0 right-0 bg-green-600 text-white p-1.5 sm:p-2 rounded-full cursor-pointer hover:bg-green-700 transition">
-                      <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                      />
-                    </label>
-                  )}
+        {/* Right Column - Business Information */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Contact Information Card */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-50 rounded-lg">
+                  <User className="w-5 h-5 text-blue-600" />
                 </div>
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 text-center">
-                  {vendor.businessName}
-                </h2>
-                <p className="text-gray-600 text-sm">Vendor</p>
-                <p
-                  className={`mt-2 px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
-                    vendor.status === "APPROVED"
-                      ? "bg-green-100 text-green-800"
-                      : vendor.status === "PENDING"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-red-100 text-red-800"
-                  }`}
-                >
-                  {vendor.status}
-                </p>
-              </div>
-
-              {/* Additional Info */}
-              <div className="mt-6 space-y-2 sm:space-y-3">
-                <div className="flex items-center gap-2 text-gray-600">
-                  <User className="w-4 h-4" />
-                  <span className="text-xs sm:text-sm truncate">{vendor.ownerName}</span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Mail className="w-4 h-4" />
-                  <span className="text-xs sm:text-sm truncate">{vendor.businessEmail}</span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Calendar className="w-4 h-4" />
-                  <span className="text-xs sm:text-sm">
-                    Joined {new Date(vendor.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Business Stats */}
-            <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 mt-4 sm:mt-6">
-              <h4 className="font-semibold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">Business Stats</h4>
-              <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Active Meal Sets:</span>
-                  <span className="font-medium">0</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Orders:</span>
-                  <span className="font-medium">0</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Delivery Partners:</span>
-                  <span className="font-medium">0</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Profile Information */}
-          <div className="lg:col-span-3">
-            <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">
-                Business Information
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                {/* Owner Name */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Owner Name
+                  <h3 className="text-lg font-semibold text-gray-900">Contact Information</h3>
+                  <p className="text-sm text-gray-600">Primary contact details</p>
+                </div>
+              </div>
+              {isEditing && (
+                <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded">
+                  Editing
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Owner Information */}
+              <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <User className="w-4 h-4 text-gray-500" />
+                  <h4 className="text-sm font-medium text-gray-700">Owner Information</h4>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Full Name
                   </label>
                   {isEditing ? (
                     <input
                       type="text"
                       value={formData.ownerName}
-                      onChange={(e) =>
-                        setFormData({ ...formData, ownerName: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
+                      onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      placeholder="Enter owner's name"
                     />
                   ) : (
-                    <div className="flex items-center gap-2 text-gray-900 p-2 text-sm sm:text-base">
-                      <User className="w-4 h-4" />
-                      {vendor.ownerName}
+                    <div className="text-gray-900 font-medium">
+                      {vendor.ownerName || "Not set"}
                     </div>
                   )}
                 </div>
-
-                {/* Business Name */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Business Name
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Primary Email
                   </label>
                   {isEditing ? (
                     <input
-                      type="text"
-                      value={formData.businessName}
-                      onChange={(e) =>
-                        setFormData({ ...formData, businessName: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      placeholder="business@example.com"
                     />
                   ) : (
-                    <div className="flex items-center gap-2 text-gray-900 p-2 text-sm sm:text-base">
-                      <Briefcase className="w-4 h-4" />
-                      {vendor.businessName}
+                    <div className="text-gray-900 font-medium">
+                      {vendor.email || vendor.businessEmail || "Not set"}
                     </div>
                   )}
                 </div>
+              </div>
 
-                {/* Phone */}
+              {/* Phone Contacts */}
+              <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Phone className="w-4 h-4 text-gray-500" />
+                  <h4 className="text-sm font-medium text-gray-700">Phone Contacts</h4>
+                </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Phone Number
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Primary Phone
                   </label>
                   {isEditing ? (
                     <input
                       type="tel"
                       value={formData.phone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, phone: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      placeholder="98XXXXXXXX"
                     />
                   ) : (
-                    <div className="flex items-center gap-2 text-gray-900 p-2 text-sm sm:text-base">
-                      <Phone className="w-4 h-4" />
-                      {vendor.phone}
+                    <div className="text-gray-900 font-medium">
+                      {vendor.phone || "Not set"}
                     </div>
                   )}
                 </div>
-
-                {/* Alternate Phone */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
                     Alternate Phone
                   </label>
                   {isEditing ? (
                     <input
                       type="tel"
                       value={formData.alternatePhone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, alternatePhone: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
+                      onChange={(e) => setFormData({ ...formData, alternatePhone: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      placeholder="Optional"
                     />
                   ) : (
-                    <div className="flex items-center gap-2 text-gray-900 p-2 text-sm sm:text-base">
-                      <Phone className="w-4 h-4" />
+                    <div className="text-gray-900">
                       {vendor.alternatePhone || "Not provided"}
                     </div>
                   )}
                 </div>
+              </div>
 
-                {/* Cuisine Type */}
+              {/* Business Address - Full Width */}
+              <div className="md:col-span-2 space-y-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <MapPin className="w-4 h-4 text-gray-500" />
+                  <h4 className="text-sm font-medium text-gray-700">Business Address</h4>
+                </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {isEditing ? (
+                    <textarea
+                      value={formData.businessAddress}
+                      onChange={(e) => setFormData({ ...formData, businessAddress: e.target.value })}
+                      rows="3"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      placeholder="Enter complete business address"
+                    />
+                  ) : (
+                    <div className="text-gray-900 whitespace-pre-line">
+                      {vendor.businessAddress || vendor.address || "Not provided"}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Business Details Card */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-50 rounded-lg">
+                  <Briefcase className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Business Details</h3>
+                  <p className="text-sm text-gray-600">Service and operational information</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Business Identity */}
+              <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Building className="w-4 h-4 text-gray-500" />
+                  <h4 className="text-sm font-medium text-gray-700">Business Identity</h4>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Business Name
+                  </label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={formData.businessName}
+                      onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      placeholder="Your business name"
+                    />
+                  ) : (
+                    <div className="text-gray-900 font-medium">
+                      {vendor.businessName || "Not set"}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
                     Cuisine Type
                   </label>
                   {isEditing ? (
                     <input
                       type="text"
                       value={formData.cuisineType}
-                      onChange={(e) =>
-                        setFormData({ ...formData, cuisineType: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
+                      onChange={(e) => setFormData({ ...formData, cuisineType: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      placeholder="e.g., North Indian, Chinese"
                     />
                   ) : (
-                    <div className="flex items-center gap-2 text-gray-900 p-2 text-sm sm:text-base">
-                      <Utensils className="w-4 h-4" />
+                    <div className="text-gray-900">
                       {vendor.cuisineType || "Not specified"}
                     </div>
                   )}
                 </div>
+              </div>
 
-                {/* Capacity */}
+              {/* Operational Details */}
+              <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="w-4 h-4 text-gray-500" />
+                  <h4 className="text-sm font-medium text-gray-700">Operational Details</h4>
+                </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
                     Daily Capacity
                   </label>
                   {isEditing ? (
                     <input
                       type="number"
                       value={formData.capacity}
-                      onChange={(e) =>
-                        setFormData({ ...formData, capacity: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
+                      onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      placeholder="Maximum orders per day"
                     />
                   ) : (
-                    <div className="flex items-center gap-2 text-gray-900 p-2 text-sm sm:text-base">
-                      <Users className="w-4 h-4" />
-                      {vendor.capacity || "Not specified"}
+                    <div className="text-gray-900 font-medium">
+                      {vendor.capacity || "Not specified"} orders/day
                     </div>
                   )}
                 </div>
-
-                {/* Business Address */}
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Business Address
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Business Hours
                   </label>
-                  {isEditing ? (
-                    <textarea
-                      value={formData.businessAddress}
-                      onChange={(e) =>
-                        setFormData({ ...formData, businessAddress: e.target.value })
-                      }
-                      rows="3"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
-                    />
-                  ) : (
-                    <div className="flex items-start gap-2 text-gray-900 p-2 text-sm sm:text-base">
-                      <MapPin className="w-4 h-4 mt-1 flex-shrink-0" />
-                      <span>{vendor.businessAddress || "Not provided"}</span>
-                    </div>
-                  )}
+                  <div className="text-gray-900">
+                    9:00 AM - 9:00 PM
+                  </div>
                 </div>
+              </div>
 
-                {/* Description */}
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Business Description
-                  </label>
+              {/* Business Description - Full Width */}
+              <div className="md:col-span-2 space-y-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageSquare className="w-4 h-4 text-gray-500" />
+                  <h4 className="text-sm font-medium text-gray-700">Business Description</h4>
+                </div>
+                <div>
                   {isEditing ? (
                     <textarea
                       value={formData.description}
-                      onChange={(e) =>
-                        setFormData({ ...formData, description: e.target.value })
-                      }
-                      rows="3"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      rows="4"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      placeholder="Describe your business, specialties, and what makes you unique..."
                     />
                   ) : (
-                    <div className="text-gray-900 p-2 text-sm sm:text-base">
-                      {vendor.description || "No description provided"}
+                    <div className="text-gray-900 whitespace-pre-line">
+                      {vendor.description || "No description provided. Add a description to attract more customers."}
                     </div>
                   )}
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Business Documents Section */}
-            <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 mt-4 sm:mt-6">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Business Documents</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="font-medium text-sm">FSSAI License</p>
-                      <p className="text-xs text-gray-500">
-                        {vendor.fssaiLicenseUrl ? "Uploaded" : "Not uploaded"}
-                      </p>
-                    </div>
-                  </div>
-                  {vendor.fssaiLicenseUrl && (
-                    <span className="text-green-600 text-sm">Verified</span>
-                  )}
+          {/* Business Documents Card */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-50 rounded-lg">
+                  <FileText className="w-5 h-5 text-purple-600" />
                 </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Business Documents</h3>
+                  <p className="text-sm text-gray-600">Verification and compliance documents</p>
+                </div>
+              </div>
+            </div>
 
-                <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="font-medium text-sm">PAN Card</p>
-                      <p className="text-xs text-gray-500">
-                        {vendor.panCardUrl ? "Uploaded" : "Not uploaded"}
-                      </p>
-                    </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-50 rounded-lg">
+                    <FileText className="w-4 h-4 text-blue-600" />
                   </div>
-                  {vendor.panCardUrl && (
-                    <span className="text-green-600 text-sm">Verified</span>
-                  )}
+                  <div>
+                    <p className="font-medium text-gray-900">FSSAI License</p>
+                    <p className="text-xs text-gray-500">
+                      Food safety certification
+                    </p>
+                  </div>
                 </div>
+                {vendor.fssaiLicenseUrl ? (
+                  <span className="text-green-600 text-sm font-medium flex items-center gap-1">
+                    <CheckCircle className="w-4 h-4" />
+                    Verified
+                  </span>
+                ) : (
+                  <span className="text-yellow-600 text-sm font-medium">Required</span>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-50 rounded-lg">
+                    <FileText className="w-4 h-4 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">PAN Card</p>
+                    <p className="text-xs text-gray-500">
+                      Tax identification
+                    </p>
+                  </div>
+                </div>
+                {vendor.panCardUrl ? (
+                  <span className="text-green-600 text-sm font-medium flex items-center gap-1">
+                    <CheckCircle className="w-4 h-4" />
+                    Verified
+                  </span>
+                ) : (
+                  <span className="text-yellow-600 text-sm font-medium">Required</span>
+                )}
               </div>
             </div>
           </div>
@@ -579,7 +943,7 @@ const VendorProfile = () => {
       {/* Change Password Modal */}
       {isChangePasswordOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Change Password</h3>
               <button
@@ -605,7 +969,7 @@ const VendorProfile = () => {
                         currentPassword: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 pr-10"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent pr-10"
                     placeholder="Enter current password"
                   />
                   <button
@@ -636,7 +1000,7 @@ const VendorProfile = () => {
                         newPassword: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 pr-10"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent pr-10"
                     placeholder="Enter new password"
                   />
                   <button
@@ -667,7 +1031,7 @@ const VendorProfile = () => {
                         confirmPassword: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 pr-10"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent pr-10"
                     placeholder="Confirm new password"
                   />
                   <button
@@ -685,16 +1049,16 @@ const VendorProfile = () => {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-6">
+            <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setIsChangePasswordOpen(false)}
-                className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition text-sm sm:text-base"
+                className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleChangePassword}
-                className="flex-1 py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm sm:text-base"
+                className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
                 Change Password
               </button>
