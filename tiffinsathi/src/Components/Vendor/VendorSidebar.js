@@ -5,12 +5,9 @@ import {
   LayoutDashboard,
   UtensilsCrossed,
   Package,
-  BarChart3,
   CreditCard,
   Users,
   Truck,
-  Star,
-  Settings,
   Calendar,
 } from "lucide-react";
 import { vendorApi } from "../../helpers/api";
@@ -45,13 +42,15 @@ const VendorSidebar = ({ isOpen, onItemClick }) => {
       setLoading(true);
       const today = new Date().toISOString().split("T")[0];
       const response = await vendorApi.getVendorOrders(today);
-      
+
       if (response.ok && Array.isArray(response.data)) {
         // Count orders that need attention (PENDING, CONFIRMED, PREPARING)
-        const pendingCount = response.data.filter(order => 
-          ["PENDING", "CONFIRMED", "PREPARING", "READY_FOR_DELIVERY"].includes(order.status)
+        const pendingCount = response.data.filter((order) =>
+          ["PENDING", "CONFIRMED", "PREPARING", "READY_FOR_DELIVERY"].includes(
+            order.status,
+          ),
         ).length;
-        
+
         setPendingOrdersCount(pendingCount);
       }
     } catch (error) {
@@ -65,10 +64,10 @@ const VendorSidebar = ({ isOpen, onItemClick }) => {
   useEffect(() => {
     if (isOpen) {
       fetchPendingOrdersCount();
-      
+
       // Set up interval to refresh every 30 seconds
       const intervalId = setInterval(fetchPendingOrdersCount, 10000);
-      
+
       // Clean up interval on unmount
       return () => clearInterval(intervalId);
     }
@@ -82,22 +81,49 @@ const VendorSidebar = ({ isOpen, onItemClick }) => {
   }, [location.pathname, fetchPendingOrdersCount]);
 
   const menuItems = [
-    { id: "dashboard", icon: LayoutDashboard, label: "Dashboard", path: "/vendor/dashboard" },
-    { id: "tiffins", icon: UtensilsCrossed, label: "My Tiffins", path: "/vendor/tiffins" },
-    { 
-      id: "orders", 
-      icon: Package, 
-      label: "Orders", 
-      path: "/vendor/orders",
-      showBadge: true 
+    {
+      id: "dashboard",
+      icon: LayoutDashboard,
+      label: "Dashboard",
+      path: "/vendor/dashboard",
     },
-    { id: "subscriptions", icon: Calendar, label: "Subscriptions", path: "/vendor/subscriptions" },
-    { id: "earnings", icon: CreditCard, label: "Earnings", path: "/vendor/earnings" },
-    { id: "analytics", icon: BarChart3, label: "Analytics", path: "/vendor/analytics" },
-    { id: "customers", icon: Users, label: "Customers", path: "/vendor/customers" },
-    { id: "delivery", icon: Truck, label: "Delivery", path: "/vendor/delivery-partners" },
-    { id: "reviews", icon: Star, label: "Reviews", path: "/vendor/reviews" },
-    { id: "settings", icon: Settings, label: "Settings", path: "/vendor/settings" },
+    {
+      id: "tiffins",
+      icon: UtensilsCrossed,
+      label: "My Tiffins",
+      path: "/vendor/tiffins",
+    },
+    {
+      id: "orders",
+      icon: Package,
+      label: "Orders",
+      path: "/vendor/orders",
+      showBadge: true,
+    },
+    {
+      id: "subscriptions",
+      icon: Calendar,
+      label: "Subscriptions",
+      path: "/vendor/subscriptions",
+    },
+    {
+      id: "earnings",
+      icon: CreditCard,
+      label: "Earnings",
+      path: "/vendor/earnings",
+    },
+    {
+      id: "customers",
+      icon: Users,
+      label: "Customers",
+      path: "/vendor/customers",
+    },
+    {
+      id: "delivery",
+      icon: Truck,
+      label: "Delivery Partners",
+      path: "/vendor/delivery-partners",
+    },
   ];
 
   if (!isOpen) return null;
@@ -108,8 +134,10 @@ const VendorSidebar = ({ isOpen, onItemClick }) => {
       <nav className="flex-1 p-4 overflow-y-auto custom-scrollbar">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.path || 
-                          (item.path !== "/vendor/dashboard" && location.pathname.startsWith(item.path));
+          const isActive =
+            location.pathname === item.path ||
+            (item.path !== "/vendor/dashboard" &&
+              location.pathname.startsWith(item.path));
           const isHovered = hoveredItem === item.id;
           const showBadge = item.showBadge && pendingOrdersCount > 0;
 
@@ -131,8 +159,8 @@ const VendorSidebar = ({ isOpen, onItemClick }) => {
                 backgroundColor: isActive
                   ? designTokens.colors.secondary.main
                   : isHovered
-                  ? "#F3F4F6"
-                  : "transparent",
+                    ? "#F3F4F6"
+                    : "transparent",
                 color: isActive
                   ? designTokens.colors.text.inverse
                   : designTokens.colors.text.primary,

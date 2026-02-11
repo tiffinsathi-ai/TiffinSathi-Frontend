@@ -6,7 +6,6 @@ import {
   Filter,
   Package,
   User,
-  DollarSign,
   Clock,
   MapPin,
   AlertCircle,
@@ -226,10 +225,11 @@ const Subscriptions = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-NP', {
-      style: 'currency',
-      currency: 'NPR'
+    const formatted = new Intl.NumberFormat('en-NP', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount || 0);
+    return `Rs. ${formatted}`;
   };
 
   const getRemainingDays = (endDate) => {
@@ -416,14 +416,11 @@ const Subscriptions = () => {
                           </div>
                         </div>
                         
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-gray-400" />
-                          <div>
-                            <p className="font-medium text-gray-900">{formatCurrency(subscription.totalAmount || subscription.packagePrice)}</p>
-                            <p className="text-sm text-gray-500">
-                              {formatDate(subscription.startDate)} - {formatDate(subscription.endDate)}
-                            </p>
-                          </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{formatCurrency(subscription.totalAmount || subscription.packagePrice)}</p>
+                          <p className="text-sm text-gray-500">
+                            {formatDate(subscription.startDate)} - {formatDate(subscription.endDate)}
+                          </p>
                         </div>
                       </div>
                     </div>

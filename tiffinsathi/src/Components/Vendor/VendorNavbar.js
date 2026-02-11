@@ -257,15 +257,18 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
                   alt="Tiffin Sathi Logo"
                   className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
                 />
-                <h1
-                  className="text-xl sm:text-2xl font-bold hidden sm:block"
-                  style={{
-                    fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
-                    color: designTokens.colors.secondary.main,
-                  }}
-                >
-                  Tiffin Sathi
-                </h1>
+                <div className="hidden sm:block">
+                  <h1
+                    className="text-xl sm:text-2xl font-bold leading-tight"
+                    style={{
+                      fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
+                      color: designTokens.colors.secondary.main,
+                    }}
+                  >
+                    Tiffin Sathi
+                  </h1>
+                  <p className="text-xs text-gray-500 font-medium">Vendor Portal</p>
+                </div>
               </div>
             </div>
             <div className="animate-pulse bg-gray-200 h-8 w-32 rounded hidden sm:block"></div>
@@ -299,15 +302,18 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
                 alt="Tiffin Sathi Logo"
                 className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
               />
-              <h1
-                className="text-xl sm:text-2xl font-bold hidden sm:block"
-                style={{
-                  fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
-                  color: designTokens.colors.secondary.main,
-                }}
-              >
-                Tiffin Sathi
-              </h1>
+              <div className="hidden sm:block">
+                <h1
+                  className="text-xl sm:text-2xl font-bold leading-tight"
+                  style={{
+                    fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
+                    color: designTokens.colors.secondary.main,
+                  }}
+                >
+                  Tiffin Sathi
+                </h1>
+                <p className="text-xs text-gray-500 font-medium">Vendor Portal</p>
+              </div>
             </div>
           </div>
 

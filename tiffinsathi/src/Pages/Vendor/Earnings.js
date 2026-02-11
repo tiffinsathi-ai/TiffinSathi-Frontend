@@ -453,10 +453,11 @@ const Earnings = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-NP', {
-      style: 'currency',
-      currency: 'NPR'
+    const formatted = new Intl.NumberFormat('en-NP', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount || 0);
+    return `Rs. ${formatted}`;
   };
 
   const formatDate = (dateString) => {

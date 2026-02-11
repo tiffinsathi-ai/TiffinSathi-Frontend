@@ -1,7 +1,13 @@
 // src/App.js
 import React from "react";
 import "./App.css";
-import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useSearchParams,
+} from "react-router-dom";
 import ScrollToTop from "./Components/ScrollToTop";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -117,18 +123,31 @@ function App() {
                 element={<ScheduleCustomization />}
               />
               <Route path="/subscription/edit" element={<EditSchedule />} />
-              <Route path="/subscription/edit/checkout" element={<EditCheckout />} />
-              <Route path="/subscription/edit/failure" element={<SubscriptionEditFailureRedirect />} />
-              <Route path="/subscription/edit/success" element={<EditSuccess />} />
+              <Route
+                path="/subscription/edit/checkout"
+                element={<EditCheckout />}
+              />
+              <Route
+                path="/subscription/edit/failure"
+                element={<SubscriptionEditFailureRedirect />}
+              />
+              <Route
+                path="/subscription/edit/success"
+                element={<EditSuccess />}
+              />
             </Route>
 
             {/* Vendor Routes - TEMPORARILY NO AUTH */}
             <Route path="/vendor/*" element={<VendorLayout />}>
               <Route index element={<Dashboard />} />
+              <Route path="dashboard" element={<Dashboard />} />
               <Route path="tiffins" element={<Tiffins />} />
               <Route path="orders" element={<Orders />} />
               <Route path="customers" element={<Customers />} />
-              <Route path="delivery-partners" element={<DeliveryPartnersPage />} />
+              <Route
+                path="delivery-partners"
+                element={<DeliveryPartnersPage />}
+              />
               <Route path="reviews" element={<Reviews />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="earnings" element={<Earnings />} />

@@ -38,13 +38,25 @@ const createApi = () => {
   };
 
   const handleResponse = async (response) => {
+    const text = await response.text();
     if (!response.ok) {
-      const error = await response
-        .json()
-        .catch(() => ({ message: "Something went wrong" }));
+      const error = text
+        ? (() => {
+            try {
+              return JSON.parse(text);
+            } catch {
+              return { message: text || "Something went wrong" };
+            }
+          })()
+        : { message: "Something went wrong" };
       throw new Error(error.message || "Request failed");
     }
-    return response.json();
+    if (!text || !text.trim()) return null;
+    try {
+      return JSON.parse(text);
+    } catch {
+      return null;
+    }
   };
 
   return {

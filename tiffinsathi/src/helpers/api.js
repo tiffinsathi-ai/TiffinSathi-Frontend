@@ -1,4 +1,4 @@
-// src/helpers/api.js
+// src/helpers/api.js - COMPLETE FIXED VERSION
 const BASE_URL = process.env.REACT_APP_API_BASE || "http://localhost:8080/api";
 
 function getAuthHeader() {
@@ -20,12 +20,15 @@ async function safeJson(res) {
 export const authStorage = {
   saveAuth: (data) => {
     if (!data) return;
-    const token = data.token || data.accessToken || data.jwt || data.authToken || null;
+    const token =
+      data.token || data.accessToken || data.jwt || data.authToken || null;
     if (token) localStorage.setItem("token", token);
-    if (data.role) localStorage.setItem("role", (data.role || "").toLowerCase());
+    if (data.role)
+      localStorage.setItem("role", (data.role || "").toLowerCase());
     if (data.email) localStorage.setItem("email", data.email);
     if (data.name) localStorage.setItem("name", data.name);
-    if (data.businessName) localStorage.setItem("businessName", data.businessName);
+    if (data.businessName)
+      localStorage.setItem("businessName", data.businessName);
     if (data.vendorId) localStorage.setItem("vendorId", data.vendorId);
   },
 
@@ -44,7 +47,7 @@ export const authStorage = {
     email: localStorage.getItem("email"),
     name: localStorage.getItem("name"),
     businessName: localStorage.getItem("businessName"),
-    vendorId: localStorage.getItem("vendorId")
+    vendorId: localStorage.getItem("vendorId"),
   }),
 };
 
@@ -53,11 +56,120 @@ export const authStorage = {
 // ============================
 export const vendorApi = {
   // -----------------------
+  // DELIVERY PARTNERS - COMPLETE
+  // -----------------------
+  getDeliveryPartners: async () => {
+    try {
+      const res = await fetch(
+        `${BASE_URL}/delivery-partners/vendor/my-partners`,
+        {
+          headers: { "Content-Type": "application/json", ...getAuthHeader() },
+        },
+      );
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("getDeliveryPartners error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  createDeliveryPartner: async (partnerData) => {
+    try {
+      const res = await fetch(`${BASE_URL}/delivery-partners`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+        body: JSON.stringify(partnerData),
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("createDeliveryPartner error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  updateDeliveryPartner: async (partnerId, partnerData) => {
+    try {
+      const res = await fetch(
+        `${BASE_URL}/delivery-partners/vendor/${partnerId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...getAuthHeader() },
+          body: JSON.stringify(partnerData),
+        },
+      );
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("updateDeliveryPartner error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  deleteDeliveryPartner: async (partnerId) => {
+    try {
+      const res = await fetch(
+        `${BASE_URL}/delivery-partners/vendor/${partnerId}`,
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json", ...getAuthHeader() },
+        },
+      );
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("deleteDeliveryPartner error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  updateDeliveryPartnerStatus: async (partnerId) => {
+    try {
+      const res = await fetch(
+        `${BASE_URL}/delivery-partners/vendor/${partnerId}/toggle-availability`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...getAuthHeader() },
+        },
+      );
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("updateDeliveryPartnerStatus error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  resetDeliveryPartnerPassword: async (partnerId) => {
+    try {
+      const res = await fetch(
+        `${BASE_URL}/delivery-partners/vendor/${partnerId}/reset-password`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getAuthHeader() },
+        },
+      );
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("resetDeliveryPartnerPassword error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  getDeliveryStats: async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/delivery-partners/vendor/stats`, {
+        headers: { "Content-Type": "application/json", ...getAuthHeader() },
+      });
+      return { ok: res.ok, data: await safeJson(res), status: res.status };
+    } catch (e) {
+      console.error("getDeliveryStats error", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  // -----------------------
   // ORDERS
   // -----------------------
   getVendorOrders: async (date) => {
     try {
-      const url = `${BASE_URL}/orders/vendor${date ? `?date=${date}` : ''}`;
+      const url = `${BASE_URL}/orders/vendor${date ? `?date=${date}` : ""}`;
       const res = await fetch(url, {
         headers: { "Content-Type": "application/json", ...getAuthHeader() },
       });
@@ -99,7 +211,7 @@ export const vendorApi = {
       if (deliveryPersonId) {
         url += `&deliveryPersonId=${deliveryPersonId}`;
       }
-      
+
       const res = await fetch(url, {
         method: "PUT",
         headers: { "Content-Type": "application/json", ...getAuthHeader() },
@@ -132,7 +244,7 @@ export const vendorApi = {
       if (search) {
         url = `${BASE_URL}/vendors/customers/search?search=${encodeURIComponent(search)}`;
       }
-      
+
       const res = await fetch(url, {
         headers: { "Content-Type": "application/json", ...getAuthHeader() },
       });
@@ -164,7 +276,7 @@ export const vendorApi = {
       if (filter !== "ALL") {
         url = `${BASE_URL}/subscriptions/vendor/status/${filter.toLowerCase()}`;
       }
-      
+
       const res = await fetch(url, {
         headers: { "Content-Type": "application/json", ...getAuthHeader() },
       });
@@ -174,7 +286,7 @@ export const vendorApi = {
       return { ok: false, error: e };
     }
   },
-  
+
   getSubscriptionDetails: async (subscriptionId) => {
     try {
       const res = await fetch(`${BASE_URL}/subscriptions/${subscriptionId}`, {
@@ -191,12 +303,15 @@ export const vendorApi = {
     try {
       const body = { status };
       if (reason) body.reason = reason;
-      
-      const res = await fetch(`${BASE_URL}/subscriptions/${subscriptionId}/status`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...getAuthHeader() },
-        body: JSON.stringify(body),
-      });
+
+      const res = await fetch(
+        `${BASE_URL}/subscriptions/${subscriptionId}/status`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...getAuthHeader() },
+          body: JSON.stringify(body),
+        },
+      );
       return { ok: res.ok, data: await safeJson(res), status: res.status };
     } catch (e) {
       console.error("updateSubscriptionStatus error", e);
@@ -208,12 +323,15 @@ export const vendorApi = {
     try {
       const body = { status: "PAUSED" };
       if (pauseReason) body.reason = pauseReason;
-      
-      const res = await fetch(`${BASE_URL}/subscriptions/${subscriptionId}/status`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...getAuthHeader() },
-        body: JSON.stringify(body),
-      });
+
+      const res = await fetch(
+        `${BASE_URL}/subscriptions/${subscriptionId}/status`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...getAuthHeader() },
+          body: JSON.stringify(body),
+        },
+      );
       return { ok: res.ok, data: await safeJson(res), status: res.status };
     } catch (e) {
       console.error("pauseSubscription error", e);
@@ -223,11 +341,14 @@ export const vendorApi = {
 
   resumeSubscription: async (subscriptionId) => {
     try {
-      const res = await fetch(`${BASE_URL}/subscriptions/${subscriptionId}/status`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...getAuthHeader() },
-        body: JSON.stringify({ status: "ACTIVE" }),
-      });
+      const res = await fetch(
+        `${BASE_URL}/subscriptions/${subscriptionId}/status`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...getAuthHeader() },
+          body: JSON.stringify({ status: "ACTIVE" }),
+        },
+      );
       return { ok: res.ok, data: await safeJson(res), status: res.status };
     } catch (e) {
       console.error("resumeSubscription error", e);
@@ -239,30 +360,18 @@ export const vendorApi = {
     try {
       const body = { status: "CANCELLED" };
       if (cancelReason) body.reason = cancelReason;
-      
-      const res = await fetch(`${BASE_URL}/subscriptions/${subscriptionId}/status`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...getAuthHeader() },
-        body: JSON.stringify(body),
-      });
+
+      const res = await fetch(
+        `${BASE_URL}/subscriptions/${subscriptionId}/status`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...getAuthHeader() },
+          body: JSON.stringify(body),
+        },
+      );
       return { ok: res.ok, data: await safeJson(res), status: res.status };
     } catch (e) {
       console.error("cancelSubscription error", e);
-      return { ok: false, error: e };
-    }
-  },
-
-  // -----------------------
-  // DELIVERY PARTNERS
-  // -----------------------
-  getDeliveryPartners: async () => {
-    try {
-      const res = await fetch(`${BASE_URL}/delivery-partners/vendor/my-partners`, {
-        headers: { "Content-Type": "application/json", ...getAuthHeader() },
-      });
-      return { ok: res.ok, data: await safeJson(res), status: res.status };
-    } catch (e) {
-      console.error("getDeliveryPartners error", e);
       return { ok: false, error: e };
     }
   },
@@ -283,7 +392,7 @@ export const vendorApi = {
   },
 
   // -----------------------
-  // VENDOR PAYMENTS & EARNINGS (Enhanced)
+  // VENDOR PAYMENTS & EARNINGS
   // -----------------------
   getVendorPayments: async () => {
     try {
@@ -300,16 +409,18 @@ export const vendorApi = {
 
   getVendorEarnings: async (timeRange = "30days") => {
     try {
-      const res = await fetch(`${BASE_URL}/vendors/earnings?period=${timeRange}`, {
-        headers: { "Content-Type": "application/json", ...getAuthHeader() },
-      });
+      const res = await fetch(
+        `${BASE_URL}/vendors/earnings?period=${timeRange}`,
+        {
+          headers: { "Content-Type": "application/json", ...getAuthHeader() },
+        },
+      );
       const data = await safeJson(res);
-      
+
       if (res.ok && data) {
         return { ok: true, data: data.payments || data, status: res.status };
       }
-      
-      // Fallback to orders and subscriptions if earnings endpoint fails
+
       return await vendorApi.getVendorEarningsFallback(timeRange);
     } catch (e) {
       console.error("getVendorEarnings error", e);
@@ -319,10 +430,9 @@ export const vendorApi = {
 
   getVendorEarningsFallback: async (timeRange = "30days") => {
     try {
-      // Calculate date range
       const endDate = new Date();
       const startDate = new Date();
-      
+
       switch (timeRange) {
         case "7days":
           startDate.setDate(startDate.getDate() - 7);
@@ -340,63 +450,87 @@ export const vendorApi = {
           startDate.setDate(startDate.getDate() - 30);
       }
 
-      const startDateStr = startDate.toISOString().split('T')[0];
-      const endDateStr = endDate.toISOString().split('T')[0];
+      const startDateStr = startDate.toISOString().split("T")[0];
+      const endDateStr = endDate.toISOString().split("T")[0];
 
-      // Fetch orders for the time range
-      const ordersRes = await vendorApi.getOrdersByDateRange(startDateStr, endDateStr);
-      
-      // Fetch all subscriptions
+      const ordersRes = await vendorApi.getOrdersByDateRange(
+        startDateStr,
+        endDateStr,
+      );
       const subsRes = await vendorApi.getVendorSubscriptions("ALL");
-      
-      const orders = ordersRes.ok ? (ordersRes.data || []) : [];
-      const subscriptions = subsRes.ok ? (subsRes.data || []) : [];
-      
-      // Transform orders to payment format
+
+      const orders = ordersRes.ok ? ordersRes.data || [] : [];
+      const subscriptions = subsRes.ok ? subsRes.data || [] : [];
+
       const payments = [];
-      
-      orders.forEach(order => {
-        if (order.totalAmount && (order.paymentStatus || order.status === 'DELIVERED' || order.status === 'COMPLETED')) {
+
+      orders.forEach((order) => {
+        if (
+          order.totalAmount &&
+          (order.paymentStatus ||
+            order.status === "DELIVERED" ||
+            order.status === "COMPLETED")
+        ) {
           payments.push({
             paymentId: `ORD-${order.orderId}`,
             amount: order.totalAmount,
-            type: 'ORDER',
-            status: order.paymentStatus || (order.status === 'DELIVERED' ? 'COMPLETED' : 'PENDING'),
-            date: order.createdAt || order.orderDate || new Date().toISOString(),
-            customerName: order.customer?.userName || order.customerName || 'Customer',
-            customerEmail: order.customer?.email || order.customerEmail || '',
-            transactionId: order.transactionId || order.payment?.transactionId || `TXN-ORD-${order.orderId}`,
+            type: "ORDER",
+            status:
+              order.paymentStatus ||
+              (order.status === "DELIVERED" ? "COMPLETED" : "PENDING"),
+            date:
+              order.createdAt || order.orderDate || new Date().toISOString(),
+            customerName:
+              order.customer?.userName || order.customerName || "Customer",
+            customerEmail: order.customer?.email || order.customerEmail || "",
+            transactionId:
+              order.transactionId ||
+              order.payment?.transactionId ||
+              `TXN-ORD-${order.orderId}`,
             description: `Order #${order.orderId}`,
-            category: order.category || 'Meal',
-            paymentMethod: order.payment?.paymentMethod || (order.status === 'DELIVERED' ? 'COD' : 'CARD')
+            category: order.category || "Meal",
+            paymentMethod:
+              order.payment?.paymentMethod ||
+              (order.status === "DELIVERED" ? "COD" : "CARD"),
           });
         }
       });
-      
-      // Transform subscriptions to payment format
-      subscriptions.forEach(subscription => {
+
+      subscriptions.forEach((subscription) => {
         if (subscription.totalAmount || subscription.packagePrice) {
           const amount = subscription.totalAmount || subscription.packagePrice;
           payments.push({
             paymentId: `SUB-${subscription.subscriptionId}`,
             amount: amount,
-            type: 'SUBSCRIPTION',
-            status: subscription.payment?.paymentStatus || subscription.status || 'COMPLETED',
-            date: subscription.startDate || subscription.createdAt || new Date().toISOString(),
-            customerName: subscription.customer?.userName || subscription.customerName || 'Customer',
-            customerEmail: subscription.customer?.email || subscription.customerEmail || '',
-            transactionId: subscription.payment?.transactionId || `TXN-SUB-${subscription.subscriptionId}`,
+            type: "SUBSCRIPTION",
+            status:
+              subscription.payment?.paymentStatus ||
+              subscription.status ||
+              "COMPLETED",
+            date:
+              subscription.startDate ||
+              subscription.createdAt ||
+              new Date().toISOString(),
+            customerName:
+              subscription.customer?.userName ||
+              subscription.customerName ||
+              "Customer",
+            customerEmail:
+              subscription.customer?.email || subscription.customerEmail || "",
+            transactionId:
+              subscription.payment?.transactionId ||
+              `TXN-SUB-${subscription.subscriptionId}`,
             description: `Subscription #${subscription.subscriptionId}`,
-            category: 'Subscription',
-            paymentMethod: subscription.payment?.paymentMethod || 'CARD'
+            category: "Subscription",
+            paymentMethod: subscription.payment?.paymentMethod || "CARD",
           });
         }
       });
-      
-      return { 
-        ok: true, 
+
+      return {
+        ok: true,
         data: payments,
-        usingFallback: true
+        usingFallback: true,
       };
     } catch (e) {
       console.error("getVendorEarningsFallback error", e);
@@ -449,11 +583,11 @@ export const api = {
         body: JSON.stringify({ email, password }),
       });
       const data = await safeJson(res);
-      
+
       if (res.ok && data) {
         authStorage.saveAuth(data);
       }
-      
+
       return { ok: res.ok, status: res.status, data };
     } catch (e) {
       console.error("login error", e);
@@ -570,7 +704,10 @@ export const api = {
       const res = await fetch(`${BASE_URL}/vendors/${vendorId}/status`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", ...getAuthHeader() },
-        body: JSON.stringify({ status: "approved", reason: "Approved by admin" }),
+        body: JSON.stringify({
+          status: "approved",
+          reason: "Approved by admin",
+        }),
       });
       const data = await safeJson(res);
       return { ok: res.ok, status: res.status, data };
@@ -612,11 +749,14 @@ export const api = {
 
   changeVendorPassword: async (vendorId, newPassword) => {
     try {
-      const res = await fetch(`${BASE_URL}/vendors/${vendorId}/change-password`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...getAuthHeader() },
-        body: JSON.stringify({ newPassword }),
-      });
+      const res = await fetch(
+        `${BASE_URL}/vendors/${vendorId}/change-password`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...getAuthHeader() },
+          body: JSON.stringify({ newPassword }),
+        },
+      );
       const data = await safeJson(res);
       return { ok: res.ok, status: res.status, data };
     } catch (e) {
@@ -639,6 +779,17 @@ export const api = {
   },
 
   // -----------------------
+  // DELIVERY PARTNERS (for compatibility with existing code)
+  // -----------------------
+  createDeliveryPartner: vendorApi.createDeliveryPartner,
+  updateDeliveryPartner: vendorApi.updateDeliveryPartner,
+  deleteDeliveryPartner: vendorApi.deleteDeliveryPartner,
+  updateDeliveryPartnerStatus: vendorApi.updateDeliveryPartnerStatus,
+  resetDeliveryPartnerPassword: vendorApi.resetDeliveryPartnerPassword,
+  getDeliveryPartners: vendorApi.getDeliveryPartners,
+  getDeliveryStats: vendorApi.getDeliveryStats,
+
+  // -----------------------
   // VENDOR API (Re-export vendorApi methods for compatibility)
   // -----------------------
   getVendorOrders: vendorApi.getVendorOrders,
@@ -646,7 +797,6 @@ export const api = {
   updateOrderStatus: vendorApi.updateOrderStatus,
   getVendorCustomers: vendorApi.getVendorCustomers,
   getVendorSubscriptions: vendorApi.getVendorSubscriptions,
-  getDeliveryPartners: vendorApi.getDeliveryPartners,
   getDashboardStats: vendorApi.getDashboardStats,
   getVendorPayments: vendorApi.getVendorPayments,
   getVendorEarnings: vendorApi.getVendorEarnings,
@@ -701,7 +851,11 @@ export const api = {
   fetchJson: async (path, opts = {}) => {
     try {
       const res = await fetch(`${BASE_URL}${path}`, {
-        headers: { "Content-Type": "application/json", ...getAuthHeader(), ...(opts.headers || {}) },
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeader(),
+          ...(opts.headers || {}),
+        },
         ...opts,
       });
       return { ok: res.ok, status: res.status, data: await safeJson(res) };

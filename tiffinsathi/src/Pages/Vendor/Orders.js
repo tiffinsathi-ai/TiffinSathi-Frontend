@@ -4,7 +4,6 @@ import { vendorApi } from "../../helpers/api";
 import { 
   Search, 
   Filter,
-  Calendar,
   Clock,
   Truck,
   CheckCircle,
@@ -338,7 +337,7 @@ const Orders = () => {
         </div>
 
         {/* Meals */}
-        <div className="mb-4">
+        <div className="mb-4 text-left">
           <h4 className="text-sm font-medium text-gray-900 mb-2">Meals</h4>
           <div className="space-y-2">
             {order.orderMeals?.map((meal, index) => (
@@ -472,15 +471,6 @@ const Orders = () => {
           <p className="text-gray-600">Manage and track customer orders</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-gray-500" />
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
           <button
             onClick={loadData}
             disabled={loading}
@@ -613,12 +603,9 @@ const Orders = () => {
         {/* Tab Title */}
         <div className="flex items-center gap-2 mb-4">
           {activeTab === "today" && (
-            <>
-              <Calendar className="h-5 w-5 text-gray-600" />
-              <h3 className="text-xl font-semibold text-gray-900">
-                Today's Orders - {formatDisplayDate(dateFilter)}
-              </h3>
-            </>
+            <h3 className="text-xl font-semibold text-gray-900">
+              Today's Orders - {formatDisplayDate(dateFilter)}
+            </h3>
           )}
           {activeTab === "assigned" && (
             <>

@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { 
-  Plus, 
-  Edit3, 
-  Eye, 
-  EyeOff, 
+import {
+  Plus,
+  Edit3,
+  Eye,
+  EyeOff,
   Calendar,
-  DollarSign,
   Users,
   Clock,
   Search,
@@ -22,13 +21,16 @@ import {
   RefreshCw,
   Info,
   CheckCircle,
-  Tag
+  Tag,
 } from "lucide-react";
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import ConfirmationModal from "../../Components/Admin/ConfirmationModal";
 
 const Tiffins = () => {
-  const [activeTab, setActiveTab] = useState('mealPackages');
+  const [activeTab, setActiveTab] = useState("mealPackages");
+  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, type: null, id: null });
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [mealSets, setMealSets] = useState([]);
   const [mealPackages, setMealPackages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -41,31 +43,32 @@ const Tiffins = () => {
   const [showPackageForm, setShowPackageForm] = useState(false);
   const [editingMealSet, setEditingMealSet] = useState(null);
   const [editingPackage, setEditingPackage] = useState(null);
-  const [imagePreview, setImagePreview] = useState('');
+  const [imagePreview, setImagePreview] = useState("");
 
   // Meal Set Form
   const [mealSetForm, setMealSetForm] = useState({
-    name: '',
-    type: 'VEG',
-    mealItemsText: '',
-    isAvailable: true
+    name: "",
+    type: "VEG",
+    mealItemsText: "",
+    isAvailable: true,
   });
 
   // Meal Package Form
   const [packageForm, setPackageForm] = useState({
-    name: '',
+    name: "",
     durationDays: 7,
-    basePackageType: 'STANDARD',
+    basePackageType: "STANDARD",
     pricePerSet: 0,
-    features: '',
-    image: '',
+    features: "",
+    image: "",
     isAvailable: true,
-    packageSets: []
+    packageSets: [],
   });
 
   const [availableMealSets, setAvailableMealSets] = useState([]);
-  const token = localStorage.getItem('token');
-  const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8080/api';
+  const token = localStorage.getItem("token");
+  const API_BASE =
+    process.env.REACT_APP_API_BASE || "http://localhost:8080/api";
 
   // Fetch data on component mount
   const fetchMealData = useCallback(async () => {
@@ -73,24 +76,26 @@ const Tiffins = () => {
       setLoading(true);
       const [setsResponse, packagesResponse] = await Promise.all([
         axios.get(`${API_BASE}/meal-sets/vendor/my-sets`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         }),
         axios.get(`${API_BASE}/meal-packages/vendor/my-packages`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
 
       setMealSets(setsResponse.data || []);
       setMealPackages(packagesResponse.data || []);
-      setAvailableMealSets((setsResponse.data || []).filter(set => set.isAvailable));
+      setAvailableMealSets(
+        (setsResponse.data || []).filter((set) => set.isAvailable),
+      );
 
-      toast.success('Data loaded successfully');
+      toast.success("Data loaded successfully");
     } catch (error) {
-      console.error('Error fetching meal data:', error);
+      console.error("Error fetching meal data:", error);
       if (error.response?.status === 500) {
-        toast.error('Server error. Please try again later.');
+        toast.error("Server error. Please try again later.");
       } else {
-        toast.error('Failed to load meal data');
+        toast.error("Failed to load meal data");
       }
     } finally {
       setLoading(false);
@@ -106,12 +111,12 @@ const Tiffins = () => {
     const file = event.target.files[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image size should be less than 5MB');
+        toast.error("Image size should be less than 5MB");
         return;
       }
 
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please select an image file');
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please select an image file");
         return;
       }
 
@@ -126,8 +131,8 @@ const Tiffins = () => {
   };
 
   const removeImage = () => {
-    setPackageForm({ ...packageForm, image: '' });
-    setImagePreview('');
+    setPackageForm({ ...packageForm, image: "" });
+    setImagePreview("");
   };
 
   // ========== MEAL SET FUNCTIONS ==========
@@ -136,34 +141,41 @@ const Tiffins = () => {
     try {
       const payload = {
         ...mealSetForm,
-        type: mealSetForm.type
+        type: mealSetForm.type,
       };
 
       if (editingMealSet) {
-        await axios.put(`${API_BASE}/meal-sets/vendor/${editingMealSet.setId}`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Meal set updated successfully!');
+        await axios.put(
+          `${API_BASE}/meal-sets/vendor/${editingMealSet.setId}`,
+          payload,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+        toast.success("Meal set updated successfully!");
       } else {
         await axios.post(`${API_BASE}/meal-sets`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
-        toast.success('Meal set created successfully!');
+        toast.success("Meal set created successfully!");
       }
       resetMealSetForm();
       fetchMealData();
     } catch (error) {
-      console.error('Error saving meal set:', error);
-      toast.error('Error saving meal set: ' + (error.response?.data?.message || error.message));
+      console.error("Error saving meal set:", error);
+      toast.error(
+        "Error saving meal set: " +
+          (error.response?.data?.message || error.message),
+      );
     }
   };
 
   const resetMealSetForm = () => {
     setMealSetForm({
-      name: '',
-      type: 'VEG',
-      mealItemsText: '',
-      isAvailable: true
+      name: "",
+      type: "VEG",
+      mealItemsText: "",
+      isAvailable: true,
     });
     setEditingMealSet(null);
     setShowMealSetForm(false);
@@ -173,8 +185,8 @@ const Tiffins = () => {
     setMealSetForm({
       name: mealSet.name,
       type: mealSet.type,
-      mealItemsText: mealSet.mealItemsText || '',
-      isAvailable: mealSet.isAvailable
+      mealItemsText: mealSet.mealItemsText || "",
+      isAvailable: mealSet.isAvailable,
     });
     setEditingMealSet(mealSet);
     setShowMealSetForm(true);
@@ -182,36 +194,42 @@ const Tiffins = () => {
 
   const toggleMealSetAvailability = async (mealSet) => {
     try {
-      const updatedMealSets = mealSets.map(set =>
-        set.setId === mealSet.setId ? { ...set, isAvailable: !set.isAvailable } : set
+      const updatedMealSets = mealSets.map((set) =>
+        set.setId === mealSet.setId
+          ? { ...set, isAvailable: !set.isAvailable }
+          : set,
       );
       setMealSets(updatedMealSets);
 
-      await axios.put(`${API_BASE}/meal-sets/vendor/${mealSet.setId}/toggle-availability`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.put(
+        `${API_BASE}/meal-sets/vendor/${mealSet.setId}/toggle-availability`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
-      setAvailableMealSets(updatedMealSets.filter(set => set.isAvailable));
-      toast.success(`Meal set ${!mealSet.isAvailable ? 'activated' : 'deactivated'} successfully`);
+      setAvailableMealSets(updatedMealSets.filter((set) => set.isAvailable));
+      toast.success(
+        `Meal set ${!mealSet.isAvailable ? "activated" : "deactivated"} successfully`,
+      );
     } catch (error) {
-      console.error('Error toggling meal set:', error);
+      console.error("Error toggling meal set:", error);
       setMealSets(mealSets);
-      toast.error('Error updating meal set availability');
+      toast.error("Error updating meal set availability");
     }
   };
 
   const deleteMealSet = async (setId) => {
-    if (window.confirm('Are you sure you want to delete this meal set? This action cannot be undone.')) {
-      try {
-        await axios.delete(`${API_BASE}/meal-sets/vendor/${setId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Meal set deleted successfully!');
-        fetchMealData();
-      } catch (error) {
-        console.error('Error deleting meal set:', error);
-        toast.error('Error deleting meal set');
-      }
+    try {
+      await axios.delete(`${API_BASE}/meal-sets/vendor/${setId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("Meal set deleted successfully!");
+      fetchMealData();
+    } catch (error) {
+      console.error("Error deleting meal set:", error);
+      toast.error("Error deleting meal set");
     }
   };
 
@@ -220,49 +238,56 @@ const Tiffins = () => {
     e.preventDefault();
     try {
       if (packageForm.packageSets.length === 0) {
-        toast.error('Please add at least 1 meal set to the package');
+        toast.error("Please add at least 1 meal set to the package");
         return;
       }
 
       const payload = {
         ...packageForm,
-        packageSets: packageForm.packageSets.map(set => ({
+        packageSets: packageForm.packageSets.map((set) => ({
           setId: set.setId,
-          frequency: set.frequency
-        }))
+          frequency: set.frequency,
+        })),
       };
 
       if (editingPackage) {
-        await axios.put(`${API_BASE}/meal-packages/vendor/${editingPackage.packageId}`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Meal package updated successfully!');
+        await axios.put(
+          `${API_BASE}/meal-packages/vendor/${editingPackage.packageId}`,
+          payload,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+        toast.success("Meal package updated successfully!");
       } else {
         await axios.post(`${API_BASE}/meal-packages`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
-        toast.success('Meal package created successfully!');
+        toast.success("Meal package created successfully!");
       }
       resetPackageForm();
       fetchMealData();
     } catch (error) {
-      console.error('Error saving meal package:', error);
-      toast.error('Error saving meal package: ' + (error.response?.data?.message || error.message));
+      console.error("Error saving meal package:", error);
+      toast.error(
+        "Error saving meal package: " +
+          (error.response?.data?.message || error.message),
+      );
     }
   };
 
   const resetPackageForm = () => {
     setPackageForm({
-      name: '',
+      name: "",
       durationDays: 7,
-      basePackageType: 'STANDARD',
+      basePackageType: "STANDARD",
       pricePerSet: 0,
-      features: '',
-      image: '',
+      features: "",
+      image: "",
       isAvailable: true,
-      packageSets: []
+      packageSets: [],
     });
-    setImagePreview('');
+    setImagePreview("");
     setEditingPackage(null);
     setShowPackageForm(false);
   };
@@ -273,10 +298,10 @@ const Tiffins = () => {
       durationDays: mealPackage.durationDays,
       basePackageType: mealPackage.basePackageType,
       pricePerSet: mealPackage.pricePerSet,
-      features: mealPackage.features || '',
-      image: mealPackage.image || '',
+      features: mealPackage.features || "",
+      image: mealPackage.image || "",
       isAvailable: mealPackage.isAvailable,
-      packageSets: mealPackage.packageSets || []
+      packageSets: mealPackage.packageSets || [],
     });
 
     if (mealPackage.image) {
@@ -289,52 +314,74 @@ const Tiffins = () => {
 
   const togglePackageAvailability = async (mealPackage) => {
     try {
-      const updatedPackages = mealPackages.map(pkg =>
-        pkg.packageId === mealPackage.packageId ? { ...pkg, isAvailable: !pkg.isAvailable } : pkg
+      const updatedPackages = mealPackages.map((pkg) =>
+        pkg.packageId === mealPackage.packageId
+          ? { ...pkg, isAvailable: !pkg.isAvailable }
+          : pkg,
       );
       setMealPackages(updatedPackages);
 
-      await axios.put(`${API_BASE}/meal-packages/vendor/${mealPackage.packageId}/toggle-availability`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      toast.success(`Meal package ${!mealPackage.isAvailable ? 'activated' : 'deactivated'} successfully`);
+      await axios.put(
+        `${API_BASE}/meal-packages/vendor/${mealPackage.packageId}/toggle-availability`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      toast.success(
+        `Meal package ${!mealPackage.isAvailable ? "activated" : "deactivated"} successfully`,
+      );
     } catch (error) {
-      console.error('Error toggling meal package:', error);
+      console.error("Error toggling meal package:", error);
       setMealPackages(mealPackages);
-      toast.error('Error updating meal package availability');
+      toast.error("Error updating meal package availability");
     }
   };
 
   const deletePackage = async (packageId) => {
-    if (window.confirm('Are you sure you want to delete this meal package? This action cannot be undone.')) {
-      try {
-        await axios.delete(`${API_BASE}/meal-packages/vendor/${packageId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Meal package deleted successfully!');
-        fetchMealData();
-      } catch (error) {
-        console.error('Error deleting meal package:', error);
-        toast.error('Error deleting meal package');
-      }
+    try {
+      await axios.delete(`${API_BASE}/meal-packages/vendor/${packageId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("Meal package deleted successfully!");
+      fetchMealData();
+    } catch (error) {
+      console.error("Error deleting meal package:", error);
+      toast.error("Error deleting meal package");
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm.id) return;
+    setDeleteLoading(true);
+    try {
+      if (deleteConfirm.type === "mealSet") await deleteMealSet(deleteConfirm.id);
+      else if (deleteConfirm.type === "package") await deletePackage(deleteConfirm.id);
+      setDeleteConfirm({ open: false, type: null, id: null });
+    } catch (err) {
+      // Error already toasts in deleteMealSet/deletePackage
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
   const addMealSetToPackage = (mealSet) => {
-    const existingSet = packageForm.packageSets.find(ps => ps.setId === mealSet.setId);
+    const existingSet = packageForm.packageSets.find(
+      (ps) => ps.setId === mealSet.setId,
+    );
 
     if (existingSet) {
-      setPackageForm(prev => ({
+      setPackageForm((prev) => ({
         ...prev,
-        packageSets: prev.packageSets.map(ps =>
+        packageSets: prev.packageSets.map((ps) =>
           ps.setId === mealSet.setId
             ? { ...ps, frequency: ps.frequency + 1 }
-            : ps
-        )
+            : ps,
+        ),
       }));
       toast.info(`${mealSet.name} frequency increased`);
     } else {
-      setPackageForm(prev => ({
+      setPackageForm((prev) => ({
         ...prev,
         packageSets: [
           ...prev.packageSets,
@@ -343,19 +390,19 @@ const Tiffins = () => {
             frequency: 1,
             setName: mealSet.name,
             type: mealSet.type,
-            mealItemsText: mealSet.mealItemsText
-          }
-        ]
+            mealItemsText: mealSet.mealItemsText,
+          },
+        ],
       }));
       toast.success(`${mealSet.name} added to package`);
     }
   };
 
   const removeMealSetFromPackage = (setId) => {
-    const removedSet = packageForm.packageSets.find(ps => ps.setId === setId);
-    setPackageForm(prev => ({
+    const removedSet = packageForm.packageSets.find((ps) => ps.setId === setId);
+    setPackageForm((prev) => ({
       ...prev,
-      packageSets: prev.packageSets.filter(ps => ps.setId !== setId)
+      packageSets: prev.packageSets.filter((ps) => ps.setId !== setId),
     }));
     if (removedSet) {
       toast.info(`${removedSet.setName} removed from package`);
@@ -364,28 +411,32 @@ const Tiffins = () => {
 
   const updateMealSetFrequency = (setId, frequency) => {
     const newFrequency = Math.max(1, parseInt(frequency) || 1);
-    setPackageForm(prev => ({
+    setPackageForm((prev) => ({
       ...prev,
-      packageSets: prev.packageSets.map(ps =>
-        ps.setId === setId ? { ...ps, frequency: newFrequency } : ps
-      )
+      packageSets: prev.packageSets.map((ps) =>
+        ps.setId === setId ? { ...ps, frequency: newFrequency } : ps,
+      ),
     }));
   };
 
   // ========== FILTER FUNCTIONS ==========
-  const filteredMealSets = mealSets.filter(set => {
-    const matchesSearch = set.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredMealSets = mealSets.filter((set) => {
+    const matchesSearch =
+      set.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       set.mealItemsText?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       set.setId?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || set.type === categoryFilter;
+    const matchesCategory =
+      categoryFilter === "all" || set.type === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
-  const filteredMealPackages = mealPackages.filter(pkg => {
-    const matchesSearch = pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredMealPackages = mealPackages.filter((pkg) => {
+    const matchesSearch =
+      pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       pkg.features?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       pkg.packageId?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || pkg.basePackageType === categoryFilter;
+    const matchesCategory =
+      categoryFilter === "all" || pkg.basePackageType === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
@@ -397,31 +448,31 @@ const Tiffins = () => {
   // Display image helper
   const displayImage = (base64String) => {
     if (!base64String) return null;
-    if (base64String.startsWith('data:')) {
+    if (base64String.startsWith("data:")) {
       return base64String;
     }
     return `data:image/jpeg;base64,${base64String}`;
   };
 
-  // Toggle package details
+  // Toggle package details (only one package expanded at a time)
   const togglePackageDetails = (packageId) => {
-    setExpandedPackage(expandedPackage === packageId ? null : packageId);
+    setExpandedPackage((prev) => (prev === packageId ? null : packageId));
   };
 
   // Filter options
   const getFilterOptions = () => {
-    if (activeTab === 'mealSets') {
+    if (activeTab === "mealSets") {
       return [
         { value: "all", label: "All Types" },
         { value: "VEG", label: "Vegetarian" },
-        { value: "NON_VEG", label: "Non-Vegetarian" }
+        { value: "NON_VEG", label: "Non-Vegetarian" },
       ];
     } else {
       return [
         { value: "all", label: "All Categories" },
         { value: "STANDARD", label: "Standard" },
         { value: "PREMIUM", label: "Premium" },
-        { value: "DELUXE", label: "Deluxe" }
+        { value: "DELUXE", label: "Deluxe" },
       ];
     }
   };
@@ -439,7 +490,7 @@ const Tiffins = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 md:p-6">
       <ToastContainer position="top-right" autoClose={3000} />
-      
+
       <div className="max-w-7xl mx-auto">
         {/* Header - Updated with left alignment and smaller title */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 md:mb-8">
@@ -469,7 +520,9 @@ const Tiffins = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Total Packages</p>
-                <p className="text-xl font-bold text-gray-900">{mealPackages.length}</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {mealPackages.length}
+                </p>
               </div>
             </div>
           </div>
@@ -480,7 +533,9 @@ const Tiffins = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Total Meal Sets</p>
-                <p className="text-xl font-bold text-gray-900">{mealSets.length}</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {mealSets.length}
+                </p>
               </div>
             </div>
           </div>
@@ -492,7 +547,7 @@ const Tiffins = () => {
               <div>
                 <p className="text-sm text-gray-600">Active Packages</p>
                 <p className="text-xl font-bold text-gray-900">
-                  {mealPackages.filter(p => p.isAvailable).length}
+                  {mealPackages.filter((p) => p.isAvailable).length}
                 </p>
               </div>
             </div>
@@ -505,7 +560,7 @@ const Tiffins = () => {
               <div>
                 <p className="text-sm text-gray-600">Inactive Sets</p>
                 <p className="text-xl font-bold text-gray-900">
-                  {mealSets.filter(s => !s.isAvailable).length}
+                  {mealSets.filter((s) => !s.isAvailable).length}
                 </p>
               </div>
             </div>
@@ -516,7 +571,10 @@ const Tiffins = () => {
         <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={20}
+              />
               <input
                 type="text"
                 placeholder="Search meals by name, ID, or features..."
@@ -549,22 +607,22 @@ const Tiffins = () => {
           <nav className="-mb-px flex space-x-4 md:space-x-8 overflow-x-auto">
             <button
               className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 whitespace-nowrap transition-all duration-200 ${
-                activeTab === 'mealPackages'
-                  ? 'border-blue-500 text-blue-600 bg-blue-50 px-3 rounded-t-lg'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                activeTab === "mealPackages"
+                  ? "border-blue-500 text-blue-600 bg-blue-50 px-3 rounded-t-lg"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
-              onClick={() => setActiveTab('mealPackages')}
+              onClick={() => setActiveTab("mealPackages")}
             >
               <Package size={16} />
               <span>Meal Packages ({mealPackages.length})</span>
             </button>
             <button
               className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 whitespace-nowrap transition-all duration-200 ${
-                activeTab === 'mealSets'
-                  ? 'border-blue-500 text-blue-600 bg-blue-50 px-3 rounded-t-lg'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                activeTab === "mealSets"
+                  ? "border-blue-500 text-blue-600 bg-blue-50 px-3 rounded-t-lg"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
-              onClick={() => setActiveTab('mealSets')}
+              onClick={() => setActiveTab("mealSets")}
             >
               <Utensils size={16} />
               <span>Meal Sets ({mealSets.length})</span>
@@ -576,29 +634,38 @@ const Tiffins = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
             <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-              {activeTab === 'mealSets' ? 'Meal Sets' : 'Meal Packages'}
+              {activeTab === "mealSets" ? "Meal Sets" : "Meal Packages"}
             </h2>
             <p className="text-gray-600">
-              {activeTab === 'mealSets'
-                ? 'Individual meal configurations'
-                : 'Complete meal plans combining multiple sets'}
+              {activeTab === "mealSets"
+                ? "Individual meal configurations"
+                : "Complete meal plans combining multiple sets"}
             </p>
           </div>
           <button
             className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2.5 md:px-6 md:py-3 rounded-lg flex items-center space-x-2 transition-all duration-200 shadow-sm hover:shadow-md"
-            onClick={() => activeTab === 'mealSets' ? setShowMealSetForm(true) : setShowPackageForm(true)}
+            onClick={() =>
+              activeTab === "mealSets"
+                ? setShowMealSetForm(true)
+                : setShowPackageForm(true)
+            }
           >
             <Plus size={20} />
-            <span>Add {activeTab === 'mealSets' ? 'Meal Set' : 'Meal Package'}</span>
+            <span>
+              Add {activeTab === "mealSets" ? "Meal Set" : "Meal Package"}
+            </span>
           </button>
         </div>
 
         {/* MEAL PACKAGES TAB - NOW IN CARDS */}
-        {activeTab === 'mealPackages' && (
+        {activeTab === "mealPackages" && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {filteredMealPackages.map(mealPackage => (
-                <div key={mealPackage.packageId} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start">
+              {filteredMealPackages.map((mealPackage) => (
+                <div
+                  key={mealPackage.packageId}
+                  className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200"
+                >
                   {/* Image Section */}
                   {mealPackage.image && (
                     <div className="relative h-48 overflow-hidden">
@@ -615,9 +682,17 @@ const Tiffins = () => {
                               ? "bg-green-500 text-white hover:bg-green-600"
                               : "bg-gray-500 text-white hover:bg-gray-600"
                           }`}
-                          title={mealPackage.isAvailable ? "Set unavailable" : "Set available"}
+                          title={
+                            mealPackage.isAvailable
+                              ? "Set unavailable"
+                              : "Set available"
+                          }
                         >
-                          {mealPackage.isAvailable ? <Eye size={16} /> : <EyeOff size={16} />}
+                          {mealPackage.isAvailable ? (
+                            <Eye size={16} />
+                          ) : (
+                            <EyeOff size={16} />
+                          )}
                         </button>
                         <button
                           onClick={() => editPackage(mealPackage)}
@@ -627,11 +702,17 @@ const Tiffins = () => {
                           <Edit3 size={16} />
                         </button>
                         <button
-                          onClick={() => togglePackageDetails(mealPackage.packageId)}
+                          onClick={() =>
+                            togglePackageDetails(mealPackage.packageId)
+                          }
                           className="p-1.5 bg-purple-500 text-white rounded-full shadow-sm hover:bg-purple-600 transition-colors"
                           title="View details"
                         >
-                          {expandedPackage === mealPackage.packageId ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                          {expandedPackage === mealPackage.packageId ? (
+                            <ChevronUp size={16} />
+                          ) : (
+                            <ChevronDown size={16} />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -642,11 +723,15 @@ const Tiffins = () => {
                     {/* Header with title and status */}
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
-                        <h3 className="font-bold text-lg text-gray-900 line-clamp-1">{mealPackage.name}</h3>
-                        <p className="text-gray-600 text-sm line-clamp-2 mt-1">{mealPackage.features}</p>
+                        <h3 className="font-bold text-lg text-gray-900 line-clamp-1">
+                          {mealPackage.name}
+                        </h3>
+                        <p className="text-gray-600 text-sm line-clamp-2 mt-1">
+                          {mealPackage.features}
+                        </p>
                       </div>
                       <button
-                        onClick={() => deletePackage(mealPackage.packageId)}
+                        onClick={() => setDeleteConfirm({ open: true, type: "package", id: mealPackage.packageId })}
                         className="p-1.5 ml-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors"
                         title="Delete"
                       >
@@ -656,12 +741,14 @@ const Tiffins = () => {
 
                     {/* Badges */}
                     <div className="flex flex-wrap gap-2 mb-4">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                        mealPackage.isAvailable 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {mealPackage.isAvailable ? 'Available' : 'Unavailable'}
+                      <span
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          mealPackage.isAvailable
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {mealPackage.isAvailable ? "Available" : "Unavailable"}
                       </span>
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                         {mealPackage.basePackageType}
@@ -674,32 +761,54 @@ const Tiffins = () => {
                     {/* Quick Stats */}
                     <div className="grid grid-cols-2 gap-3 text-sm mb-3">
                       <div className="flex items-center text-gray-600">
-                        <DollarSign size={14} className="mr-2 flex-shrink-0 text-gray-500" />
-                        <span className="font-medium text-gray-900">Rs {mealPackage.pricePerSet}/set</span>
+                        <span className="font-medium text-gray-900">
+                          Rs {mealPackage.pricePerSet}/set
+                        </span>
                       </div>
                       <div className="flex items-center text-gray-600">
-                        <Calendar size={14} className="mr-2 flex-shrink-0 text-gray-500" />
-                        <span className="font-medium text-gray-900">Total: Rs {calculatePackageTotal(mealPackage)}</span>
+                        <Calendar
+                          size={14}
+                          className="mr-2 flex-shrink-0 text-gray-500"
+                        />
+                        <span className="font-medium text-gray-900">
+                          Total: Rs {calculatePackageTotal(mealPackage)}
+                        </span>
                       </div>
                     </div>
 
                     {/* Expanded Details */}
                     {expandedPackage === mealPackage.packageId && (
                       <div className="mt-4 pt-4 border-t border-gray-100">
-                        <h5 className="font-medium text-gray-700 mb-2">Included Meal Sets:</h5>
+                        <h5 className="font-medium text-gray-700 mb-2">
+                          Included Meal Sets:
+                        </h5>
                         <div className="space-y-2">
                           {mealPackage.packageSets?.map((set, index) => (
-                            <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                            >
                               <div className="flex-1">
                                 <div className="flex items-center space-x-2">
-                                  <span className="font-medium text-sm">{set.setName}</span>
-                                  <span className={`text-xs px-2 py-0.5 rounded ${set.type === 'VEG' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                    }`}>
+                                  <span className="font-medium text-sm">
+                                    {set.setName}
+                                  </span>
+                                  <span
+                                    className={`text-xs px-2 py-0.5 rounded ${
+                                      set.type === "VEG"
+                                        ? "bg-green-100 text-green-800"
+                                        : "bg-red-100 text-red-800"
+                                    }`}
+                                  >
                                     {set.type}
                                   </span>
-                                  <span className="text-xs text-gray-500">×{set.frequency}</span>
+                                  <span className="text-xs text-gray-500">
+                                    ×{set.frequency}
+                                  </span>
                                 </div>
-                                <p className="text-xs text-gray-600 mt-1">{set.mealItemsText}</p>
+                                <p className="text-xs text-gray-600 mt-1">
+                                  {set.mealItemsText}
+                                </p>
                               </div>
                             </div>
                           ))}
@@ -720,9 +829,9 @@ const Tiffins = () => {
                   No Meal Packages Found
                 </h3>
                 <p className="text-gray-600 mb-4 max-w-md mx-auto">
-                  {searchTerm || categoryFilter !== 'all'
-                    ? 'No meal packages match your search criteria. Try adjusting your filters.'
-                    : 'Start by creating your first meal package'}
+                  {searchTerm || categoryFilter !== "all"
+                    ? "No meal packages match your search criteria. Try adjusting your filters."
+                    : "Start by creating your first meal package"}
                 </p>
                 <button
                   onClick={() => setShowPackageForm(true)}
@@ -737,27 +846,41 @@ const Tiffins = () => {
         )}
 
         {/* MEAL SETS TAB */}
-        {activeTab === 'mealSets' && (
+        {activeTab === "mealSets" && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {filteredMealSets.map(mealSet => (
-                <div key={mealSet.setId} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200">
+              {filteredMealSets.map((mealSet) => (
+                <div
+                  key={mealSet.setId}
+                  className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200"
+                >
                   <div className="p-4 md:p-5">
                     {/* Header with title and action buttons */}
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
-                        <h4 className="text-lg font-semibold text-gray-900 line-clamp-1">{mealSet.name}</h4>
+                        <h4 className="text-lg font-semibold text-gray-900 line-clamp-1">
+                          {mealSet.name}
+                        </h4>
                       </div>
                       <div className="flex space-x-1 ml-2">
                         <button
                           onClick={() => toggleMealSetAvailability(mealSet)}
-                          className={`p-1.5 rounded-full ${mealSet.isAvailable
+                          className={`p-1.5 rounded-full ${
+                            mealSet.isAvailable
                               ? "text-green-600 hover:bg-green-50"
                               : "text-gray-600 hover:bg-gray-50"
-                            } transition-colors`}
-                          title={mealSet.isAvailable ? "Set unavailable" : "Set available"}
+                          } transition-colors`}
+                          title={
+                            mealSet.isAvailable
+                              ? "Set unavailable"
+                              : "Set available"
+                          }
                         >
-                          {mealSet.isAvailable ? <Eye size={16} /> : <EyeOff size={16} />}
+                          {mealSet.isAvailable ? (
+                            <Eye size={16} />
+                          ) : (
+                            <EyeOff size={16} />
+                          )}
                         </button>
                         <button
                           onClick={() => editMealSet(mealSet)}
@@ -767,7 +890,7 @@ const Tiffins = () => {
                           <Edit3 size={16} />
                         </button>
                         <button
-                          onClick={() => deleteMealSet(mealSet.setId)}
+                          onClick={() => setDeleteConfirm({ open: true, type: "mealSet", id: mealSet.setId })}
                           className="p-1.5 text-red-600 rounded-full hover:bg-red-50 transition-colors"
                           title="Delete"
                         >
@@ -778,36 +901,62 @@ const Tiffins = () => {
 
                     {/* Availability and Type badges */}
                     <div className="flex items-center mb-4">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${mealSet.isAvailable
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                        }`}>
-                        {mealSet.isAvailable ? 'Available' : 'Unavailable'}
+                      <span
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          mealSet.isAvailable
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {mealSet.isAvailable ? "Available" : "Unavailable"}
                       </span>
-                      <span className={`ml-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${mealSet.type === 'VEG'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                        }`}>
-                        {mealSet.type === 'VEG' ? 'Vegetarian' : 'Non-Vegetarian'}
+                      <span
+                        className={`ml-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          mealSet.type === "VEG"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {mealSet.type === "VEG"
+                          ? "Vegetarian"
+                          : "Non-Vegetarian"}
                       </span>
                     </div>
 
                     {/* Meal Items */}
                     <div className="mb-4">
                       <div className="flex items-start">
-                        <Utensils size={14} className="mt-0.5 mr-2 flex-shrink-0 text-gray-400" />
-                        <p className="text-sm text-gray-600 line-clamp-3">{mealSet.mealItemsText}</p>
+                        <Utensils
+                          size={14}
+                          className="mt-0.5 mr-2 flex-shrink-0 text-gray-400"
+                        />
+                        <p className="text-sm text-gray-600 line-clamp-3">
+                          {mealSet.mealItemsText}
+                        </p>
                       </div>
                     </div>
 
                     {/* Status indicator */}
                     <div className="pt-3 border-t border-gray-100">
                       <div className="flex items-center">
-                        <CheckCircle size={14} className={`mr-2 ${mealSet.isAvailable ? 'text-green-500' : 'text-red-500'
-                          }`} />
-                        <span className={`text-sm font-medium ${mealSet.isAvailable ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                          {mealSet.isAvailable ? 'Active for packages' : 'Not available'}
+                        <CheckCircle
+                          size={14}
+                          className={`mr-2 ${
+                            mealSet.isAvailable
+                              ? "text-green-500"
+                              : "text-red-500"
+                          }`}
+                        />
+                        <span
+                          className={`text-sm font-medium ${
+                            mealSet.isAvailable
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {mealSet.isAvailable
+                            ? "Active for packages"
+                            : "Not available"}
                         </span>
                       </div>
                     </div>
@@ -825,9 +974,9 @@ const Tiffins = () => {
                   No Meal Sets Found
                 </h3>
                 <p className="text-gray-600 mb-4 max-w-md mx-auto">
-                  {searchTerm || categoryFilter !== 'all'
-                    ? 'No meal sets match your search criteria. Try adjusting your filters.'
-                    : 'Start by creating your first meal set'}
+                  {searchTerm || categoryFilter !== "all"
+                    ? "No meal sets match your search criteria. Try adjusting your filters."
+                    : "Start by creating your first meal set"}
                 </p>
                 <button
                   onClick={() => setShowMealSetForm(true)}
@@ -851,12 +1000,14 @@ const Tiffins = () => {
                 <div className="flex justify-between items-center mb-6">
                   <div>
                     <h3 className="text-xl font-bold text-gray-900">
-                      {editingPackage ? 'Edit Meal Package' : 'Create New Meal Package'}
+                      {editingPackage
+                        ? "Edit Meal Package"
+                        : "Create New Meal Package"}
                     </h3>
                     <p className="text-sm text-gray-600 mt-1">
                       {editingPackage
-                        ? 'Update your meal package details'
-                        : 'Fill in the details to create a new meal package'}
+                        ? "Update your meal package details"
+                        : "Fill in the details to create a new meal package"}
                     </p>
                   </div>
                   <button
@@ -876,7 +1027,12 @@ const Tiffins = () => {
                       <input
                         type="text"
                         value={packageForm.name}
-                        onChange={(e) => setPackageForm({ ...packageForm, name: e.target.value })}
+                        onChange={(e) =>
+                          setPackageForm({
+                            ...packageForm,
+                            name: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                         placeholder="e.g., 7-Day Vegetarian Plan"
@@ -889,7 +1045,12 @@ const Tiffins = () => {
                       </label>
                       <select
                         value={packageForm.basePackageType}
-                        onChange={(e) => setPackageForm({ ...packageForm, basePackageType: e.target.value })}
+                        onChange={(e) =>
+                          setPackageForm({
+                            ...packageForm,
+                            basePackageType: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="STANDARD">Standard</option>
@@ -906,7 +1067,12 @@ const Tiffins = () => {
                       <input
                         type="number"
                         value={packageForm.durationDays}
-                        onChange={(e) => setPackageForm({ ...packageForm, durationDays: parseInt(e.target.value) })}
+                        onChange={(e) =>
+                          setPackageForm({
+                            ...packageForm,
+                            durationDays: parseInt(e.target.value),
+                          })
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         min="1"
                         required
@@ -920,7 +1086,12 @@ const Tiffins = () => {
                       <input
                         type="number"
                         value={packageForm.pricePerSet}
-                        onChange={(e) => setPackageForm({ ...packageForm, pricePerSet: parseFloat(e.target.value) })}
+                        onChange={(e) =>
+                          setPackageForm({
+                            ...packageForm,
+                            pricePerSet: parseFloat(e.target.value),
+                          })
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         min="0"
                         step="0.01"
@@ -935,7 +1106,12 @@ const Tiffins = () => {
                     </label>
                     <textarea
                       value={packageForm.features}
-                      onChange={(e) => setPackageForm({ ...packageForm, features: e.target.value })}
+                      onChange={(e) =>
+                        setPackageForm({
+                          ...packageForm,
+                          features: e.target.value,
+                        })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       rows="3"
                       placeholder="Describe package features and benefits..."
@@ -950,10 +1126,17 @@ const Tiffins = () => {
                     <div className="flex items-center space-x-4">
                       <div className="w-32 h-32 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden">
                         {imagePreview ? (
-                          <img src={imagePreview} alt="Preview" className="w-full h-full object-cover rounded-lg" />
+                          <img
+                            src={imagePreview}
+                            alt="Preview"
+                            className="w-full h-full object-cover rounded-lg"
+                          />
                         ) : (
                           <div className="text-center">
-                            <ImageIcon size={24} className="mx-auto text-gray-400 mb-2" />
+                            <ImageIcon
+                              size={24}
+                              className="mx-auto text-gray-400 mb-2"
+                            />
                             <p className="text-xs text-gray-500">No image</p>
                           </div>
                         )}
@@ -1013,20 +1196,33 @@ const Tiffins = () => {
                         <div className="space-y-2 max-h-80 overflow-y-auto p-2 border rounded-lg bg-gray-50">
                           {availableMealSets.length === 0 ? (
                             <div className="text-center py-4 text-gray-500">
-                              No available meal sets. Create some meal sets first.
+                              No available meal sets. Create some meal sets
+                              first.
                             </div>
                           ) : (
-                            availableMealSets.map(mealSet => (
-                              <div key={mealSet.setId} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white hover:bg-blue-50 transition-colors">
+                            availableMealSets.map((mealSet) => (
+                              <div
+                                key={mealSet.setId}
+                                className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white hover:bg-blue-50 transition-colors"
+                              >
                                 <div className="flex-1">
                                   <div className="flex items-center space-x-2 mb-1">
-                                    <span className="font-medium text-sm">{mealSet.name}</span>
-                                    <span className={`text-xs px-2 py-0.5 rounded ${mealSet.type === 'VEG' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                      }`}>
+                                    <span className="font-medium text-sm">
+                                      {mealSet.name}
+                                    </span>
+                                    <span
+                                      className={`text-xs px-2 py-0.5 rounded ${
+                                        mealSet.type === "VEG"
+                                          ? "bg-green-100 text-green-800"
+                                          : "bg-red-100 text-red-800"
+                                      }`}
+                                    >
                                       {mealSet.type}
                                     </span>
                                   </div>
-                                  <p className="text-xs text-gray-600 truncate">{mealSet.mealItemsText}</p>
+                                  <p className="text-xs text-gray-600 truncate">
+                                    {mealSet.mealItemsText}
+                                  </p>
                                 </div>
                                 <button
                                   type="button"
@@ -1047,34 +1243,62 @@ const Tiffins = () => {
                           <CheckCircle className="mr-2" size={16} />
                           Selected Meal Sets:
                           <span className="ml-2 text-sm font-normal text-gray-500">
-                            Total frequency: {packageForm.packageSets.reduce((sum, set) => sum + set.frequency, 0)}
+                            Total frequency:{" "}
+                            {packageForm.packageSets.reduce(
+                              (sum, set) => sum + set.frequency,
+                              0,
+                            )}
                           </span>
                         </h5>
                         {packageForm.packageSets.length === 0 ? (
                           <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
-                            <Package size={32} className="mx-auto text-gray-400 mb-2" />
-                            <p className="text-gray-500">No meal sets added yet</p>
-                            <p className="text-sm text-gray-400">Add at least 1 meal set from the left panel</p>
+                            <Package
+                              size={32}
+                              className="mx-auto text-gray-400 mb-2"
+                            />
+                            <p className="text-gray-500">
+                              No meal sets added yet
+                            </p>
+                            <p className="text-sm text-gray-400">
+                              Add at least 1 meal set from the left panel
+                            </p>
                           </div>
                         ) : (
                           <div className="space-y-2 max-h-80 overflow-y-auto p-2 border rounded-lg bg-gray-50">
-                            {packageForm.packageSets.map(packageSet => (
-                              <div key={packageSet.setId} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white">
+                            {packageForm.packageSets.map((packageSet) => (
+                              <div
+                                key={packageSet.setId}
+                                className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white"
+                              >
                                 <div className="flex-1">
                                   <div className="flex items-center space-x-2 mb-1">
-                                    <span className="font-medium text-sm">{packageSet.setName}</span>
-                                    <span className={`text-xs px-2 py-0.5 rounded ${packageSet.type === 'VEG' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                      }`}>
+                                    <span className="font-medium text-sm">
+                                      {packageSet.setName}
+                                    </span>
+                                    <span
+                                      className={`text-xs px-2 py-0.5 rounded ${
+                                        packageSet.type === "VEG"
+                                          ? "bg-green-100 text-green-800"
+                                          : "bg-red-100 text-red-800"
+                                      }`}
+                                    >
                                       {packageSet.type}
                                     </span>
                                   </div>
-                                  <p className="text-xs text-gray-600 truncate">{packageSet.mealItemsText}</p>
+                                  <p className="text-xs text-gray-600 truncate">
+                                    {packageSet.mealItemsText}
+                                  </p>
                                 </div>
                                 <div className="flex items-center space-x-2 ml-2">
                                   <div className="flex items-center space-x-1">
                                     <button
                                       type="button"
-                                      onClick={() => updateMealSetFrequency(packageSet.setId, packageSet.frequency - 1)}
+                                      onClick={() =>
+                                        updateMealSetFrequency(
+                                          packageSet.setId,
+                                          packageSet.frequency - 1,
+                                        )
+                                      }
                                       className="w-6 h-6 flex items-center justify-center bg-gray-200 rounded hover:bg-gray-300"
                                       disabled={packageSet.frequency <= 1}
                                     >
@@ -1083,13 +1307,23 @@ const Tiffins = () => {
                                     <input
                                       type="number"
                                       value={packageSet.frequency}
-                                      onChange={(e) => updateMealSetFrequency(packageSet.setId, e.target.value)}
+                                      onChange={(e) =>
+                                        updateMealSetFrequency(
+                                          packageSet.setId,
+                                          e.target.value,
+                                        )
+                                      }
                                       className="w-12 text-center px-1 py-1 border border-gray-300 rounded text-sm"
                                       min="1"
                                     />
                                     <button
                                       type="button"
-                                      onClick={() => updateMealSetFrequency(packageSet.setId, packageSet.frequency + 1)}
+                                      onClick={() =>
+                                        updateMealSetFrequency(
+                                          packageSet.setId,
+                                          packageSet.frequency + 1,
+                                        )
+                                      }
                                       className="w-6 h-6 flex items-center justify-center bg-gray-200 rounded hover:bg-gray-300"
                                     >
                                       <span className="text-xs">+</span>
@@ -1097,7 +1331,9 @@ const Tiffins = () => {
                                   </div>
                                   <button
                                     type="button"
-                                    onClick={() => removeMealSetFromPackage(packageSet.setId)}
+                                    onClick={() =>
+                                      removeMealSetFromPackage(packageSet.setId)
+                                    }
                                     className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
                                   >
                                     <Trash2 size={16} />
@@ -1114,30 +1350,46 @@ const Tiffins = () => {
                   {/* Package Summary */}
                   {packageForm.packageSets.length > 0 && (
                     <div className="bg-blue-50 p-4 rounded-lg">
-                      <h5 className="font-medium text-gray-700 mb-2">Package Summary:</h5>
+                      <h5 className="font-medium text-gray-700 mb-2">
+                        Package Summary:
+                      </h5>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
                         <div>
                           <span className="text-gray-600">Duration:</span>
-                          <span className="ml-2 font-medium">{packageForm.durationDays} days</span>
+                          <span className="ml-2 font-medium">
+                            {packageForm.durationDays} days
+                          </span>
                         </div>
                         <div>
                           <span className="text-gray-600">Price per set:</span>
-                          <span className="ml-2 font-medium">Rs {packageForm.pricePerSet}</span>
+                          <span className="ml-2 font-medium">
+                            Rs {packageForm.pricePerSet}
+                          </span>
                         </div>
                         <div>
                           <span className="text-gray-600">Total price:</span>
                           <span className="ml-2 font-medium">
-                            Rs {(packageForm.pricePerSet * packageForm.durationDays).toFixed(2)}
+                            Rs{" "}
+                            {(
+                              packageForm.pricePerSet * packageForm.durationDays
+                            ).toFixed(2)}
                           </span>
                         </div>
                         <div>
                           <span className="text-gray-600">Meal sets:</span>
-                          <span className="ml-2 font-medium">{packageForm.packageSets.length}</span>
+                          <span className="ml-2 font-medium">
+                            {packageForm.packageSets.length}
+                          </span>
                         </div>
                         <div>
-                          <span className="text-gray-600">Total frequency:</span>
+                          <span className="text-gray-600">
+                            Total frequency:
+                          </span>
                           <span className="ml-2 font-medium">
-                            {packageForm.packageSets.reduce((sum, set) => sum + set.frequency, 0)}
+                            {packageForm.packageSets.reduce(
+                              (sum, set) => sum + set.frequency,
+                              0,
+                            )}
                           </span>
                         </div>
                       </div>
@@ -1149,11 +1401,19 @@ const Tiffins = () => {
                       <input
                         type="checkbox"
                         checked={packageForm.isAvailable}
-                        onChange={(e) => setPackageForm({ ...packageForm, isAvailable: e.target.checked })}
+                        onChange={(e) =>
+                          setPackageForm({
+                            ...packageForm,
+                            isAvailable: e.target.checked,
+                          })
+                        }
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         id="package-availability"
                       />
-                      <label htmlFor="package-availability" className="ml-2 text-sm text-gray-700">
+                      <label
+                        htmlFor="package-availability"
+                        className="ml-2 text-sm text-gray-700"
+                      >
                         Available for customers
                       </label>
                     </div>
@@ -1163,12 +1423,13 @@ const Tiffins = () => {
                     <button
                       type="submit"
                       disabled={packageForm.packageSets.length === 0}
-                      className={`flex-1 py-2.5 px-4 rounded-lg transition-all duration-200 ${packageForm.packageSets.length > 0
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-sm hover:shadow'
-                          : 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                        }`}
+                      className={`flex-1 py-2.5 px-4 rounded-lg transition-all duration-200 ${
+                        packageForm.packageSets.length > 0
+                          ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-sm hover:shadow"
+                          : "bg-gray-400 text-gray-200 cursor-not-allowed"
+                      }`}
                     >
-                      {editingPackage ? 'Update Package' : 'Create Package'}
+                      {editingPackage ? "Update Package" : "Create Package"}
                     </button>
                     <button
                       type="button"
@@ -1192,12 +1453,12 @@ const Tiffins = () => {
                 <div className="flex justify-between items-center mb-6">
                   <div>
                     <h3 className="text-xl font-bold text-gray-900">
-                      {editingMealSet ? 'Edit Meal Set' : 'Create New Meal Set'}
+                      {editingMealSet ? "Edit Meal Set" : "Create New Meal Set"}
                     </h3>
                     <p className="text-sm text-gray-600 mt-1">
                       {editingMealSet
-                        ? 'Update your meal set details'
-                        : 'Fill in the details to create a new meal set'}
+                        ? "Update your meal set details"
+                        : "Fill in the details to create a new meal set"}
                     </p>
                   </div>
                   <button
@@ -1217,7 +1478,12 @@ const Tiffins = () => {
                       <input
                         type="text"
                         value={mealSetForm.name}
-                        onChange={(e) => setMealSetForm({ ...mealSetForm, name: e.target.value })}
+                        onChange={(e) =>
+                          setMealSetForm({
+                            ...mealSetForm,
+                            name: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                         placeholder="e.g., Healthy Breakfast"
@@ -1230,7 +1496,12 @@ const Tiffins = () => {
                       </label>
                       <select
                         value={mealSetForm.type}
-                        onChange={(e) => setMealSetForm({ ...mealSetForm, type: e.target.value })}
+                        onChange={(e) =>
+                          setMealSetForm({
+                            ...mealSetForm,
+                            type: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="VEG">Vegetarian</option>
@@ -1245,14 +1516,20 @@ const Tiffins = () => {
                     </label>
                     <textarea
                       value={mealSetForm.mealItemsText}
-                      onChange={(e) => setMealSetForm({ ...mealSetForm, mealItemsText: e.target.value })}
+                      onChange={(e) =>
+                        setMealSetForm({
+                          ...mealSetForm,
+                          mealItemsText: e.target.value,
+                        })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       rows="4"
                       placeholder="Enter meal items separated by commas (e.g., Poha, Tea, Fruits)..."
                       required
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Separate items with commas. Be descriptive for better customer understanding.
+                      Separate items with commas. Be descriptive for better
+                      customer understanding.
                     </p>
                   </div>
 
@@ -1261,11 +1538,19 @@ const Tiffins = () => {
                       <input
                         type="checkbox"
                         checked={mealSetForm.isAvailable}
-                        onChange={(e) => setMealSetForm({ ...mealSetForm, isAvailable: e.target.checked })}
+                        onChange={(e) =>
+                          setMealSetForm({
+                            ...mealSetForm,
+                            isAvailable: e.target.checked,
+                          })
+                        }
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         id="set-availability"
                       />
-                      <label htmlFor="set-availability" className="ml-2 text-sm text-gray-700">
+                      <label
+                        htmlFor="set-availability"
+                        className="ml-2 text-sm text-gray-700"
+                      >
                         Available for packages
                       </label>
                     </div>
@@ -1276,7 +1561,7 @@ const Tiffins = () => {
                       type="submit"
                       className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-2.5 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-sm hover:shadow"
                     >
-                      {editingMealSet ? 'Update Meal Set' : 'Create Meal Set'}
+                      {editingMealSet ? "Update Meal Set" : "Create Meal Set"}
                     </button>
                     <button
                       type="button"
@@ -1291,6 +1576,23 @@ const Tiffins = () => {
             </div>
           </div>
         )}
+
+      {/* Delete confirmation modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirm.open}
+        onClose={() => setDeleteConfirm({ open: false, type: null, id: null })}
+        onConfirm={handleDeleteConfirm}
+        title={deleteConfirm.type === "package" ? "Delete Meal Package" : "Delete Meal Set"}
+        message={
+          deleteConfirm.type === "package"
+            ? "Are you sure you want to delete this meal package? This action cannot be undone."
+            : "Are you sure you want to delete this meal set? This action cannot be undone."
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="delete"
+        isLoading={deleteLoading}
+      />
       </div>
     </div>
   );
