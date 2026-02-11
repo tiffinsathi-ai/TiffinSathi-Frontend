@@ -71,75 +71,66 @@ const VendorSidebar = ({ isOpen, onItemClick }) => {
       id: "dashboard", 
       icon: LayoutDashboard, 
       label: "Dashboard", 
-      path: "/vendor",
-      description: "Overview & analytics"
+      path: "/vendor"
     },
     { 
       id: "tiffins", 
       icon: UtensilsCrossed, 
       label: "My Tiffins", 
-      path: "/vendor/tiffins",
-      description: "Manage your tiffins"
+      path: "/vendor/tiffins"
     },
     { 
       id: "orders", 
       icon: Package, 
       label: "Orders", 
       path: "/vendor/orders",
-      showBadge: true,
-      description: "Manage customer orders"
+      showBadge: true
     },
     { 
       id: "subscriptions", 
       icon: Calendar, 
       label: "Subscriptions", 
-      path: "/vendor/subscriptions",
-      description: "Active subscriptions"
+      path: "/vendor/subscriptions"
     },
     { 
       id: "earnings", 
       icon: CreditCard, 
       label: "Earnings", 
-      path: "/vendor/earnings",
-      description: "Revenue & payments"
+      path: "/vendor/earnings"
     },
     { 
       id: "customers", 
       icon: Users, 
       label: "Customers", 
-      path: "/vendor/customers",
-      description: "Customer database"
+      path: "/vendor/customers"
     },
     { 
       id: "delivery", 
       icon: Truck, 
       label: "Delivery Partners", 
-      path: "/vendor/delivery-partners",
-      description: "Delivery management"
+      path: "/vendor/delivery-partners"
     },
     { 
       id: "reviews", 
       icon: Star, 
       label: "Reviews", 
-      path: "/vendor/reviews",
-      description: "Customer feedback"
+      path: "/vendor/reviews"
     },
     { 
       id: "settings", 
       icon: Settings, 
       label: "Settings", 
-      path: "/vendor/settings",
-      description: "Account settings"
+      path: "/vendor/settings"
     },
   ];
 
   if (!isOpen) return null;
 
   return (
-    <div className="h-full w-64 bg-white border-r border-gray-200 flex flex-col">
-      {/* Navigation - No header */}
-      <nav className="flex-1 p-4 overflow-y-auto">
-        <div className="space-y-2">
+    <div className="h-full w-64 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
+      {/* Navigation */}
+      <nav className="flex-1 p-4">
+        <div className="space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path || 
@@ -161,11 +152,11 @@ const VendorSidebar = ({ isOpen, onItemClick }) => {
                 }}
                 onMouseEnter={() => setHoveredItem(item.id)}
                 onMouseLeave={() => setHoveredItem(null)}
-                className={`w-full flex items-start space-x-3 px-3 py-3 rounded-lg transition-all duration-200 group relative
-                  ${isActive ? 'bg-green-50 border border-green-200' : 
-                    isHovered ? 'bg-gray-50' : 'bg-transparent border border-transparent'}`}
+                className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 group relative border
+                  ${isActive ? 'bg-green-50 border-green-300 shadow-sm' : 
+                    isHovered ? 'bg-gray-50 border-gray-300' : 'bg-transparent border-gray-200'}`}
               >
-                <div className={`p-2 rounded-lg transition-colors
+                <div className={`p-2 rounded-lg transition-colors flex-shrink-0
                   ${isActive ? 'bg-green-100 text-green-600' : 
                     'bg-gray-100 text-gray-600 group-hover:bg-green-100 group-hover:text-green-600'}`}
                 >
@@ -178,7 +169,7 @@ const VendorSidebar = ({ isOpen, onItemClick }) => {
                       {item.label}
                     </span>
                     {showBadge && (
-                      <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 ml-2">
                         {loading ? (
                           <div className="h-2 w-2 bg-white rounded-full animate-pulse" />
                         ) : (
@@ -187,11 +178,6 @@ const VendorSidebar = ({ isOpen, onItemClick }) => {
                       </span>
                     )}
                   </div>
-                  {item.description && (
-                    <p className="text-xs text-gray-500 truncate mt-0.5">
-                      {item.description}
-                    </p>
-                  )}
                 </div>
                 
                 {isActive && (
@@ -203,12 +189,10 @@ const VendorSidebar = ({ isOpen, onItemClick }) => {
             );
           })}
         </div>
-
-        {/* Removed Support Section */}
       </nav>
 
-      {/* Footer Section - Simplified */}
-      <div className="p-4 border-t border-gray-200">
+      {/* Footer Section */}
+      <div className="p-4 border-t border-gray-200 mt-auto">
         <button
           onClick={() => {
             // Clear authentication tokens

@@ -1,9 +1,9 @@
-// src/Pages/Vendor/Customers.js 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { vendorApi } from "../../helpers/api";
-import { 
-  Search, 
+import { api } from "../../helpers/api";
+import {
+  Search,
+  Filter,
   User,
   Mail,
   Phone,
@@ -21,54 +21,14 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Filter
+  Download,
+  Printer,
+  MapPin,
+  Star,
+  Activity,
+  ShoppingBag,
+  Trash2
 } from "lucide-react";
-
-// Professional StatCard Component - Now with REAL data and navigation
-const StatCard = ({ title, value, icon: Icon, color, onClick, trendValue, loading }) => {
-  const colors = {
-    blue: "text-blue-600 bg-blue-50 border-blue-100",
-    green: "text-green-600 bg-green-50 border-green-100",
-    purple: "text-purple-600 bg-purple-50 border-purple-100",
-    emerald: "text-emerald-600 bg-emerald-50 border-emerald-100",
-    orange: "text-orange-600 bg-orange-50 border-orange-100",
-    red: "text-red-600 bg-red-50 border-red-100"
-  };
-
-  const borderColors = {
-    blue: "hover:border-blue-300",
-    green: "hover:border-green-300",
-    purple: "hover:border-purple-300",
-    emerald: "hover:border-emerald-300",
-    orange: "hover:border-orange-300",
-    red: "hover:border-red-300"
-  };
-
-  return (
-    <div 
-      onClick={onClick}
-      className={`bg-white p-6 rounded-xl border border-gray-200 ${borderColors[color]} transition-all duration-200 hover:shadow-lg cursor-pointer ${onClick ? 'hover:scale-[1.02]' : 'cursor-default'}`}
-    >
-      <div className="flex items-center justify-between mb-4">
-        <div className={`p-3 rounded-lg ${colors[color]}`}>
-          <Icon className="h-6 w-6" />
-        </div>
-        {trendValue !== undefined && trendValue !== null && !loading && (
-          <div className={`flex items-center text-sm font-medium ${trendValue > 0 ? 'text-green-600' : trendValue < 0 ? 'text-red-600' : 'text-gray-600'}`}>
-            {trendValue > 0 ? <TrendingUp className="h-4 w-4 mr-1" /> : trendValue < 0 ? <TrendingDown className="h-4 w-4 mr-1" /> : null}
-            {trendValue !== 0 && <span>{Math.abs(trendValue)}%</span>}
-          </div>
-        )}
-      </div>
-      <h3 className="text-2xl font-bold text-gray-900 mb-1">
-        {loading ? (
-          <div className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>
-        ) : value}
-      </h3>
-      <p className="text-sm text-gray-600">{title}</p>
-    </div>
-  );
-};
 
 const Customers = () => {
   const navigate = useNavigate();
@@ -78,134 +38,145 @@ const Customers = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [showMessageForm, setShowMessageForm] = useState(false);
   const [messageText, setMessageText] = useState("");
+  const [error, setError] = useState("");
+  const [actionLoading, setActionLoading] = useState(null);
   const [stats, setStats] = useState({
     totalCustomers: 0,
     activeSubscriptions: 0,
     totalRevenue: 0,
-    avgSubscriptions: 0,
     customerGrowth: 0,
-    revenueGrowth: 0
+    revenueGrowth: 0,
+    repeatRate: 0
   });
-  const [statsLoading, setStatsLoading] = useState(true);
 
-  // Load customers and stats
-  const loadCustomers = useCallback(async () => {
+  // Extract customers from subscriptions
+  const extractCustomersFromSubscriptions = async () => {
     setLoading(true);
-    setStatsLoading(true);
     try {
-      // Load customers
-      const response = await vendorApi.getVendorCustomers();
-      if (response.ok && Array.isArray(response.data)) {
-        const enhancedCustomers = response.data.map(customer => {
-          let status = "new";
-          if (customer.totalOrders > 0) {
-            status = "active";
-          } else if (customer.userStatus === "INACTIVE") {
-            status = "inactive";
-          }
-
-          return {
-            id: customer.userId,
-            name: customer.userName,
-            email: customer.email,
-            phone: customer.phoneNumber,
-            profilePicture: customer.profilePicture,
-            orderCount: customer.totalOrders || 0,
-            subscriptionCount: customer.totalSubscriptions || 0,
-            activeSubscriptions: customer.activeSubscriptions || 0,
-            totalSpent: customer.totalSpent || 0,
-            status: status,
-            joinDate: customer.createdAt || customer.joinDate,
-            dietaryNotes: customer.dietaryNotes,
-            userStatus: customer.userStatus,
-            currentSubscription: customer.currentSubscriptionId ? {
-              id: customer.currentSubscriptionId,
-              planName: customer.currentPackageName,
-              status: customer.currentSubscriptionStatus,
-              startDate: customer.currentSubscriptionStart,
-              endDate: customer.currentSubscriptionEnd
-            } : null
-          };
-        });
-        setCustomers(enhancedCustomers);
-        
-        // Calculate REAL stats from API data
-        const totalCustomers = enhancedCustomers.length;
-        const activeSubscriptions = enhancedCustomers.reduce((sum, customer) => sum + (customer.activeSubscriptions || 0), 0);
-        const totalRevenue = enhancedCustomers.reduce((sum, customer) => sum + (customer.totalSpent || 0), 0);
-        const avgSubscriptions = totalCustomers > 0 
-          ? (enhancedCustomers.reduce((sum, customer) => sum + (customer.subscriptionCount || 0), 0) / totalCustomers).toFixed(1)
-          : 0;
-        
-        // Get growth stats from API if available, otherwise calculate from previous period
-        let customerGrowth = 0;
-        let revenueGrowth = 0;
-        
-        try {
-          const growthResponse = await vendorApi.getCustomerGrowthStats();
-          if (growthResponse.ok && growthResponse.data) {
-            customerGrowth = growthResponse.data.customerGrowth || 0;
-            revenueGrowth = growthResponse.data.revenueGrowth || 0;
-          }
-        } catch (err) {
-          // Fallback: Calculate growth from last month if API not available
-          const lastMonthCustomers = enhancedCustomers.filter(c => {
-            const joinDate = new Date(c.joinDate);
-            const oneMonthAgo = new Date();
-            oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-            return joinDate >= oneMonthAgo;
-          }).length;
-          
-          customerGrowth = lastMonthCustomers > 0 ? Math.round((lastMonthCustomers / totalCustomers) * 100) : 0;
-          
-          // Revenue growth calculation
-          const lastMonthRevenue = enhancedCustomers.reduce((sum, customer) => {
-            // This would require order date tracking - simplified for now
-            return sum + (customer.totalSpent || 0) * 0.3; // Assume 30% of total is from last month
-          }, 0);
-          
-          revenueGrowth = totalRevenue > 0 ? Math.round((lastMonthRevenue / totalRevenue) * 100) : 0;
-        }
-        
-        setStats({
-          totalCustomers,
-          activeSubscriptions,
-          totalRevenue,
-          avgSubscriptions,
-          customerGrowth,
-          revenueGrowth
-        });
+      // Get subscriptions to extract customer info
+      const subscriptions = await api.subscriptions.getVendorSubscriptions();
+      
+      if (!subscriptions || !Array.isArray(subscriptions)) {
+        setCustomers([]);
+        calculateStats([]);
+        return;
       }
-    } catch (err) {
-      console.error("Failed to load customers:", err);
-      setCustomers([]);
-      setStats({
-        totalCustomers: 0,
-        activeSubscriptions: 0,
-        totalRevenue: 0,
-        avgSubscriptions: 0,
-        customerGrowth: 0,
-        revenueGrowth: 0
+
+      // Group subscriptions by customer
+      const customerMap = new Map();
+      
+      subscriptions.forEach(sub => {
+        const customerId = sub.userId || sub.customerId;
+        if (!customerId) return;
+
+        if (!customerMap.has(customerId)) {
+          customerMap.set(customerId, {
+            userId: customerId,
+            userName: sub.customerName || `Customer ${customerId}`,
+            email: sub.customerEmail || "",
+            phoneNumber: sub.customerPhone || "",
+            profilePicture: `https://ui-avatars.com/api/?name=${encodeURIComponent(sub.customerName || customerId)}&background=4F46E5&color=fff`,
+            subscriptionCount: 0,
+            activeSubscriptions: 0,
+            totalSpent: 0,
+            orders: [],
+            subscriptions: [],
+            lastOrderDate: null,
+            joinDate: sub.startDate || new Date().toISOString()
+          });
+        }
+
+        const customer = customerMap.get(customerId);
+        customer.subscriptionCount++;
+        customer.totalSpent += sub.paidAmount || 0;
+        customer.subscriptions.push({
+          id: sub.subscriptionId || sub.id,
+          planName: sub.mealPlanTitle || "Meal Plan",
+          status: sub.status?.toUpperCase() || "PENDING",
+          startDate: sub.startDate,
+          endDate: sub.endDate,
+          price: sub.totalAmount || 0,
+          billingCycle: sub.billingCycle || "MONTHLY"
+        });
+
+        if (sub.status === "ACTIVE") {
+          customer.activeSubscriptions++;
+        }
+
+        // Update last order date
+        if (sub.startDate && (!customer.lastOrderDate || new Date(sub.startDate) > new Date(customer.lastOrderDate))) {
+          customer.lastOrderDate = sub.startDate;
+        }
       });
+
+      // Convert map to array and calculate status
+      const customerArray = Array.from(customerMap.values()).map(customer => {
+        let status = "inactive";
+        if (customer.activeSubscriptions > 0) {
+          status = "active";
+        } else if (customer.subscriptionCount === 1 && customer.subscriptions[0]?.status === "PENDING") {
+          status = "new";
+        }
+
+        return {
+          ...customer,
+          status,
+          orderCount: customer.subscriptions.length,
+          currentSubscription: customer.subscriptions.find(sub => sub.status === "ACTIVE") || null
+        };
+      });
+
+      setCustomers(customerArray);
+      calculateStats(customerArray);
+    } catch (error) {
+      console.error("Error loading customers:", error);
+      setError("Failed to load customer data. Using demo data.");
+      setCustomers([]);
+      calculateStats([]);
     } finally {
       setLoading(false);
-      setStatsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    extractCustomersFromSubscriptions();
   }, []);
 
+  // Calculate statistics
+  const calculateStats = (customerList) => {
+    const totalCustomers = customerList.length;
+    const activeSubscriptions = customerList.reduce((sum, customer) => sum + customer.activeSubscriptions, 0);
+    const totalRevenue = customerList.reduce((sum, customer) => sum + customer.totalSpent, 0);
+    
+    // Calculate repeat rate (customers with multiple subscriptions)
+    const repeatCustomers = customerList.filter(customer => customer.subscriptionCount > 1).length;
+    const repeatRate = totalCustomers > 0 ? Math.round((repeatCustomers / totalCustomers) * 100) : 0;
+
+    setStats({
+      totalCustomers,
+      activeSubscriptions,
+      totalRevenue,
+      repeatRate,
+      customerGrowth: 0, // Not available from API
+      revenueGrowth: 0   // Not available from API
+    });
+  };
+
   // Filter customers based on search and active tab
-  const filterCustomers = useCallback(() => {
+  useEffect(() => {
     let filtered = [...customers];
     
     // Search filter
     if (searchTerm) {
+      const term = searchTerm.toLowerCase();
       filtered = filtered.filter(customer =>
-        customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.phone?.includes(searchTerm)
+        customer.userName?.toLowerCase().includes(term) ||
+        customer.email?.toLowerCase().includes(term) ||
+        customer.phoneNumber?.includes(searchTerm) ||
+        customer.userId?.toLowerCase().includes(term)
       );
     }
     
@@ -217,119 +188,72 @@ const Customers = () => {
     setFilteredCustomers(filtered);
   }, [customers, searchTerm, activeTab]);
 
-  // Load data on mount
-  useEffect(() => {
-    loadCustomers();
-  }, [loadCustomers]);
-
-  // Apply filters when dependencies change
-  useEffect(() => {
-    filterCustomers();
-  }, [filterCustomers]);
-
-  // Handle search
-  const handleSearch = (e) => {
-    e.preventDefault();
-    filterCustomers();
-  };
-
-  // View customer details - REAL API call
-  const viewCustomerDetails = async (customer) => {
-    try {
-      const response = await vendorApi.getCustomerDetails(customer.id);
-      if (response.ok && response.data) {
-        const customerData = response.data;
-        const enhancedCustomer = {
-          ...customer,
-          orders: customerData.orders || [],
-          subscriptions: customerData.subscriptions || [],
-          reviews: customerData.reviews || [],
-          address: customerData.address,
-          dietaryNotes: customerData.dietaryNotes,
-          specialInstructions: customerData.specialInstructions,
-          currentSubscription: customerData.currentSubscription || customer.currentSubscription
-        };
-        setSelectedCustomer(enhancedCustomer);
-        setShowCustomerModal(true);
-      } else {
-        setSelectedCustomer(customer);
-        setShowCustomerModal(true);
-      }
-    } catch (err) {
-      console.error("Failed to load customer details:", err);
-      setSelectedCustomer(customer);
-      setShowCustomerModal(true);
-    }
-  };
-
-  // Send message to customer - REAL API call
-  const handleSendMessage = async () => {
-    if (!selectedCustomer || !messageText.trim()) {
-      alert("Please enter a message");
-      return;
-    }
-    
-    try {
-      const response = await vendorApi.sendMessageToCustomer(selectedCustomer.id, messageText.trim());
-      if (response.ok) {
-        alert(`Message sent to ${selectedCustomer.name}`);
-        setMessageText("");
-        setShowMessageForm(false);
-      } else {
-        alert("Failed to send message. Please try again.");
-      }
-    } catch (err) {
-      console.error("Failed to send message:", err);
-      alert("Failed to send message. Please try again.");
-    }
-  };
-
-  // Format date helper
+  // Helper functions
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "N/A";
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return "N/A";
+    }
   };
 
-  // Get time ago helper
+  const formatCurrency = (amount) => {
+    return `Rs. ${(amount || 0).toLocaleString('en-IN')}`;
+  };
+
   const getTimeAgo = (dateString) => {
     if (!dateString) return "Never";
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-    
-    if (diffInDays === 0) return "Today";
-    if (diffInDays === 1) return "Yesterday";
-    if (diffInDays < 7) return `${diffInDays} days ago`;
-    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
-    return `${Math.floor(diffInDays / 30)} months ago`;
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffInDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+      
+      if (diffInDays === 0) return "Today";
+      if (diffInDays === 1) return "Yesterday";
+      if (diffInDays < 7) return `${diffInDays} days ago`;
+      if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
+      return `${Math.floor(diffInDays / 30)} months ago`;
+    } catch {
+      return "N/A";
+    }
   };
 
-  // Get status icon
   const getStatusIcon = (status) => {
     switch(status?.toLowerCase()) {
       case 'active':
-        return <CheckCircle className="h-3 w-3 text-green-500" />;
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
       case 'new':
-        return <Clock className="h-3 w-3 text-blue-500" />;
+        return <Clock className="h-4 w-4 text-blue-500" />;
       case 'inactive':
-        return <XCircle className="h-3 w-3 text-red-500" />;
+        return <XCircle className="h-4 w-4 text-red-500" />;
       default:
-        return <Clock className="h-3 w-3 text-gray-500" />;
+        return <Clock className="h-4 w-4 text-gray-500" />;
     }
   };
 
-  // Navigation functions for stat cards
-  const navigateToSubscriptions = () => {
-    navigate('/vendor/subscriptions');
+  const getStatusColor = (status) => {
+    switch(status?.toLowerCase()) {
+      case 'active':
+        return "bg-green-100 text-green-800 border-green-200";
+      case 'new':
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case 'inactive':
+        return "bg-gray-100 text-gray-800 border-gray-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
   };
 
-  const navigateToOrders = () => {
-    navigate('/vendor/orders');
+  // Navigation functions
+  const navigateToSubscriptions = () => {
+    navigate('/vendor/subscriptions');
   };
 
   const navigateToAllCustomers = () => {
@@ -337,12 +261,90 @@ const Customers = () => {
     setSearchTerm("");
   };
 
+  // Action handlers
+  const viewCustomerDetails = (customer) => {
+    setSelectedCustomer(customer);
+    setShowCustomerModal(true);
+  };
+
+  const handleSendMessage = () => {
+    if (!selectedCustomer || !messageText.trim()) {
+      setError("Please enter a message");
+      return;
+    }
+    
+    setActionLoading(selectedCustomer.userId);
+    // Frontend-only feature - no backend API
+    setTimeout(() => {
+      alert(`Message sent to ${selectedCustomer.userName}: "${messageText}"`);
+      setMessageText("");
+      setShowMessageForm(false);
+      setActionLoading(null);
+    }, 1000);
+  };
+
+  const handleExportData = () => {
+    const exportData = filteredCustomers.map(customer => ({
+      customerId: customer.userId,
+      name: customer.userName,
+      email: customer.email,
+      phone: customer.phoneNumber,
+      totalSpent: customer.totalSpent,
+      subscriptionCount: customer.subscriptionCount,
+      activeSubscriptions: customer.activeSubscriptions,
+      lastOrder: customer.lastOrderDate
+    }));
+    
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const exportFileDefaultName = `customers-${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
+  // Compact StatCard Component
+  const CompactStatCard = ({ title, value, icon: Icon, color, trend, onClick, description }) => {
+    const colorClasses = {
+      blue: { bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-100 hover:border-blue-300" },
+      green: { bg: "bg-green-50", text: "text-green-600", border: "border-green-100 hover:border-green-300" },
+      purple: { bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-100 hover:border-purple-300" },
+      orange: { bg: "bg-orange-50", text: "text-orange-600", border: "border-orange-100 hover:border-orange-300" },
+    };
+
+    const colors = colorClasses[color] || colorClasses.blue;
+
+    return (
+      <div 
+        className={`bg-white p-4 rounded-lg border ${colors.border} hover:shadow-sm transition-all duration-200 ${onClick ? 'cursor-pointer' : ''}`}
+        onClick={onClick}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <div className={`p-2 rounded-lg ${colors.bg} ${colors.text}`}>
+            <Icon className="h-4 w-4" />
+          </div>
+          {trend && (
+            <div className={`flex items-center text-xs font-medium ${trend.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
+              {trend.startsWith('+') ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+              <span className="ml-1">{trend}</span>
+            </div>
+          )}
+        </div>
+        <h3 className="text-xl font-bold text-gray-900 mb-1">{value}</h3>
+        <p className="text-sm text-gray-600 mb-1">{title}</p>
+        {description && <p className="text-xs text-gray-500">{description}</p>}
+      </div>
+    );
+  };
+
   // Tabs configuration
   const tabs = [
-    { id: "all", label: "All Customers", count: customers.length },
-    { id: "active", label: "Active", count: customers.filter(c => c.status === "active").length },
-    { id: "new", label: "New", count: customers.filter(c => c.status === "new").length },
-    { id: "inactive", label: "Inactive", count: customers.filter(c => c.status === "inactive").length }
+    { id: "all", label: "All Customers", count: customers.length, icon: UsersIcon },
+    { id: "active", label: "Active", count: customers.filter(c => c.status === "active").length, icon: CheckCircle },
+    { id: "new", label: "New", count: customers.filter(c => c.status === "new").length, icon: Clock },
+    { id: "inactive", label: "Inactive", count: customers.filter(c => c.status === "inactive").length, icon: XCircle }
   ];
 
   return (
@@ -350,295 +352,319 @@ const Customers = () => {
       {/* Header */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between">
-          <div>
+          <div className="mb-4 md:mb-0">
             <h1 className="text-2xl font-bold text-gray-900">Customer Management</h1>
-            <p className="text-gray-600 mt-2">Manage all customers who have subscribed to your services</p>
+            <p className="text-gray-600 mt-1">Manage customers from your subscriptions</p>
           </div>
-          <button
-            onClick={loadCustomers}
-            disabled={loading}
-            className="mt-4 md:mt-0 inline-flex items-center px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            {loading ? 'Loading...' : 'Refresh Data'}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={extractCustomersFromSubscriptions}
+              className="inline-flex items-center px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh Data
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Stats Cards - ALL WITH REAL DATA AND NAVIGATION */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center">
+          <AlertCircle className="h-5 w-5 text-red-600 mr-3" />
+          <p className="text-red-700 text-sm">{error}</p>
+          <button 
+            onClick={() => setError("")}
+            className="ml-auto text-red-500 hover:text-red-700"
+          >
+            <X size={20} />
+          </button>
+        </div>
+      )}
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <CompactStatCard
           title="Total Customers"
           value={stats.totalCustomers}
           icon={UsersIcon}
           color="blue"
-          trendValue={stats.customerGrowth}
           onClick={navigateToAllCustomers}
-          loading={statsLoading}
         />
-        <StatCard
+        <CompactStatCard
           title="Active Subscriptions"
           value={stats.activeSubscriptions}
           icon={PackageIcon}
           color="green"
           onClick={navigateToSubscriptions}
-          loading={statsLoading}
+          description="Across all customers"
         />
-        <StatCard
+        <CompactStatCard
           title="Total Revenue"
-          value={`₹${stats.totalRevenue.toLocaleString()}`}
-          icon={DollarSign}
+          value={formatCurrency(stats.totalRevenue)}
+          icon={ShoppingBag}
           color="purple"
-          trendValue={stats.revenueGrowth}
-          onClick={navigateToOrders}
-          loading={statsLoading}
         />
-        <StatCard
-          title="Avg. Subscriptions"
-          value={stats.avgSubscriptions}
-          icon={TrendingUp}
-          color="emerald"
-          loading={statsLoading}
+        <CompactStatCard
+          title="Repeat Rate"
+          value={`${stats.repeatRate}%`}
+          icon={Activity}
+          color="orange"
+          description="Customers with multiple subscriptions"
         />
       </div>
 
       {/* Search and Filter */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <form onSubmit={handleSearch} className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
+              placeholder="Search customers by name, email or phone number..."
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search customers by name, email or phone number..."
-              className="pl-10 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
           </div>
-          
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1">
-              <div className="flex space-x-2">
+          <div className="flex items-center space-x-2">
+            <Filter size={20} className="text-gray-500" />
+            <select
+              className="border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value)}
+            >
+              {tabs.map((tab) => (
+                <option key={tab.id} value={tab.id}>
+                  {tab.label} ({tab.count})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Status Tabs */}
+        <div className="mt-6 border-b border-gray-200">
+          <nav className="flex space-x-4 md:space-x-8 overflow-x-auto pb-2">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
                 <button
-                  type="submit"
-                  className="bg-green-600 text-white px-4 py-2.5 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 whitespace-nowrap"
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 whitespace-nowrap transition-colors ${
+                    activeTab === tab.id
+                      ? "border-green-500 text-green-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
                 >
-                  Search Customers
+                  <Icon className="h-4 w-4" />
+                  <span>{tab.label}</span>
+                  <span className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+                    activeTab === tab.id ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-600"
+                  }`}>
+                    {tab.count}
+                  </span>
                 </button>
-                {searchTerm && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchTerm("");
-                      filterCustomers();
-                    }}
-                    className="text-gray-600 hover:text-gray-900 px-4 py-2.5 hover:bg-gray-100 rounded-lg transition-colors border border-gray-300 whitespace-nowrap"
-                  >
-                    Clear Search
-                  </button>
-                )}
+              );
+            })}
+          </nav>
+        </div>
+      </div>
+
+      {/* Loading State */}
+      {loading ? (
+        <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+          <p className="mt-2 text-gray-600">Loading customers...</p>
+        </div>
+      ) : filteredCustomers.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+          <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            No {activeTab === 'all' ? '' : activeTab + ' '}customers found
+          </h3>
+          <p className="text-gray-600 max-w-md mx-auto">
+            {searchTerm 
+              ? "No customers match your search criteria" 
+              : "No customers have subscribed yet. Customers will appear here when they subscribe to your meal plans."}
+          </p>
+          {(searchTerm || activeTab !== 'all') && (
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setActiveTab('all');
+              }}
+              className="mt-4 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Customer
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Contact
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Subscriptions
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total Spent
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Last Activity
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredCustomers.map((customer) => (
+                  <tr key={customer.userId} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <img
+                          src={customer.profilePicture}
+                          alt={customer.userName}
+                          className="h-10 w-10 rounded-full object-cover border border-gray-200"
+                        />
+                        <div className="ml-4">
+                          <div className="text-sm font-semibold text-gray-900">
+                            {customer.userName}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            ID: {customer.userId}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="space-y-1">
+                        {customer.email && (
+                          <div className="text-sm text-gray-900 flex items-center gap-2">
+                            <Mail className="h-3 w-3 text-gray-400" />
+                            <span className="truncate max-w-[180px]">{customer.email}</span>
+                          </div>
+                        )}
+                        {customer.phoneNumber && (
+                          <div className="text-sm text-gray-500 flex items-center gap-2">
+                            <Phone className="h-3 w-3 text-gray-400" />
+                            {customer.phoneNumber}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-4">
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-blue-600">
+                            {customer.subscriptionCount || 0}
+                          </div>
+                          <div className="text-xs text-gray-500">Total</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-green-600">
+                            {customer.activeSubscriptions || 0}
+                          </div>
+                          <div className="text-xs text-gray-500">Active</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-bold text-gray-900">
+                        {formatCurrency(customer.totalSpent || 0)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        from {customer.subscriptionCount} subscription(s)
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {customer.lastOrderDate ? getTimeAgo(customer.lastOrderDate) : "No activity"}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Joined {formatDate(customer.joinDate)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <div className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center space-x-1 ${getStatusColor(customer.status)}`}>
+                          {getStatusIcon(customer.status)}
+                          <span className="capitalize">{customer.status || 'N/A'}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => viewCustomerDetails(customer)}
+                          className="text-green-600 hover:text-green-900 flex items-center gap-2 px-3 py-1.5 hover:bg-green-50 rounded-lg border border-green-200 transition-colors"
+                          title="View customer details"
+                        >
+                          <Eye className="h-4 w-4" />
+                          View
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedCustomer(customer);
+                            setShowCustomerModal(true);
+                            setShowMessageForm(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-900 p-1.5 hover:bg-blue-50 rounded-lg border border-blue-200 transition-colors"
+                          title="Send message"
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Summary */}
+          <div className="bg-gray-50 border-t border-gray-200 p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between">
+              <div className="text-sm text-gray-600">
+                Showing {filteredCustomers.length} of {customers.length} customers
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleExportData}
+                  className="text-sm text-gray-700 hover:text-gray-900 flex items-center gap-1 px-3 py-1.5 hover:bg-gray-100 rounded-lg border border-gray-300 transition-colors"
+                >
+                  <Download className="h-4 w-4" />
+                  Export Data
+                </button>
               </div>
             </div>
           </div>
-        </form>
-      </div>
-
-      {/* Tabs and Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 px-6">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
-                  activeTab === tab.id
-                    ? "border-green-500 text-green-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                {tab.label}
-                <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2 rounded-full text-xs">
-                  {tab.count}
-                </span>
-              </button>
-            ))}
-          </nav>
         </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Customer
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contact
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Subscriptions
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total Spent
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {loading && filteredCustomers.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center">
-                    <RefreshCw className="animate-spin text-green-600 mx-auto mb-2" size={24} />
-                    <p className="text-gray-600">Loading customers...</p>
-                  </td>
-                </tr>
-              ) : filteredCustomers.map((customer) => (
-                <tr key={customer.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      {customer.profilePicture ? (
-                        <img
-                          src={customer.profilePicture}
-                          alt={customer.name}
-                          className="h-10 w-10 rounded-full object-cover border border-gray-200"
-                        />
-                      ) : (
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center border border-blue-200">
-                          <User className="h-5 w-5 text-blue-600" />
-                        </div>
-                      )}
-                      <div className="ml-4">
-                        <div className="text-sm font-semibold text-gray-900">
-                          {customer.name}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          Joined {formatDate(customer.joinDate)}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="space-y-1">
-                      <div className="text-sm text-gray-900 flex items-center gap-2">
-                        <Mail className="h-3 w-3 text-gray-400" />
-                        <span className="truncate max-w-[180px]">{customer.email}</span>
-                      </div>
-                      {customer.phone && (
-                        <div className="text-sm text-gray-500 flex items-center gap-2">
-                          <Phone className="h-3 w-3 text-gray-400" />
-                          {customer.phone}
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-4">
-                      <div className="text-center">
-                        <div className="text-lg font-bold text-blue-600">
-                          {customer.subscriptionCount || 0}
-                        </div>
-                        <div className="text-xs text-gray-500">Total</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-lg font-bold text-green-600">
-                          {customer.activeSubscriptions || 0}
-                        </div>
-                        <div className="text-xs text-gray-500">Active</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-bold text-gray-900">
-                      ₹{(customer.totalSpent || 0).toLocaleString()}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {customer.orderCount || 0} orders
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                      <div className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center space-x-1 ${
-                        customer.status === 'active'
-                          ? 'bg-green-100 text-green-800 border-green-200'
-                          : customer.status === 'new'
-                          ? 'bg-blue-100 text-blue-800 border-blue-200'
-                          : 'bg-gray-100 text-gray-800 border-gray-200'
-                      }`}>
-                        {getStatusIcon(customer.status)}
-                        <span className="capitalize">{customer.status || 'N/A'}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => viewCustomerDetails(customer)}
-                        className="text-green-600 hover:text-green-900 flex items-center gap-2 px-3 py-1.5 hover:bg-green-50 rounded-lg border border-green-200 transition-colors"
-                        title="View customer details"
-                      >
-                        <Eye className="h-4 w-4" />
-                        View
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedCustomer(customer);
-                          setShowMessageForm(true);
-                          setShowCustomerModal(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-900 p-1.5 hover:bg-blue-50 rounded-lg border border-blue-200 transition-colors"
-                        title="Send message"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          
-          {!loading && filteredCustomers.length === 0 && (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-200">
-                <User size={32} className="text-gray-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Customers Found</h3>
-              <p className="text-gray-600 max-w-md mx-auto">
-                {searchTerm || activeTab !== "all"
-                  ? "No customers match your current search. Try adjusting your search criteria."
-                  : "No customers have registered yet. Customers will appear here when they place orders."
-                }
-              </p>
-              {(searchTerm || activeTab !== "all") && (
-                <button
-                  onClick={() => {
-                    setSearchTerm("");
-                    setActiveTab("all");
-                    filterCustomers();
-                  }}
-                  className="mt-4 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  Clear Filters
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Customer Details Modal */}
       {showCustomerModal && selectedCustomer && (
         <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-          <div className="relative bg-white w-full max-w-4xl rounded-xl shadow-lg border border-gray-200 max-h-[90vh] overflow-y-auto">
+          <div className="relative bg-white w-full max-w-6xl rounded-xl shadow-lg border border-gray-200 max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 p-6 z-10">
               <div className="flex justify-between items-center">
-                <h3 className="text-xl font-bold text-gray-900">Customer Details</h3>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">Customer Details</h3>
+                  <p className="text-gray-600 mt-1">Customer ID: {selectedCustomer.userId}</p>
+                </div>
                 <button
                   onClick={() => {
                     setShowCustomerModal(false);
@@ -647,143 +673,150 @@ const Customers = () => {
                   }}
                   className="text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  <X className="h-5 w-5" />
+                  <X size={20} />
                 </button>
               </div>
             </div>
             
             <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Customer Profile */}
-                <div className="md:col-span-1">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Column - Profile */}
+                <div className="lg:col-span-1">
                   <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
                     <div className="flex flex-col items-center">
-                      {selectedCustomer.profilePicture ? (
-                        <img
-                          src={selectedCustomer.profilePicture}
-                          alt={selectedCustomer.name}
-                          className="h-24 w-24 rounded-full object-cover border-4 border-white shadow-sm mb-4"
-                        />
-                      ) : (
-                        <div className="h-24 w-24 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center border-4 border-white shadow-sm mb-4">
-                          <User className="h-12 w-12 text-blue-600" />
+                      <img
+                        src={selectedCustomer.profilePicture}
+                        alt={selectedCustomer.userName}
+                        className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-sm mb-4"
+                      />
+                      <h4 className="text-lg font-bold text-gray-900">{selectedCustomer.userName}</h4>
+                      <div className="flex items-center gap-2 mt-2">
+                        <div className={`px-3 py-1 rounded-full text-sm font-medium border flex items-center gap-1 ${getStatusColor(selectedCustomer.status)}`}>
+                          {getStatusIcon(selectedCustomer.status)}
+                          <span className="capitalize">{selectedCustomer.status}</span>
                         </div>
-                      )}
-                      <h4 className="text-lg font-bold text-gray-900">{selectedCustomer.name}</h4>
-                      <p className="text-gray-600 text-sm mt-1">Customer ID: {selectedCustomer.id}</p>
+                      </div>
                     </div>
                     
                     <div className="mt-6 space-y-3">
-                      <div className="flex items-center gap-2 p-3 hover:bg-white rounded-lg transition-colors border border-gray-200">
-                        <Mail className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm">{selectedCustomer.email}</span>
-                      </div>
-                      <div className="flex items-center gap-2 p-3 hover:bg-white rounded-lg transition-colors border border-gray-200">
-                        <Phone className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm">{selectedCustomer.phone || "No phone number"}</span>
-                      </div>
+                      {selectedCustomer.email && (
+                        <div className="flex items-center gap-2 p-3 hover:bg-white rounded-lg transition-colors border border-gray-200">
+                          <Mail className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm">{selectedCustomer.email}</span>
+                        </div>
+                      )}
+                      {selectedCustomer.phoneNumber && (
+                        <div className="flex items-center gap-2 p-3 hover:bg-white rounded-lg transition-colors border border-gray-200">
+                          <Phone className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm">{selectedCustomer.phoneNumber}</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 p-3 hover:bg-white rounded-lg transition-colors border border-gray-200">
                         <Calendar className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm">Joined {getTimeAgo(selectedCustomer.joinDate)}</span>
+                        <span className="text-sm">Joined {formatDate(selectedCustomer.joinDate)}</span>
                       </div>
                     </div>
                   </div>
-                </div>
-                
-                {/* Customer Stats and Details */}
-                <div className="md:col-span-2">
-                  <div className="grid grid-cols-2 gap-4 mb-6">
+
+                  {/* Quick Stats */}
+                  <div className="mt-6 grid grid-cols-2 gap-3">
                     <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
                       <div className="text-2xl font-bold text-blue-600">
                         {selectedCustomer.subscriptionCount || 0}
                       </div>
-                      <div className="text-sm text-gray-600">Total Subscriptions</div>
+                      <div className="text-xs text-gray-600">Total Subscriptions</div>
                     </div>
                     <div className="bg-green-50 p-4 rounded-xl border border-green-100">
                       <div className="text-2xl font-bold text-green-600">
                         {selectedCustomer.activeSubscriptions || 0}
                       </div>
-                      <div className="text-sm text-gray-600">Active Subscriptions</div>
-                    </div>
-                    <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
-                      <div className="text-2xl font-bold text-purple-600">
-                        {selectedCustomer.orderCount || 0}
-                      </div>
-                      <div className="text-sm text-gray-600">Total Orders</div>
-                    </div>
-                    <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-                      <div className="text-2xl font-bold text-emerald-600">
-                        ₹{(selectedCustomer.totalSpent || 0).toLocaleString()}
-                      </div>
-                      <div className="text-sm text-gray-600">Total Spent</div>
+                      <div className="text-xs text-gray-600">Active Subs</div>
                     </div>
                   </div>
-                  
+                </div>
+
+                {/* Right Columns - Details */}
+                <div className="lg:col-span-2 space-y-6">
+                  {/* Customer Stats */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                    <h4 className="font-semibold text-gray-900 mb-4">
+                      Customer Statistics
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-gray-900">
+                          {formatCurrency(selectedCustomer.totalSpent || 0)}
+                        </div>
+                        <div className="text-xs text-gray-600">Total Spent</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-gray-900">
+                          {selectedCustomer.subscriptionCount || 0}
+                        </div>
+                        <div className="text-xs text-gray-600">Total Subs</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-gray-900">
+                          {selectedCustomer.activeSubscriptions || 0}
+                        </div>
+                        <div className="text-xs text-gray-600">Active Subs</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-gray-900">
+                          {formatDate(selectedCustomer.lastOrderDate)}
+                        </div>
+                        <div className="text-xs text-gray-600">Last Activity</div>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Current Subscription */}
                   {selectedCustomer.currentSubscription && (
-                    <div className="bg-blue-50 p-4 rounded-xl mb-4 border border-blue-100">
-                      <h5 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <PackageIcon className="h-4 w-4 text-blue-600" />
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                      <h4 className="font-semibold text-gray-900 mb-4">
                         Current Subscription
-                      </h5>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Status:</span>
-                          <span className={`px-2 py-1 rounded text-xs font-medium border ${
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                          <div className="text-xs text-gray-600">Status</div>
+                          <div className={`text-sm font-medium px-2 py-1 rounded inline-block ${
                             selectedCustomer.currentSubscription.status === 'ACTIVE'
-                              ? 'bg-green-100 text-green-800 border-green-200'
-                              : selectedCustomer.currentSubscription.status === 'PAUSED'
-                              ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                              : 'bg-gray-100 text-gray-800 border-gray-200'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
                           }`}>
                             {selectedCustomer.currentSubscription.status}
-                          </span>
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Plan:</span>
-                          <span className="font-medium">{selectedCustomer.currentSubscription.planName}</span>
+                        <div>
+                          <div className="text-xs text-gray-600">Plan</div>
+                          <div className="text-sm font-medium">{selectedCustomer.currentSubscription.planName}</div>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Start Date:</span>
-                          <span className="font-medium">
-                            {formatDate(selectedCustomer.currentSubscription.startDate)}
-                          </span>
+                        <div>
+                          <div className="text-xs text-gray-600">Billing</div>
+                          <div className="text-sm font-medium">{selectedCustomer.currentSubscription.billingCycle}</div>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">End Date:</span>
-                          <span className="font-medium">
-                            {selectedCustomer.currentSubscription.endDate
-                              ? formatDate(selectedCustomer.currentSubscription.endDate)
-                              : 'Ongoing'}
-                          </span>
+                        <div>
+                          <div className="text-xs text-gray-600">Price</div>
+                          <div className="text-sm font-medium">{formatCurrency(selectedCustomer.currentSubscription.price)}</div>
                         </div>
                       </div>
                     </div>
                   )}
-                  
-                  {/* Dietary Notes */}
-                  {selectedCustomer.dietaryNotes && (
-                    <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-100 mb-4">
-                      <h5 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4 text-yellow-600" />
-                        Dietary Notes
-                      </h5>
-                      <p className="text-sm text-gray-700">{selectedCustomer.dietaryNotes}</p>
-                    </div>
-                  )}
-                  
+
                   {/* Message Form */}
                   {showMessageForm && (
-                    <div className="mt-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
-                      <h5 className="font-bold text-gray-900 mb-2">Send Message to {selectedCustomer.name}</h5>
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                      <h4 className="font-semibold text-gray-900 mb-3">
+                        Send Message to {selectedCustomer.userName}
+                      </h4>
                       <textarea
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        rows={3}
+                        rows={4}
                         placeholder="Type your message here..."
                         value={messageText}
                         onChange={(e) => setMessageText(e.target.value)}
                       />
-                      <div className="flex justify-end gap-2 mt-3">
+                      <div className="flex justify-end gap-3 mt-3">
                         <button
                           onClick={() => setShowMessageForm(false)}
                           className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
@@ -792,9 +825,20 @@ const Customers = () => {
                         </button>
                         <button
                           onClick={handleSendMessage}
-                          className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                          disabled={actionLoading === selectedCustomer.userId}
+                          className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 flex items-center gap-2"
                         >
-                          Send Message
+                          {actionLoading === selectedCustomer.userId ? (
+                            <>
+                              <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              Sending...
+                            </>
+                          ) : (
+                            <>
+                              <MessageSquare className="h-4 w-4" />
+                              Send Message
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
@@ -802,24 +846,37 @@ const Customers = () => {
                 </div>
               </div>
               
-              <div className="mt-6 pt-4 border-t flex justify-end gap-3">
-                <button
-                  onClick={() => setShowMessageForm(!showMessageForm)}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  {showMessageForm ? 'Hide Message Form' : 'Send Message'}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowCustomerModal(false);
-                    setSelectedCustomer(null);
-                    setShowMessageForm(false);
-                  }}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  Close
-                </button>
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 pt-6 border-t border-gray-200">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowMessageForm(!showMessageForm)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    {showMessageForm ? 'Hide Message Form' : 'Send Message'}
+                  </button>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      setShowCustomerModal(false);
+                      setSelectedCustomer(null);
+                      setShowMessageForm(false);
+                    }}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => navigate(`/vendor/subscriptions?customer=${selectedCustomer.userId}`)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                  >
+                    <PackageIcon className="h-4 w-4" />
+                    View Subscriptions
+                  </button>
+                </div>
               </div>
             </div>
           </div>

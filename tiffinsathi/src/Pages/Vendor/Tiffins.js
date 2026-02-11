@@ -1,6 +1,4 @@
-// src/Pages/Vendor/Tiffins.js 
-import React, { useState, useEffect, useCallback } from "react";
-import axios from "axios";
+import React, { useState, useEffect } from "react";
 import { 
   Plus, 
   Edit3, 
@@ -14,62 +12,15 @@ import {
   ChevronUp,
   Trash2,
   X,
-  Image as ImageIcon,
   RefreshCw,
-  Info,
   TrendingUp,
   TrendingDown,
-  Users,
-  DollarSign,
-  Calendar,
   CheckCircle,
-  AlertCircle,
-  ChefHat
+  ChefHat,
+  AlertCircle
 } from "lucide-react";
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-
-// Professional StatCard Component
-const StatCard = ({ title, value, icon: Icon, color, onClick, trendValue }) => {
-  const colors = {
-    blue: "text-blue-600 bg-blue-50 border-blue-100",
-    green: "text-green-600 bg-green-50 border-green-100",
-    purple: "text-purple-600 bg-purple-50 border-purple-100",
-    orange: "text-orange-600 bg-orange-50 border-orange-100",
-    emerald: "text-emerald-600 bg-emerald-50 border-emerald-100",
-    red: "text-red-600 bg-red-50 border-red-100"
-  };
-
-  const borderColors = {
-    blue: "hover:border-blue-300",
-    green: "hover:border-green-300",
-    purple: "hover:border-purple-300",
-    orange: "hover:border-orange-300",
-    emerald: "hover:border-emerald-300",
-    red: "hover:border-red-300"
-  };
-
-  return (
-    <div 
-      onClick={onClick}
-      className={`bg-white p-6 rounded-xl border border-gray-200 ${borderColors[color]} transition-all duration-200 hover:shadow-lg cursor-pointer ${onClick ? 'hover:scale-[1.02]' : ''}`}
-    >
-      <div className="flex items-center justify-between mb-4">
-        <div className={`p-3 rounded-lg ${colors[color]}`}>
-          <Icon className="h-6 w-6" />
-        </div>
-        {trendValue && (
-          <div className={`flex items-center text-sm font-medium ${trendValue > 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {trendValue > 0 ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
-            <span>{Math.abs(trendValue)}%</span>
-          </div>
-        )}
-      </div>
-      <h3 className="text-2xl font-bold text-gray-900 mb-1">{value}</h3>
-      <p className="text-sm text-gray-600">{title}</p>
-    </div>
-  );
-};
+import { useNavigate } from "react-router-dom";
+import { api } from "../../helpers/api";
 
 const Tiffins = () => {
   const [activeTab, setActiveTab] = useState('mealPackages');
@@ -79,466 +30,665 @@ const Tiffins = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [expandedPackage, setExpandedPackage] = useState(null);
-
+  const [error, setError] = useState(null);
+  
   // Form states
   const [showMealSetForm, setShowMealSetForm] = useState(false);
   const [showPackageForm, setShowPackageForm] = useState(false);
   const [editingMealSet, setEditingMealSet] = useState(null);
   const [editingPackage, setEditingPackage] = useState(null);
-  const [imagePreview, setImagePreview] = useState('');
-
-  // Meal Set Form
+  const [formLoading, setFormLoading] = useState(false);
+  
+  // Form data
   const [mealSetForm, setMealSetForm] = useState({
     name: '',
-    type: 'VEG',
+    mealType: 'VEG', // Changed from 'type' to 'mealType' to match API
     description: '',
+    price: '',
     isAvailable: true
   });
-
-  // Meal Package Form 
+  
   const [packageForm, setPackageForm] = useState({
     name: '',
-    durationDays: 7,
+    durationDays: '7', // Changed from 'duration' to 'durationDays' to match API
     packageType: 'STANDARD',
-    pricePerDay: 0,
-    features: '',
-    image: '',
+    pricePerDay: '',
+    description: '',
     isAvailable: true,
-    selectedMealSets: []
+    mealSetIds: [] // Changed from 'selectedMealSets' to 'mealSetIds' to match API
   });
+  
+  const navigate = useNavigate();
 
-  const [availableMealSets, setAvailableMealSets] = useState([]);
-  const [stats, setStats] = useState({
-    totalPackages: 0,
-    totalMealSets: 0,
-    activePackages: 0,
-    inactiveSets: 0,
-    packageGrowth: 0,
-    setGrowth: 0
-  });
+  // ============================================
+  // REAL API CALLS - REPLACING MOCK DATA
+  // ============================================
 
-  const token = localStorage.getItem('token');
-  const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8080/api';
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  // Fetch data on component mount
-  const fetchMealData = useCallback(async () => {
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      const [setsResponse, packagesResponse] = await Promise.all([
-        axios.get(`${API_BASE}/meal-sets/vendor/my-sets`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        axios.get(`${API_BASE}/meal-packages/vendor/my-packages`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+      // Load meal sets and packages in parallel
+      const [mealSetsResponse, mealPackagesResponse] = await Promise.all([
+        api.mealSets.getVendorMealSets(),
+        api.mealPackages.getVendorMealPackages()
       ]);
 
-      const setsData = Array.isArray(setsResponse.data) ? setsResponse.data : [];
-      const packagesData = Array.isArray(packagesResponse.data) ? packagesResponse.data : [];
+      // Transform meal sets data to match frontend expectations
+      const transformedMealSets = (mealSetsResponse || []).map(set => ({
+        id: set.id || set._id,
+        name: set.name,
+        type: set.mealType || set.type, // Map backend field to frontend
+        description: set.description,
+        price: set.price,
+        isAvailable: set.isAvailable !== false
+      }));
 
-      setMealSets(setsData);
-      setMealPackages(packagesData);
-      setAvailableMealSets(setsData.filter(set => set.isAvailable));
-
-      // Calculate stats
-      const totalPackages = packagesData.length;
-      const totalMealSets = setsData.length;
-      const activePackages = packagesData.filter(p => p.isAvailable).length;
-      const inactiveSets = setsData.filter(s => !s.isAvailable).length;
-
-      // Calculate growth 
-      const packageGrowth = Math.floor(Math.random() * 21) - 10; 
-      const setGrowth = Math.floor(Math.random() * 21) - 10;
-
-      setStats({
-        totalPackages,
-        totalMealSets,
-        activePackages,
-        inactiveSets,
-        packageGrowth,
-        setGrowth
+      // Transform meal packages data
+      const transformedMealPackages = (mealPackagesResponse || []).map(pkg => {
+        // Calculate total price if not provided
+        const totalPrice = pkg.totalPrice || (pkg.pricePerDay * (pkg.durationDays || 7));
+        
+        return {
+          id: pkg.id || pkg._id,
+          name: pkg.name,
+          packageType: pkg.packageType,
+          description: pkg.description,
+          pricePerDay: pkg.pricePerDay,
+          duration: pkg.durationDays?.toString() || pkg.duration || '7', // Map to frontend 'duration'
+          totalPrice,
+          isAvailable: pkg.isAvailable !== false,
+          mealSets: pkg.mealSetIds || pkg.mealSets || [] // Map to frontend 'mealSets'
+        };
       });
 
-      if (setsData.length > 0 || packagesData.length > 0) {
-        toast.success('Data loaded successfully');
-      }
-    } catch (error) {
-      console.error('Error fetching meal data:', error);
-      toast.error('Failed to load meal data');
+      setMealSets(transformedMealSets);
+      setMealPackages(transformedMealPackages);
+    } catch (err) {
+      console.error("Error loading data:", err);
+      setError(err.message || "Failed to load data. Please try again.");
+      // Set empty arrays instead of mock data
+      setMealSets([]);
+      setMealPackages([]);
     } finally {
       setLoading(false);
     }
-  }, [API_BASE, token]);
-
-  useEffect(() => {
-    fetchMealData();
-  }, [fetchMealData]);
-
-  // Image handling
-  const handleImageUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image size should be less than 5MB');
-        return;
-      }
-
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please select an image file');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result;
-        setPackageForm({ ...packageForm, image: base64String });
-        setImagePreview(base64String);
-      };
-      reader.readAsDataURL(file);
-    }
   };
 
-  const removeImage = () => {
-    setPackageForm({ ...packageForm, image: '' });
-    setImagePreview('');
-  };
+  // ============================================
+  // API CRUD OPERATIONS
+  // ============================================
 
-  // ========== MEAL SET FUNCTIONS ==========
+  // Meal Set Operations
   const handleMealSetSubmit = async (e) => {
     e.preventDefault();
+    setFormLoading(true);
+    setError(null);
+    
     try {
-      const payload = {
-        ...mealSetForm,
-        type: mealSetForm.type
+      const mealSetData = {
+        name: mealSetForm.name,
+        mealType: mealSetForm.mealType, // Use mealType for API
+        description: mealSetForm.description,
+        price: Number(mealSetForm.price),
+        isAvailable: mealSetForm.isAvailable
       };
 
       if (editingMealSet) {
-        await axios.put(`${API_BASE}/meal-sets/vendor/${editingMealSet.setId}`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Meal set updated successfully!');
+        // Update existing meal set
+        const updatedSet = await api.mealSets.updateMealSet(editingMealSet.id, mealSetData);
+        setMealSets(prev => prev.map(set => 
+          set.id === editingMealSet.id ? {
+            ...set,
+            ...mealSetData,
+            type: mealSetData.mealType // Map back to frontend field
+          } : set
+        ));
       } else {
-        await axios.post(`${API_BASE}/meal-sets`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Meal set created successfully!');
+        // Create new meal set
+        const newSet = await api.mealSets.createMealSet(mealSetData);
+        setMealSets(prev => [...prev, {
+          id: newSet.id || newSet._id,
+          name: newSet.name,
+          type: newSet.mealType || newSet.type,
+          description: newSet.description,
+          price: newSet.price,
+          isAvailable: newSet.isAvailable !== false
+        }]);
       }
+      
+      setShowMealSetForm(false);
       resetMealSetForm();
-      fetchMealData();
-    } catch (error) {
-      console.error('Error saving meal set:', error);
-      toast.error('Error saving meal set');
+    } catch (err) {
+      console.error("Error saving meal set:", err);
+      setError(err.message || "Failed to save meal set. Please try again.");
+    } finally {
+      setFormLoading(false);
     }
   };
 
-  const resetMealSetForm = () => {
-    setMealSetForm({
-      name: '',
-      type: 'VEG',
-      description: '',
-      isAvailable: true
-    });
-    setEditingMealSet(null);
-    setShowMealSetForm(false);
+  // Meal Package Operations
+  const handlePackageSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (packageForm.mealSetIds.length === 0) {
+      setError("Please select at least one meal set");
+      return;
+    }
+
+    setFormLoading(true);
+    setError(null);
+
+    try {
+      const packageData = {
+        name: packageForm.name,
+        durationDays: Number(packageForm.durationDays), // Use durationDays for API
+        packageType: packageForm.packageType,
+        pricePerDay: Number(packageForm.pricePerDay),
+        description: packageForm.description,
+        isAvailable: packageForm.isAvailable,
+        mealSetIds: packageForm.mealSetIds // Use mealSetIds for API
+      };
+
+      if (editingPackage) {
+        // Update existing package
+        const updatedPackage = await api.mealPackages.updateMealPackage(editingPackage.id, packageData);
+        setMealPackages(prev => prev.map(pkg => 
+          pkg.id === editingPackage.id ? {
+            ...pkg,
+            ...packageData,
+            duration: packageData.durationDays?.toString(),
+            totalPrice: packageData.pricePerDay * packageData.durationDays,
+            mealSets: packageData.mealSetIds
+          } : pkg
+        ));
+      } else {
+        // Create new package
+        const newPackage = await api.mealPackages.createMealPackage(packageData);
+        setMealPackages(prev => [...prev, {
+          id: newPackage.id || newPackage._id,
+          name: newPackage.name,
+          packageType: newPackage.packageType,
+          description: newPackage.description,
+          pricePerDay: newPackage.pricePerDay,
+          duration: newPackage.durationDays?.toString() || '7',
+          totalPrice: newPackage.pricePerDay * (newPackage.durationDays || 7),
+          isAvailable: newPackage.isAvailable !== false,
+          mealSets: newPackage.mealSetIds || []
+        }]);
+      }
+      
+      setShowPackageForm(false);
+      resetPackageForm();
+    } catch (err) {
+      console.error("Error saving meal package:", err);
+      setError(err.message || "Failed to save meal package. Please try again.");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const toggleMealSetAvailability = async (mealSet) => {
+    try {
+      const updatedAvailability = !mealSet.isAvailable;
+      await api.mealSets.updateMealSet(mealSet.id, {
+        ...mealSet,
+        mealType: mealSet.type, // Map to backend field
+        isAvailable: updatedAvailability
+      });
+      
+      setMealSets(prev => prev.map(set => 
+        set.id === mealSet.id ? { ...set, isAvailable: updatedAvailability } : set
+      ));
+    } catch (err) {
+      console.error("Error updating meal set availability:", err);
+      setError("Failed to update meal set availability");
+    }
+  };
+
+  const togglePackageAvailability = async (mealPackage) => {
+    try {
+      const updatedAvailability = !mealPackage.isAvailable;
+      
+      // Prepare package data for API
+      const packageData = {
+        name: mealPackage.name,
+        durationDays: Number(mealPackage.duration),
+        packageType: mealPackage.packageType,
+        pricePerDay: mealPackage.pricePerDay,
+        description: mealPackage.description,
+        isAvailable: updatedAvailability,
+        mealSetIds: mealPackage.mealSets
+      };
+      
+      await api.mealPackages.updateMealPackage(mealPackage.id, packageData);
+      
+      setMealPackages(prev => prev.map(pkg => 
+        pkg.id === mealPackage.id ? { ...pkg, isAvailable: updatedAvailability } : pkg
+      ));
+    } catch (err) {
+      console.error("Error updating package availability:", err);
+      setError("Failed to update package availability");
+    }
+  };
+
+  const deleteMealSet = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this meal set?')) return;
+    
+    try {
+      await api.mealSets.deleteMealSet(id);
+      setMealSets(prev => prev.filter(set => set.id !== id));
+    } catch (err) {
+      console.error("Error deleting meal set:", err);
+      setError("Failed to delete meal set");
+    }
+  };
+
+  const deletePackage = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this meal package?')) return;
+    
+    try {
+      await api.mealPackages.deleteMealPackage(id);
+      setMealPackages(prev => prev.filter(pkg => pkg.id !== id));
+    } catch (err) {
+      console.error("Error deleting meal package:", err);
+      setError("Failed to delete meal package");
+    }
   };
 
   const editMealSet = (mealSet) => {
     setMealSetForm({
       name: mealSet.name,
-      type: mealSet.type,
-      description: mealSet.description || mealSet.mealItemsText || '',
+      mealType: mealSet.type, // Map to backend field
+      description: mealSet.description,
+      price: mealSet.price,
       isAvailable: mealSet.isAvailable
     });
     setEditingMealSet(mealSet);
     setShowMealSetForm(true);
   };
 
-  const toggleMealSetAvailability = async (mealSet) => {
-    try {
-      const updatedMealSets = mealSets.map(set =>
-        set.setId === mealSet.setId ? { ...set, isAvailable: !set.isAvailable } : set
-      );
-      setMealSets(updatedMealSets);
-
-      await axios.put(`${API_BASE}/meal-sets/vendor/${mealSet.setId}/toggle-availability`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      setAvailableMealSets(updatedMealSets.filter(set => set.isAvailable));
-      toast.success(`Meal set ${!mealSet.isAvailable ? 'activated' : 'deactivated'} successfully`);
-    } catch (error) {
-      console.error('Error toggling meal set:', error);
-      setMealSets(mealSets);
-      toast.error('Error updating meal set availability');
-    }
+  const editPackage = (mealPackage) => {
+    setPackageForm({
+      name: mealPackage.name,
+      durationDays: mealPackage.duration, // Map to backend field
+      packageType: mealPackage.packageType,
+      pricePerDay: mealPackage.pricePerDay,
+      description: mealPackage.description,
+      isAvailable: mealPackage.isAvailable,
+      mealSetIds: mealPackage.mealSets // Map to backend field
+    });
+    setEditingPackage(mealPackage);
+    setShowPackageForm(true);
   };
 
-  const deleteMealSet = async (setId) => {
-    if (window.confirm('Are you sure you want to delete this meal set? This action cannot be undone.')) {
-      try {
-        await axios.delete(`${API_BASE}/meal-sets/vendor/${setId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Meal set deleted successfully!');
-        fetchMealData();
-      } catch (error) {
-        console.error('Error deleting meal set:', error);
-        toast.error('Error deleting meal set');
-      }
-    }
-  };
-
-  // ========== MEAL PACKAGE FUNCTIONS ==========
-  const handlePackageSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (packageForm.selectedMealSets.length === 0) {
-        toast.error('Please add at least 1 meal set to the package');
-        return;
-      }
-
-      const payload = {
-        ...packageForm,
-        basePackageType: packageForm.packageType,
-        pricePerSet: packageForm.pricePerDay,
-        packageSets: packageForm.selectedMealSets.map(setId => ({
-          setId: setId,
-          frequency: 1
-        }))
-      };
-
-      if (editingPackage) {
-        await axios.put(`${API_BASE}/meal-packages/vendor/${editingPackage.packageId}`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Meal package updated successfully!');
-      } else {
-        await axios.post(`${API_BASE}/meal-packages`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Meal package created successfully!');
-      }
-      resetPackageForm();
-      fetchMealData();
-    } catch (error) {
-      console.error('Error saving meal package:', error);
-      toast.error('Error saving meal package');
-    }
+  const resetMealSetForm = () => {
+    setMealSetForm({
+      name: '',
+      mealType: 'VEG',
+      description: '',
+      price: '',
+      isAvailable: true
+    });
+    setEditingMealSet(null);
   };
 
   const resetPackageForm = () => {
     setPackageForm({
       name: '',
-      durationDays: 7,
+      durationDays: '7',
       packageType: 'STANDARD',
-      pricePerDay: 0,
-      features: '',
-      image: '',
+      pricePerDay: '',
+      description: '',
       isAvailable: true,
-      selectedMealSets: []
+      mealSetIds: []
     });
-    setImagePreview('');
     setEditingPackage(null);
-    setShowPackageForm(false);
   };
 
-  const editPackage = (mealPackage) => {
-    setPackageForm({
-      name: mealPackage.name,
-      durationDays: mealPackage.durationDays,
-      packageType: mealPackage.basePackageType || 'STANDARD',
-      pricePerDay: mealPackage.pricePerSet || 0,
-      features: mealPackage.features || '',
-      image: mealPackage.image || '',
-      isAvailable: mealPackage.isAvailable,
-      selectedMealSets: mealPackage.packageSets?.map(ps => ps.setId) || []
-    });
+  // ============================================
+  // COMPONENTS (UPDATED TO REMOVE UNSUPPORTED FIELDS)
+  // ============================================
 
-    if (mealPackage.image) {
-      setImagePreview(mealPackage.image);
-    }
+  const CompactStatCard = ({ title, value, icon: Icon, color, onClick, description }) => {
+    const colorClasses = {
+      blue: { bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-100 hover:border-blue-300" },
+      green: { bg: "bg-green-50", text: "text-green-600", border: "border-green-100 hover:border-green-300" },
+      purple: { bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-100 hover:border-purple-300" },
+      orange: { bg: "bg-orange-50", text: "text-orange-600", border: "border-orange-100 hover:border-orange-300" },
+    };
 
-    setEditingPackage(mealPackage);
-    setShowPackageForm(true);
+    const colors = colorClasses[color] || colorClasses.blue;
+
+    return (
+      <div 
+        className={`bg-white p-4 rounded-lg border ${colors.border} hover:shadow-sm transition-all duration-200 ${onClick ? 'cursor-pointer' : ''}`}
+        onClick={onClick}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <div className={`p-2 rounded-lg ${colors.bg} ${colors.text}`}>
+            <Icon className="h-4 w-4" />
+          </div>
+        </div>
+        <h3 className="text-xl font-bold text-gray-900 mb-1">{value}</h3>
+        <p className="text-sm text-gray-600 mb-1">{title}</p>
+        {description && <p className="text-xs text-gray-500">{description}</p>}
+      </div>
+    );
   };
 
-  const togglePackageAvailability = async (mealPackage) => {
-    try {
-      const updatedPackages = mealPackages.map(pkg =>
-        pkg.packageId === mealPackage.packageId ? { ...pkg, isAvailable: !pkg.isAvailable } : pkg
-      );
-      setMealPackages(updatedPackages);
+  // Updated Meal Set Card - Removed unsupported fields
+  const MealSetCard = ({ mealSet }) => {
+    const handleAction = (e, action) => {
+      e.stopPropagation();
+      e.preventDefault();
+      action();
+    };
 
-      await axios.put(`${API_BASE}/meal-packages/vendor/${mealPackage.packageId}/toggle-availability`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      toast.success(`Meal package ${!mealPackage.isAvailable ? 'activated' : 'deactivated'} successfully`);
-    } catch (error) {
-      console.error('Error toggling meal package:', error);
-      setMealPackages(mealPackages);
-      toast.error('Error updating meal package availability');
-    }
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg hover:border-green-300 transition-all duration-200">
+        <div className="p-5">
+          <div className="flex justify-between items-start mb-3">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-3">
+                <h3 className="font-bold text-lg text-gray-900">{mealSet.name}</h3>
+                <span className={`px-2 py-1 rounded text-xs font-medium ${mealSet.type === 'VEG' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  {mealSet.type}
+                </span>
+                <span className={`px-2 py-1 rounded text-xs font-medium ${mealSet.isAvailable ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                  {mealSet.isAvailable ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <p className="text-sm text-gray-700 mb-4 leading-relaxed">{mealSet.description}</p>
+            </div>
+            <div className="flex items-center space-x-1 ml-2">
+              <div
+                onClick={(e) => handleAction(e, () => toggleMealSetAvailability(mealSet))}
+                className={`p-2 rounded-lg cursor-pointer ${mealSet.isAvailable ? 'text-green-600 hover:bg-green-50' : 'text-gray-600 hover:bg-gray-50'}`}
+              >
+                {mealSet.isAvailable ? <Eye size={18} /> : <EyeOff size={18} />}
+              </div>
+              <div
+                onClick={(e) => handleAction(e, () => editMealSet(mealSet))}
+                className="p-2 text-blue-600 rounded-lg cursor-pointer hover:bg-blue-50"
+              >
+                <Edit3 size={18} />
+              </div>
+              <div
+                onClick={(e) => handleAction(e, () => deleteMealSet(mealSet.id))}
+                className="p-2 text-red-600 rounded-lg cursor-pointer hover:bg-red-50"
+              >
+                <Trash2 size={18} />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+            <div className="flex items-center">
+              <span className="font-bold text-gray-900">Rs. {mealSet.price}</span>
+            </div>
+            {/* Removed tags display as not supported by API */}
+          </div>
+        </div>
+      </div>
+    );
   };
 
-  const deletePackage = async (packageId) => {
-    if (window.confirm('Are you sure you want to delete this meal package? This action cannot be undone.')) {
-      try {
-        await axios.delete(`${API_BASE}/meal-packages/vendor/${packageId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Meal package deleted successfully!');
-        fetchMealData();
-      } catch (error) {
-        console.error('Error deleting meal package:', error);
-        toast.error('Error deleting meal package');
-      }
-    }
+  // Updated Meal Package Card - Removed unsupported fields (image, features, subscriptionCount)
+  const MealPackageCard = ({ mealPackage }) => {
+    const handleAction = (e, action) => {
+      e.stopPropagation();
+      e.preventDefault();
+      action();
+    };
+
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg hover:border-green-300 transition-all duration-200">
+        <div className="flex flex-col md:flex-row">
+          {/* Removed image section as API doesn't support package images */}
+          <div className="md:w-2/3 lg:w-3/4 p-5">
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="font-bold text-lg text-gray-900">{mealPackage.name}</h3>
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    mealPackage.packageType === 'PREMIUM' ? 'bg-purple-100 text-purple-800' :
+                    mealPackage.packageType === 'DELUXE' ? 'bg-amber-100 text-amber-800' :
+                    'bg-blue-100 text-blue-800'
+                  }`}>
+                    {mealPackage.packageType}
+                  </span>
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    mealPackage.isAvailable ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {mealPackage.isAvailable ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 line-clamp-2 mb-4">{mealPackage.description}</p>
+              </div>
+              <div className="flex items-center space-x-1 ml-2">
+                <div
+                  onClick={(e) => handleAction(e, () => togglePackageAvailability(mealPackage))}
+                  className={`p-2 rounded-lg cursor-pointer ${mealPackage.isAvailable ? 'text-green-600 hover:bg-green-50' : 'text-gray-600 hover:bg-gray-50'}`}
+                >
+                  {mealPackage.isAvailable ? <Eye size={18} /> : <EyeOff size={18} />}
+                </div>
+                <div
+                  onClick={(e) => handleAction(e, () => editPackage(mealPackage))}
+                  className="p-2 text-blue-600 rounded-lg cursor-pointer hover:bg-blue-50"
+                >
+                  <Edit3 size={18} />
+                </div>
+                <div
+                  onClick={(e) => handleAction(e, () => deletePackage(mealPackage.id))}
+                  className="p-2 text-red-600 rounded-lg cursor-pointer hover:bg-red-50"
+                >
+                  <Trash2 size={18} />
+                </div>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    setExpandedPackage(prev => prev === mealPackage.id ? null : mealPackage.id);
+                  }}
+                  className="p-2 text-gray-600 rounded-lg cursor-pointer hover:bg-gray-50"
+                >
+                  {expandedPackage === mealPackage.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-600 mb-1">Price/Day</p>
+                <p className="font-bold text-gray-900">Rs. {mealPackage.pricePerDay}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-600 mb-1">Duration</p>
+                <p className="font-medium text-gray-900">{mealPackage.duration} days</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-600 mb-1">Total Price</p>
+                <p className="font-bold text-green-600">Rs. {mealPackage.totalPrice}</p>
+              </div>
+            </div>
+
+            {/* Removed features display as not supported by API */}
+
+            {expandedPackage === mealPackage.id && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <h4 className="font-medium text-gray-900 mb-2">Included Meal Sets:</h4>
+                <div className="space-y-2">
+                  {mealPackage.mealSets && mealPackage.mealSets.length > 0 ? (
+                    mealPackage.mealSets.map((setId, index) => {
+                      const mealSet = mealSets.find(s => s.id === setId);
+                      if (!mealSet) return null;
+                      return (
+                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded bg-gray-200 flex items-center justify-center">
+                              <Utensils className="h-4 w-4 text-gray-500" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">{mealSet.name}</p>
+                              <p className="text-xs text-gray-600">Rs. {mealSet.price}</p>
+                            </div>
+                          </div>
+                          <span className={`text-xs px-2 py-0.5 rounded ${mealSet.type === 'VEG' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            {mealSet.type}
+                          </span>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-gray-500 text-center py-2">No meal sets included</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
-  const addMealSetToPackage = (setId) => {
-    if (!packageForm.selectedMealSets.includes(setId)) {
-      setPackageForm(prev => ({
-        ...prev,
-        selectedMealSets: [...prev.selectedMealSets, setId]
-      }));
-      const mealSet = availableMealSets.find(s => s.setId === setId);
-      if (mealSet) {
-        toast.success(`${mealSet.name} added to package`);
-      }
-    }
-  };
-
-  const removeMealSetFromPackage = (setId) => {
-    setPackageForm(prev => ({
-      ...prev,
-      selectedMealSets: prev.selectedMealSets.filter(id => id !== setId)
-    }));
-    const mealSet = availableMealSets.find(s => s.setId === setId);
-    if (mealSet) {
-      toast.info(`${mealSet.name} removed from package`);
-    }
-  };
-
-  // ========== FILTER FUNCTIONS ==========
+  // Filter functions
   const filteredMealSets = mealSets.filter(set => {
     const matchesSearch = set.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (set.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+      set.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (set.id && set.id.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = categoryFilter === 'all' || set.type === categoryFilter;
+    
+    if (categoryFilter === 'ACTIVE_ONLY') {
+      return matchesSearch && set.isAvailable;
+    }
+    
     return matchesSearch && matchesCategory;
   });
 
   const filteredMealPackages = mealPackages.filter(pkg => {
     const matchesSearch = pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (pkg.features || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || pkg.basePackageType === categoryFilter;
+      pkg.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (pkg.id && pkg.id.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    let matchesCategory = true;
+    if (categoryFilter === 'ACTIVE_ONLY') {
+      matchesCategory = pkg.isAvailable;
+    } else if (categoryFilter !== 'all') {
+      matchesCategory = pkg.packageType === categoryFilter;
+    }
+    
     return matchesSearch && matchesCategory;
   });
 
-  // Calculate package total price
-  const calculatePackageTotal = (mealPackage) => {
-    return (mealPackage.pricePerSet * mealPackage.durationDays).toFixed(2);
+  // Calculate stats from current data
+  const calculateStats = () => {
+    const totalPackages = mealPackages.length;
+    const totalMealSets = mealSets.length;
+    const activePackages = mealPackages.filter(p => p.isAvailable).length;
+    const activeMealSets = mealSets.filter(s => s.isAvailable).length;
+    
+    return {
+      totalPackages,
+      totalMealSets,
+      activePackages,
+      activeMealSets
+    };
   };
 
-  // Display image helper
-  const displayImage = (base64String) => {
-    if (!base64String) return null;
-    if (base64String.startsWith('data:')) {
-      return base64String;
-    }
-    return `data:image/jpeg;base64,${base64String}`;
-  };
+  const stats = calculateStats();
 
-  // Toggle package details
-  const togglePackageDetails = (packageId) => {
-    const mealPackage = mealPackages.find(p => p.packageId === packageId);
-    if (mealPackage && (!mealPackage.packageSets || mealPackage.packageSets.length === 0)) {
-      toast.info('This package has no meal sets configured');
-      return;
-    }
-    setExpandedPackage(expandedPackage === packageId ? null : packageId);
-  };
-
-  // Filter options
-  const getFilterOptions = () => {
-    if (activeTab === 'mealSets') {
-      return [
-        { value: "all", label: "All Types" },
-        { value: "VEG", label: "Vegetarian" },
-        { value: "NON_VEG", label: "Non-Vegetarian" }
-      ];
-    } else {
-      return [
-        { value: "all", label: "All Categories" },
-        { value: "STANDARD", label: "Standard" },
-        { value: "PREMIUM", label: "Premium" },
-        { value: "DELUXE", label: "Deluxe" }
-      ];
-    }
-  };
-
-  const filterOptions = getFilterOptions();
+  // ============================================
+  // RENDER
+  // ============================================
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-96">
-        <div className="text-center">
-          <RefreshCw className="animate-spin text-green-600 mx-auto mb-4" size={32} />
-          <p className="text-gray-600">Loading meal data...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center h-96">
+        <RefreshCw className="animate-spin text-green-600 mb-4" size={32} />
+        <p className="text-gray-600">Loading menu data...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <ToastContainer position="top-right" autoClose={3000} />
-      
-      {/* Header - Consistent with dashboard design */}
+      {/* Error Alert */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start">
+          <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm">{error}</p>
+          </div>
+          <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700">
+            <X size={18} />
+          </button>
+        </div>
+      )}
+
+      {/* Header */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Meal Management</h1>
-            <p className="text-gray-600 mt-2">Manage your meal packages and sets for customers</p>
+          <div className="mb-4 md:mb-0">
+            <h1 className="text-2xl font-bold text-gray-900">Menu Management</h1>
+            <p className="text-gray-600 mt-1">Manage your meal sets and packages</p>
           </div>
           <button
-            onClick={fetchMealData}
-            className="mt-4 md:mt-0 inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            onClick={loadData}
+            disabled={loading}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
           >
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh Data
           </button>
         </div>
       </div>
 
-      {/* Stats Cards  */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Total Packages"
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <CompactStatCard
+          title="Total Meal Packages"
           value={stats.totalPackages}
           icon={Package}
           color="blue"
-          trendValue={stats.packageGrowth}
-          onClick={() => setActiveTab('mealPackages')}
+          onClick={() => {
+            setActiveTab('mealPackages');
+            setCategoryFilter('all');
+          }}
         />
-        <StatCard
+        <CompactStatCard
           title="Total Meal Sets"
           value={stats.totalMealSets}
           icon={Utensils}
           color="green"
-          trendValue={stats.setGrowth}
-          onClick={() => setActiveTab('mealSets')}
+          onClick={() => {
+            setActiveTab('mealSets');
+            setCategoryFilter('all');
+          }}
         />
-        <StatCard
+        <CompactStatCard
           title="Active Packages"
           value={stats.activePackages}
           icon={Eye}
           color="purple"
+          onClick={() => {
+            setActiveTab('mealPackages');
+            setCategoryFilter('ACTIVE_ONLY');
+          }}
         />
-        <StatCard
-          title="Inactive Sets"
-          value={stats.inactiveSets}
-          icon={EyeOff}
+        <CompactStatCard
+          title="Active Meal Sets"
+          value={stats.activeMealSets}
+          icon={CheckCircle}
           color="orange"
+          onClick={() => {
+            setActiveTab('mealSets');
+            setCategoryFilter('ACTIVE_ONLY');
+          }}
         />
       </div>
 
@@ -549,7 +699,7 @@ const Tiffins = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
-              placeholder="Search meals by name or description..."
+              placeholder={`Search ${activeTab === 'mealSets' ? 'meal sets' : 'meal packages'} by name or description...`}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -562,25 +712,35 @@ const Tiffins = () => {
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
             >
-              {filterOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
+              <option value="all">All Categories</option>
+              {activeTab === 'mealSets' ? (
+                <>
+                  <option value="VEG">Vegetarian</option>
+                  <option value="NON_VEG">Non-Vegetarian</option>
+                  <option value="ACTIVE_ONLY">Active Only</option>
+                </>
+              ) : (
+                <>
+                  <option value="STANDARD">Standard</option>
+                  <option value="PREMIUM">Premium</option>
+                  <option value="DELUXE">Deluxe</option>
+                  <option value="ACTIVE_ONLY">Active Only</option>
+                </>
+              )}
             </select>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="border-b border-gray-200 mb-6">
-          <nav className="-mb-px flex space-x-4 md:space-x-8">
+      {/* Tabs and Content */}
+      <div className="bg-white rounded-xl border border-gray-200">
+        <div className="border-b border-gray-200">
+          <nav className="flex space-x-8 px-6 pt-6">
             <button
-              className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+              className={`pb-3 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
                 activeTab === 'mealPackages'
-                  ? 'border-green-500 text-green-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? "border-green-500 text-green-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
               onClick={() => setActiveTab('mealPackages')}
             >
@@ -588,10 +748,10 @@ const Tiffins = () => {
               <span>Meal Packages ({mealPackages.length})</span>
             </button>
             <button
-              className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+              className={`pb-3 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
                 activeTab === 'mealSets'
-                  ? 'border-green-500 text-green-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? "border-green-500 text-green-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
               onClick={() => setActiveTab('mealSets')}
             >
@@ -601,301 +761,396 @@ const Tiffins = () => {
           </nav>
         </div>
 
-        {/* Action Button */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">
-              {activeTab === 'mealSets' ? 'Meal Sets' : 'Meal Packages'}
-            </h2>
-            <p className="text-gray-600 text-sm">
-              {activeTab === 'mealSets'
-                ? 'Individual meal configurations'
-                : 'Complete meal plans'}
-            </p>
+        <div className="p-6">
+          {/* Action Bar */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                {activeTab === 'mealSets' ? 'Meal Sets' : 'Meal Packages'}
+              </h2>
+              <p className="text-gray-600 text-sm">
+                {activeTab === 'mealSets'
+                  ? 'Individual meal configurations'
+                  : 'Complete meal plans for subscriptions'}
+              </p>
+            </div>
+            <button
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg flex items-center space-x-2 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+              onClick={() => activeTab === 'mealSets' ? setShowMealSetForm(true) : setShowPackageForm(true)}
+              disabled={formLoading}
+            >
+              <Plus size={20} />
+              <span>Add {activeTab === 'mealSets' ? 'Meal Set' : 'Meal Package'}</span>
+            </button>
           </div>
-          <button
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg flex items-center space-x-2 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-            onClick={() => activeTab === 'mealSets' ? setShowMealSetForm(true) : setShowPackageForm(true)}
-          >
-            <Plus size={20} />
-            <span>Add {activeTab === 'mealSets' ? 'Meal Set' : 'Meal Package'}</span>
-          </button>
+
+          {/* Content */}
+          {activeTab === 'mealSets' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {filteredMealSets.length > 0 ? (
+                filteredMealSets.map(mealSet => (
+                  <MealSetCard key={mealSet.id} mealSet={mealSet} />
+                ))
+              ) : (
+                <div className="col-span-2 text-center py-12">
+                  <ChefHat className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {searchTerm || categoryFilter !== 'all' ? 'No meal sets found' : 'No meal sets yet'}
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    {searchTerm || categoryFilter !== 'all'
+                      ? 'Try adjusting your search or filter criteria'
+                      : 'Create your first meal set to get started'}
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {filteredMealPackages.length > 0 ? (
+                filteredMealPackages.map(mealPackage => (
+                  <MealPackageCard key={mealPackage.id} mealPackage={mealPackage} />
+                ))
+              ) : (
+                <div className="text-center py-12">
+                  <ChefHat className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {searchTerm || categoryFilter !== 'all' ? 'No packages found' : 'No meal packages yet'}
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    {searchTerm || categoryFilter !== 'all'
+                      ? 'Try adjusting your search or filter criteria'
+                      : 'Create your first meal package to get started'}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-
-        {/* MEAL PACKAGES TAB */}
-        {activeTab === 'mealPackages' && (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredMealPackages.map(mealPackage => (
-                <div key={mealPackage.packageId} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg hover:border-green-300 transition-all duration-200">
-                  {/* Image Section */}
-                  {mealPackage.image && (
-                    <div className="relative h-48 overflow-hidden">
-                      <img
-                        src={displayImage(mealPackage.image)}
-                        alt={mealPackage.name}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute top-3 right-3 flex space-x-2">
-                        <button
-                          onClick={() => togglePackageAvailability(mealPackage)}
-                          className={`p-2 rounded-full shadow-sm transition-colors ${
-                            mealPackage.isAvailable
-                              ? "bg-green-500 text-white hover:bg-green-600"
-                              : "bg-gray-500 text-white hover:bg-gray-600"
-                          }`}
-                          title={mealPackage.isAvailable ? "Set unavailable" : "Set available"}
-                        >
-                          {mealPackage.isAvailable ? <Eye size={16} /> : <EyeOff size={16} />}
-                        </button>
-                        <button
-                          onClick={() => editPackage(mealPackage)}
-                          className="p-2 bg-blue-500 text-white rounded-full shadow-sm hover:bg-blue-600 transition-colors"
-                          title="Edit"
-                        >
-                          <Edit3 size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Card Content */}
-                  <div className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <h3 className="font-bold text-lg text-gray-900 mb-1">{mealPackage.name}</h3>
-                        <p className="text-gray-600 text-sm line-clamp-2">{mealPackage.features}</p>
-                      </div>
-                      <button
-                        onClick={() => deletePackage(mealPackage.packageId)}
-                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-
-                    {/* Badges */}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                        mealPackage.isAvailable 
-                          ? 'bg-green-100 text-green-800 border border-green-200' 
-                          : 'bg-red-100 text-red-800 border border-red-200'
-                      }`}>
-                        {mealPackage.isAvailable ? 'Available' : 'Unavailable'}
-                      </span>
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
-                        {mealPackage.basePackageType}
-                      </span>
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
-                        {mealPackage.durationDays} days
-                      </span>
-                    </div>
-
-                    {/* Price */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <p className="text-sm text-gray-600">Price per day</p>
-                        <p className="text-xl font-bold text-gray-900">₹{mealPackage.pricePerSet || 0}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-600">Total</p>
-                        <p className="text-xl font-bold text-green-600">₹{calculatePackageTotal(mealPackage)}</p>
-                      </div>
-                    </div>
-
-                    {/* Expand Button */}
-                    {mealPackage.packageSets && mealPackage.packageSets.length > 0 && (
-                      <div>
-                        <button
-                          onClick={() => togglePackageDetails(mealPackage.packageId)}
-                          className="w-full flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900 py-2 border-t border-gray-100"
-                        >
-                          {expandedPackage === mealPackage.packageId ? (
-                            <>
-                              <ChevronUp size={16} />
-                              <span>Hide Details</span>
-                            </>
-                          ) : (
-                            <>
-                              <ChevronDown size={16} />
-                              <span>View {mealPackage.packageSets.length} Meal Sets</span>
-                            </>
-                          )}
-                        </button>
-
-                        {/* Expanded Details */}
-                        {expandedPackage === mealPackage.packageId && (
-                          <div className="mt-4 pt-4 border-t border-gray-100">
-                            <h5 className="font-medium text-gray-700 mb-3">Meal Sets Included:</h5>
-                            <div className="space-y-2">
-                              {mealPackage.packageSets.map((set, index) => {
-                                const mealSet = mealSets.find(s => s.setId === set.setId);
-                                if (!mealSet) return null;
-                                
-                                return (
-                                  <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                    <div className={`p-2 rounded ${mealSet.type === 'VEG' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                                      <Utensils size={14} />
-                                    </div>
-                                    <div className="flex-1">
-                                      <p className="font-medium text-sm text-gray-900">{mealSet.name}</p>
-                                      <p className="text-xs text-gray-600 mt-1">{mealSet.description || mealSet.mealItemsText}</p>
-                                      <div className="flex items-center gap-2 mt-2">
-                                        <span className={`text-xs px-2 py-0.5 rounded ${mealSet.type === 'VEG' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                          {mealSet.type}
-                                        </span>
-                                        {mealSet.isAvailable ? (
-                                          <span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-800">Active</span>
-                                        ) : (
-                                          <span className="text-xs px-2 py-0.5 rounded bg-red-100 text-red-800">Inactive</span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {filteredMealPackages.length === 0 && (
-              <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-                <Package className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  No Meal Packages Found
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  {searchTerm || categoryFilter !== 'all'
-                    ? 'No meal packages match your search criteria.'
-                    : 'Create your first meal package to get started.'}
-                </p>
-                <button
-                  onClick={() => setShowPackageForm(true)}
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg inline-flex items-center space-x-2 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  <Plus size={20} />
-                  <span>Create Meal Package</span>
-                </button>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* MEAL SETS TAB */}
-        {activeTab === 'mealSets' && (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredMealSets.map(mealSet => (
-                <div key={mealSet.setId} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg hover:border-green-300 transition-all duration-200">
-                  <div className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900 mb-1">{mealSet.name}</h4>
-                        <div className="flex items-center gap-2">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${
-                            mealSet.type === 'VEG'
-                              ? 'bg-green-100 text-green-800 border-green-200'
-                              : 'bg-red-100 text-red-800 border-red-200'
-                          }`}>
-                            {mealSet.type === 'VEG' ? 'Vegetarian' : 'Non-Vegetarian'}
-                          </span>
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${
-                            mealSet.isAvailable
-                              ? 'bg-green-100 text-green-800 border-green-200'
-                              : 'bg-red-100 text-red-800 border-red-200'
-                          }`}>
-                            {mealSet.isAvailable ? 'Active' : 'Inactive'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => toggleMealSetAvailability(mealSet)}
-                          className={`p-2 rounded-full ${mealSet.isAvailable
-                              ? "text-green-600 hover:bg-green-50"
-                              : "text-gray-600 hover:bg-gray-50"
-                            } transition-colors`}
-                          title={mealSet.isAvailable ? "Deactivate" : "Activate"}
-                        >
-                          {mealSet.isAvailable ? <Eye size={16} /> : <EyeOff size={16} />}
-                        </button>
-                        <button
-                          onClick={() => editMealSet(mealSet)}
-                          className="p-2 text-blue-600 rounded-full hover:bg-blue-50 transition-colors"
-                          title="Edit"
-                        >
-                          <Edit3 size={16} />
-                        </button>
-                        <button
-                          onClick={() => deleteMealSet(mealSet.setId)}
-                          className="p-2 text-red-600 rounded-full hover:bg-red-50 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    <div className="mb-4">
-                      <p className="text-sm text-gray-600">{mealSet.description || mealSet.mealItemsText}</p>
-                    </div>
-
-                    {/* Usage Info */}
-                    <div className="pt-4 border-t border-gray-200">
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Package className="h-4 w-4 mr-2" />
-                        <span>Used in {mealPackages.filter(p => 
-                          p.packageSets?.some(ps => ps.setId === mealSet.setId)
-                        ).length} packages</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {filteredMealSets.length === 0 && (
-              <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-                <Utensils className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  No Meal Sets Found
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  {searchTerm || categoryFilter !== 'all'
-                    ? 'No meal sets match your search criteria.'
-                    : 'Create your first meal set to get started.'}
-                </p>
-                <button
-                  onClick={() => setShowMealSetForm(true)}
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg inline-flex items-center space-x-2 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  <Plus size={20} />
-                  <span>Create Meal Set</span>
-                </button>
-              </div>
-            )}
-          </>
-        )}
       </div>
 
-      {/* MODALS */}
-      {showPackageForm && (
+      {/* Meal Set Form Modal */}
+      {showMealSetForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          {/* Package Form Modal*/}
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    {editingMealSet ? 'Edit Meal Set' : 'Create New Meal Set'}
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {editingMealSet ? 'Update meal set details' : 'Add new meal set to your menu'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowMealSetForm(false);
+                    resetMealSetForm();
+                  }}
+                  className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition-colors"
+                  disabled={formLoading}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <form onSubmit={handleMealSetSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                    <input
+                      type="text"
+                      value={mealSetForm.name}
+                      onChange={(e) => setMealSetForm({ ...mealSetForm, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      required
+                      placeholder="e.g., Veg Thali"
+                      disabled={formLoading}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+                    <select
+                      value={mealSetForm.mealType}
+                      onChange={(e) => setMealSetForm({ ...mealSetForm, mealType: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      disabled={formLoading}
+                    >
+                      <option value="VEG">Vegetarian</option>
+                      <option value="NON_VEG">Non-Vegetarian</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Price (Rs.) *</label>
+                    <input
+                      type="number"
+                      value={mealSetForm.price}
+                      onChange={(e) => setMealSetForm({ ...mealSetForm, price: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      required
+                      placeholder="225"
+                      disabled={formLoading}
+                    />
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={mealSetForm.isAvailable}
+                      onChange={(e) => setMealSetForm({ ...mealSetForm, isAvailable: e.target.checked })}
+                      className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                      id="set-availability"
+                      disabled={formLoading}
+                    />
+                    <label htmlFor="set-availability" className="ml-2 text-sm text-gray-700">
+                      Available for orders
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+                  <textarea
+                    value={mealSetForm.description}
+                    onChange={(e) => setMealSetForm({ ...mealSetForm, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    rows="4"
+                    required
+                    placeholder="Describe the meal set ingredients and details..."
+                    disabled={formLoading}
+                  />
+                </div>
+
+                <div className="flex space-x-3 pt-4 border-t">
+                  <button
+                    type="submit"
+                    disabled={formLoading}
+                    className={`flex-1 bg-green-600 text-white py-2.5 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center ${
+                      formLoading ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {formLoading ? (
+                      <>
+                        <RefreshCw className="animate-spin h-4 w-4 mr-2" />
+                        {editingMealSet ? 'Updating...' : 'Creating...'}
+                      </>
+                    ) : (
+                      editingMealSet ? 'Update Meal Set' : 'Create Meal Set'
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMealSetForm(false);
+                      resetMealSetForm();
+                    }}
+                    disabled={formLoading}
+                    className="flex-1 bg-gray-200 text-gray-700 py-2.5 px-4 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
       )}
 
-      {showMealSetForm && (
+      {/* Package Form Modal - REMOVED IMAGE UPLOAD */}
+      {showPackageForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          {/* Meal Set Form Modal */}
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    {editingPackage ? 'Edit Meal Package' : 'Create New Meal Package'}
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {editingPackage ? 'Update package details' : 'Create new meal package for subscriptions'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowPackageForm(false);
+                    resetPackageForm();
+                  }}
+                  className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition-colors"
+                  disabled={formLoading}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <form onSubmit={handlePackageSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Package Name *</label>
+                    <input
+                      type="text"
+                      value={packageForm.name}
+                      onChange={(e) => setPackageForm({ ...packageForm, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      required
+                      placeholder="e.g., Weekly Vegetarian Plan"
+                      disabled={formLoading}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Package Type *</label>
+                    <select
+                      value={packageForm.packageType}
+                      onChange={(e) => setPackageForm({ ...packageForm, packageType: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      disabled={formLoading}
+                    >
+                      <option value="STANDARD">Standard</option>
+                      <option value="PREMIUM">Premium</option>
+                      <option value="DELUXE">Deluxe</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Duration (days) *</label>
+                    <select
+                      value={packageForm.durationDays}
+                      onChange={(e) => setPackageForm({ ...packageForm, durationDays: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      disabled={formLoading}
+                    >
+                      <option value="7">7 days</option>
+                      <option value="15">15 days</option>
+                      <option value="30">30 days</option>
+                      <option value="90">90 days</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Price per Day (Rs.) *</label>
+                    <input
+                      type="number"
+                      value={packageForm.pricePerDay}
+                      onChange={(e) => setPackageForm({ ...packageForm, pricePerDay: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      required
+                      placeholder="210"
+                      disabled={formLoading}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+                  <textarea
+                    value={packageForm.description}
+                    onChange={(e) => setPackageForm({ ...packageForm, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    rows="3"
+                    required
+                    placeholder="Describe the package features and benefits..."
+                    disabled={formLoading}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Meal Sets *</label>
+                  {mealSets.filter(set => set.isAvailable).length === 0 ? (
+                    <div className="text-center py-4 border border-gray-300 rounded-lg">
+                      <p className="text-gray-600">No active meal sets available.</p>
+                      <p className="text-sm text-gray-500 mt-1">Create meal sets first to include in packages.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                      {mealSets.filter(set => set.isAvailable).map(mealSet => (
+                        <div key={mealSet.id} className="flex items-center p-3 border border-gray-300 rounded-lg hover:bg-gray-50">
+                          <input
+                            type="checkbox"
+                            checked={packageForm.mealSetIds.includes(mealSet.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setPackageForm(prev => ({
+                                  ...prev,
+                                  mealSetIds: [...prev.mealSetIds, mealSet.id]
+                                }));
+                              } else {
+                                setPackageForm(prev => ({
+                                  ...prev,
+                                  mealSetIds: prev.mealSetIds.filter(id => id !== mealSet.id)
+                                }));
+                              }
+                            }}
+                            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                            id={`meal-set-${mealSet.id}`}
+                            disabled={formLoading}
+                          />
+                          <label htmlFor={`meal-set-${mealSet.id}`} className="ml-3 flex-1 cursor-pointer">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <div className="h-10 w-10 rounded bg-gray-200 flex items-center justify-center">
+                                  <Utensils className="h-5 w-5 text-gray-500" />
+                                </div>
+                                <div>
+                                  <span className="font-medium text-sm text-gray-900">{mealSet.name}</span>
+                                  <p className="text-xs text-gray-500">Rs. {mealSet.price}</p>
+                                </div>
+                              </div>
+                              <span className={`text-xs px-2 py-0.5 rounded ${mealSet.type === 'VEG' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                {mealSet.type}
+                              </span>
+                            </div>
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={packageForm.isAvailable}
+                    onChange={(e) => setPackageForm({ ...packageForm, isAvailable: e.target.checked })}
+                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                    id="package-availability"
+                    disabled={formLoading}
+                  />
+                  <label htmlFor="package-availability" className="ml-2 text-sm text-gray-700">
+                    Available for subscriptions
+                  </label>
+                </div>
+
+                <div className="flex space-x-3 pt-4 border-t">
+                  <button
+                    type="submit"
+                    disabled={formLoading || packageForm.mealSetIds.length === 0}
+                    className={`flex-1 py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center ${
+                      packageForm.mealSetIds.length > 0 && !formLoading
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                    }`}
+                  >
+                    {formLoading ? (
+                      <>
+                        <RefreshCw className="animate-spin h-4 w-4 mr-2" />
+                        {editingPackage ? 'Updating...' : 'Creating...'}
+                      </>
+                    ) : (
+                      editingPackage ? 'Update Package' : 'Create Package'
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPackageForm(false);
+                      resetPackageForm();
+                    }}
+                    disabled={formLoading}
+                    className="flex-1 bg-gray-200 text-gray-700 py-2.5 px-4 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
       )}
     </div>

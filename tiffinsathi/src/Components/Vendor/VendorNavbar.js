@@ -244,15 +244,18 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
                   alt="Tiffin Sathi Logo"
                   className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
                 />
-                <h1
-                  className="text-xl sm:text-2xl font-bold hidden sm:block"
-                  style={{
-                    fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
-                    color: designTokens.colors.secondary.main,
-                  }}
-                >
-                  Tiffin Sathi
-                </h1>
+                <div className="flex flex-col">
+                  <h1
+                    className="text-xl sm:text-2xl font-bold hidden sm:block"
+                    style={{
+                      fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
+                      color: designTokens.colors.secondary.main,
+                    }}
+                  >
+                    Tiffin Sathi
+                  </h1>
+                  <div className="animate-pulse bg-gray-200 h-3 w-20 rounded hidden sm:block"></div>
+                </div>
               </div>
             </div>
             <div className="animate-pulse bg-gray-200 h-8 w-32 rounded hidden sm:block"></div>
@@ -286,15 +289,20 @@ const VendorNavbar = ({ onToggleSidebar, isMobile }) => {
                 alt="Tiffin Sathi Logo"
                 className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
               />
-              <h1
-                className="text-xl sm:text-2xl font-bold hidden sm:block"
-                style={{
-                  fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
-                  color: designTokens.colors.secondary.main,
-                }}
-              >
-                Tiffin Sathi
-              </h1>
+              <div className="flex flex-col">
+                <h1
+                  className="text-xl sm:text-2xl font-bold hidden sm:block"
+                  style={{
+                    fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive",
+                    color: designTokens.colors.secondary.main,
+                  }}
+                >
+                  Tiffin Sathi
+                </h1>
+                <span className="text-xs text-gray-500 hidden sm:block mt-0.5">
+                  Vendor Portal
+                </span>
+              </div>
             </div>
           </div>
 

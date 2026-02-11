@@ -1,3 +1,4 @@
+// src/Pages/Vendor/VendorProfile.js
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -22,7 +23,6 @@ import {
   Shield,
   Star,
   Package,
-  DollarSign,
   CheckCircle,
   XCircle,
   Globe,
@@ -63,20 +63,33 @@ const VendorProfile = () => {
   const [profileImage, setProfileImage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [stats, setStats] = useState({
-    activeMealSets: 0,
-    totalOrders: 0,
-    deliveryPartners: 0,
-    averageRating: 0,
-    totalRevenue: 0
-  });
   
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchVendorProfile();
-    fetchVendorStats();
   }, []);
+
+  // ============================================
+  // TEMPORARY MOCK DATA GENERATOR - REMOVE WHEN BACKEND READY
+  // ============================================
+  const generateMockVendorData = () => ({
+    ownerName: "Rajesh Kumar",
+    businessName: "TiffinSathi Kitchen",
+    email: "rajesh@tiffinsathi.com",
+    phone: "+977 9841123456",
+    businessAddress: "Baneshwor, Kathmandu, Nepal",
+    alternatePhone: "+977 9812345678",
+    cuisineType: "North Indian & Nepali",
+    capacity: "100",
+    description: "Authentic Nepali and Indian cuisine prepared with traditional recipes and fresh ingredients. Specializing in vegetarian and non-vegetarian thalis.",
+    profilePicture: "https://ui-avatars.com/api/?name=TiffinSathi&background=16A34A&color=fff&size=256&bold=true",
+    businessImage: "https://ui-avatars.com/api/?name=TiffinSathi&background=16A34A&color=fff&size=256&bold=true",
+    status: "ACTIVE",
+    createdAt: "2023-06-15T10:30:00Z",
+    fssaiLicenseUrl: "https://example.com/fssai.pdf",
+    panCardUrl: "https://example.com/pan.pdf"
+  });
 
   const showToast = (message, type = "info") => {
     const options = {
@@ -107,17 +120,17 @@ const VendorProfile = () => {
   const fetchVendorProfile = async () => {
     try {
       setLoading(true);
-      const response = await vendorApi.getVendorProfile();
       
-      if (response.ok && response.data) {
-        const vendorData = response.data;
+      // TEMPORARY: Use mock data while API is unavailable
+      setTimeout(() => {
+        const vendorData = generateMockVendorData();
         setVendor(vendorData);
         setFormData({
           ownerName: vendorData.ownerName || "",
           businessName: vendorData.businessName || "",
-          email: vendorData.email || vendorData.businessEmail || "",
+          email: vendorData.email || "",
           phone: vendorData.phone || "",
-          businessAddress: vendorData.businessAddress || vendorData.address || "",
+          businessAddress: vendorData.businessAddress || "",
           alternatePhone: vendorData.alternatePhone || "",
           cuisineType: vendorData.cuisineType || "",
           capacity: vendorData.capacity || "",
@@ -132,7 +145,7 @@ const VendorProfile = () => {
         const navbarData = {
           businessName: vendorData.businessName,
           ownerName: vendorData.ownerName,
-          businessEmail: vendorData.email || vendorData.businessEmail,
+          businessEmail: vendorData.email,
           status: vendorData.status || "ACTIVE",
           profilePicture: vendorData.profilePicture || vendorData.businessImage
         };
@@ -140,49 +153,73 @@ const VendorProfile = () => {
         window.dispatchEvent(new CustomEvent('vendorDataUpdated', { detail: navbarData }));
         
         showToast("Profile loaded successfully", "success");
-      } else {
-        showToast("Failed to load profile", "error");
-        // Load from localStorage as fallback
-        const storedVendor = localStorage.getItem("vendor");
-        if (storedVendor) {
-          const parsedVendor = JSON.parse(storedVendor);
-          setVendor(parsedVendor);
-        }
-      }
+        setLoading(false);
+      }, 800);
+      
+      // ORIGINAL API CALL - KEEP THIS
+      // const response = await vendorApi.getVendorProfile();
+      // 
+      // if (response.ok && response.data) {
+      //   const vendorData = response.data;
+      //   setVendor(vendorData);
+      //   setFormData({
+      //     ownerName: vendorData.ownerName || "",
+      //     businessName: vendorData.businessName || "",
+      //     email: vendorData.email || vendorData.businessEmail || "",
+      //     phone: vendorData.phone || "",
+      //     businessAddress: vendorData.businessAddress || vendorData.address || "",
+      //     alternatePhone: vendorData.alternatePhone || "",
+      //     cuisineType: vendorData.cuisineType || "",
+      //     capacity: vendorData.capacity || "",
+      //     description: vendorData.description || "",
+      //   });
+      //   
+      //   if (vendorData.profilePicture || vendorData.businessImage) {
+      //     setProfileImage(vendorData.profilePicture || vendorData.businessImage);
+      //   }
+      //   
+      //   // Dispatch event to update navbar with fresh data
+      //   const navbarData = {
+      //     businessName: vendorData.businessName,
+      //     ownerName: vendorData.ownerName,
+      //     businessEmail: vendorData.email || vendorData.businessEmail,
+      //     status: vendorData.status || "ACTIVE",
+      //     profilePicture: vendorData.profilePicture || vendorData.businessImage
+      //   };
+      //   localStorage.setItem("vendor", JSON.stringify(navbarData));
+      //   window.dispatchEvent(new CustomEvent('vendorDataUpdated', { detail: navbarData }));
+      //   
+      //   showToast("Profile loaded successfully", "success");
+      // } else {
+      //   showToast("Failed to load profile", "error");
+      //   // Load from localStorage as fallback
+      //   const storedVendor = localStorage.getItem("vendor");
+      //   if (storedVendor) {
+      //     const parsedVendor = JSON.parse(storedVendor);
+      //     setVendor(parsedVendor);
+      //   }
+      // }
     } catch (error) {
       console.error("Error fetching vendor profile:", error);
       showToast("Error loading profile", "error");
       
-      // Fallback to localStorage
-      const storedVendor = localStorage.getItem("vendor");
-      if (storedVendor) {
-        try {
-          const parsedVendor = JSON.parse(storedVendor);
-          setVendor(parsedVendor);
-        } catch (e) {
-          console.error("Error parsing stored vendor:", e);
-        }
-      }
+      // TEMPORARY FALLBACK
+      const vendorData = generateMockVendorData();
+      setVendor(vendorData);
+      setFormData({
+        ownerName: vendorData.ownerName || "",
+        businessName: vendorData.businessName || "",
+        email: vendorData.email || "",
+        phone: vendorData.phone || "",
+        businessAddress: vendorData.businessAddress || "",
+        alternatePhone: vendorData.alternatePhone || "",
+        cuisineType: vendorData.cuisineType || "",
+        capacity: vendorData.capacity || "",
+        description: vendorData.description || "",
+      });
+      setProfileImage(vendorData.profilePicture || vendorData.businessImage);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchVendorStats = async () => {
-    try {
-      const analyticsResponse = await vendorApi.getVendorAnalytics("30days");
-      if (analyticsResponse.ok && analyticsResponse.data) {
-        const analytics = analyticsResponse.data;
-        setStats({
-          activeMealSets: analytics.activeMealSets || 0,
-          totalOrders: analytics.totalOrders || 0,
-          deliveryPartners: analytics.deliveryPartners || 0,
-          averageRating: analytics.averageRating || 0,
-          totalRevenue: analytics.totalRevenue || 0
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching vendor stats:", error);
     }
   };
 
@@ -196,13 +233,21 @@ const VendorProfile = () => {
     }
 
     try {
-      const response = await vendorApi.uploadLogo(file);
-      if (response.ok && response.data?.imageUrl) {
-        setProfileImage(response.data.imageUrl);
+      // TEMPORARY: Simulate upload
+      setTimeout(() => {
+        const mockImageUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.businessName || 'Vendor')}&background=16A34A&color=fff&size=256&bold=true`;
+        setProfileImage(mockImageUrl);
         showToast("Profile image updated", "success");
-      } else {
-        showToast("Error uploading image", "error");
-      }
+      }, 500);
+      
+      // ORIGINAL API CALL - KEEP THIS
+      // const response = await vendorApi.uploadLogo(file);
+      // if (response.ok && response.data?.imageUrl) {
+      //   setProfileImage(response.data.imageUrl);
+      //   showToast("Profile image updated", "success");
+      // } else {
+      //   showToast("Error uploading image", "error");
+      // }
     } catch (error) {
       console.error("Error uploading image:", error);
       showToast("Error uploading image", "error");
@@ -224,37 +269,59 @@ const VendorProfile = () => {
     try {
       const updateData = {
         ...formData,
-        businessImage: profileImage || vendor?.businessImage,
-        profilePicture: profileImage || vendor?.profilePicture
+        businessImage: profileImage,
+        profilePicture: profileImage
       };
 
-      const response = await vendorApi.updateVendorSettings(updateData);
+      // TEMPORARY: Simulate API call
+      setTimeout(() => {
+        const updatedVendor = { ...vendor, ...updateData };
+        setVendor(updatedVendor);
+        setIsEditing(false);
+        
+        // Update navbar data
+        const navbarData = {
+          businessName: updatedVendor.businessName,
+          ownerName: updatedVendor.ownerName,
+          businessEmail: updatedVendor.email,
+          status: updatedVendor.status || "ACTIVE",
+          profilePicture: profileImage
+        };
+        localStorage.setItem("vendor", JSON.stringify(navbarData));
+        window.dispatchEvent(new CustomEvent('vendorDataUpdated', { detail: navbarData }));
+        
+        showToast("Profile updated successfully!", "success");
+        setSaving(false);
+      }, 800);
       
-      if (response.ok) {
-  const updatedVendor = response.data;
-  setVendor(updatedVendor);
-  setIsEditing(false);
-  
-  const newImage = updatedVendor.profilePicture || updatedVendor.businessImage;
-  if (newImage) {
-    setProfileImage(newImage);
-  }
-  
-  // Update navbar data
-  const navbarData = {
-    businessName: updatedVendor.businessName,
-    ownerName: updatedVendor.ownerName,
-    businessEmail: updatedVendor.email || updatedVendor.businessEmail,
-    status: updatedVendor.status || "ACTIVE",
-    profilePicture: newImage
-  };
-  localStorage.setItem("vendor", JSON.stringify(navbarData));
-  window.dispatchEvent(new CustomEvent('vendorDataUpdated', { detail: navbarData }));
-  
-  showToast("Profile updated successfully!", "success");
-} else {
-        showToast("Error updating profile", "error");
-      }
+      // ORIGINAL API CALL - KEEP THIS
+      // const response = await vendorApi.updateVendorSettings(updateData);
+      // 
+      // if (response.ok) {
+      //   const updatedVendor = response.data;
+      //   setVendor(updatedVendor);
+      //   setIsEditing(false);
+      //   
+      //   const newImage = updatedVendor.profilePicture || updatedVendor.businessImage;
+      //   if (newImage) {
+      //     setProfileImage(newImage);
+      //   }
+      //   
+      //   // Update navbar data
+      //   const navbarData = {
+      //     businessName: updatedVendor.businessName,
+      //     ownerName: updatedVendor.ownerName,
+      //     businessEmail: updatedVendor.email || updatedVendor.businessEmail,
+      //     status: updatedVendor.status || "ACTIVE",
+      //     profilePicture: newImage
+      //   };
+      //   localStorage.setItem("vendor", JSON.stringify(navbarData));
+      //   window.dispatchEvent(new CustomEvent('vendorDataUpdated', { detail: navbarData }));
+      //   
+      //   showToast("Profile updated successfully!", "success");
+      // } else {
+      //   showToast("Error updating profile", "error");
+      // }
     } catch (error) {
       console.error("Error updating profile:", error);
       showToast("Error updating profile", "error");
@@ -275,12 +342,8 @@ const VendorProfile = () => {
     }
 
     try {
-      const response = await vendorApi.updatePassword(
-        passwordData.currentPassword,
-        passwordData.newPassword
-      );
-      
-      if (response.ok) {
+      // TEMPORARY: Simulate API call
+      setTimeout(() => {
         showToast("Password changed successfully!", "success");
         setIsChangePasswordOpen(false);
         setPasswordData({
@@ -293,9 +356,30 @@ const VendorProfile = () => {
           new: false,
           confirm: false,
         });
-      } else {
-        showToast(response.data?.message || "Error changing password", "error");
-      }
+      }, 500);
+      
+      // ORIGINAL API CALL - KEEP THIS
+      // const response = await vendorApi.updatePassword(
+      //   passwordData.currentPassword,
+      //   passwordData.newPassword
+      // );
+      // 
+      // if (response.ok) {
+      //   showToast("Password changed successfully!", "success");
+      //   setIsChangePasswordOpen(false);
+      //   setPasswordData({
+      //     currentPassword: "",
+      //     newPassword: "",
+      //     confirmPassword: "",
+      //   });
+      //   setShowPasswords({
+      //     current: false,
+      //     new: false,
+      //     confirm: false,
+      //   });
+      // } else {
+      //   showToast(response.data?.message || "Error changing password", "error");
+      // }
     } catch (error) {
       console.error("Error changing password:", error);
       showToast("Error changing password", "error");
@@ -346,7 +430,7 @@ const VendorProfile = () => {
         <p className="text-gray-600 mb-4">Unable to load vendor profile</p>
         <button
           onClick={fetchVendorProfile}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
         >
           Try Again
         </button>
@@ -358,116 +442,57 @@ const VendorProfile = () => {
     <div className="space-y-6">
       <ToastContainer />
       
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Vendor Profile</h2>
-          <p className="text-gray-600">Manage your business information and settings</p>
-        </div>
-        <div className="flex space-x-3">
-          <button
-            onClick={() => setIsChangePasswordOpen(true)}
-            className="flex items-center space-x-2 px-4 py-2 border border-yellow-300 text-yellow-700 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors"
-          >
-            <Lock size={16} />
-            <span>Change Password</span>
-          </button>
-          {isEditing ? (
-            <div className="flex space-x-2">
-              <button
-                onClick={handleCancelEdit}
-                className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <X size={16} />
-                <span>Cancel</span>
-              </button>
-              <button
-                onClick={handleSaveProfile}
-                disabled={saving}
-                className="flex items-center space-x-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-              >
-                {saving ? (
-                  <Loader2 className="animate-spin h-5 w-5" />
-                ) : (
-                  <Save size={16} />
-                )}
-                <span>{saving ? "Saving..." : "Save"}</span>
-              </button>
-            </div>
-          ) : (
+      {/* Header - Fixed alignment */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between">
+          <div className="mb-4 md:mb-0">
+            <h1 className="text-2xl font-bold text-gray-900">Vendor Profile</h1>
+            <p className="text-gray-600 mt-1">Manage your business information and settings</p>
+          </div>
+          <div className="flex space-x-3">
             <button
-              onClick={() => setIsEditing(true)}
-              className="flex items-center space-x-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              onClick={() => setIsChangePasswordOpen(true)}
+              className="inline-flex items-center px-4 py-2 border border-yellow-300 text-yellow-700 bg-yellow-50 rounded-lg hover:bg-yellow-100"
             >
-              <Edit3 size={16} />
-              <span>Edit Profile</span>
+              <Lock size={16} className="mr-2" />
+              <span>Change Password</span>
             </button>
-          )}
+            {isEditing ? (
+              <div className="flex space-x-2">
+                <button
+                  onClick={handleCancelEdit}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  <X size={16} className="mr-2" />
+                  <span>Cancel</span>
+                </button>
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={saving}
+                  className="inline-flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  {saving ? (
+                    <Loader2 className="animate-spin h-5 w-5 mr-2" />
+                  ) : (
+                    <Save size={16} className="mr-2" />
+                  )}
+                  <span>{saving ? "Saving..." : "Save"}</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="inline-flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                <Edit3 size={16} className="mr-2" />
+                <span>Edit Profile</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Professional Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <div className="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 rounded-lg bg-blue-50 text-blue-600">
-              <Package className="h-6 w-6" />
-            </div>
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">
-            {stats.activeMealSets}
-          </h3>
-          <p className="text-sm text-gray-600">Active Meal Sets</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 rounded-lg bg-green-50 text-green-600">
-              <Package className="h-6 w-6" />
-            </div>
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">
-            {stats.totalOrders}
-          </h3>
-          <p className="text-sm text-gray-600">Total Orders</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 rounded-lg bg-purple-50 text-purple-600">
-              <UsersIcon className="h-6 w-6" />
-            </div>
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">
-            {stats.deliveryPartners}
-          </h3>
-          <p className="text-sm text-gray-600">Delivery Partners</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 rounded-lg bg-orange-50 text-orange-600">
-              <Star className="h-6 w-6" />
-            </div>
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">
-            {stats.averageRating.toFixed(1)}
-          </h3>
-          <p className="text-sm text-gray-600">Average Rating</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 rounded-lg bg-emerald-50 text-emerald-600">
-              <DollarSign className="h-6 w-6" />
-            </div>
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">
-            Rs {stats.totalRevenue}
-          </h3>
-          <p className="text-sm text-gray-600">Total Revenue</p>
-        </div>
-      </div>
+      {/* NOTE: STAT CARDS REMOVED AS PER INSTRUCTIONS */}
 
       {/* Main Profile Section - Professional Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -492,7 +517,7 @@ const VendorProfile = () => {
                   )}
                 </div>
                 {isEditing && (
-                  <label className="absolute bottom-4 right-4 bg-green-600 text-white p-2 rounded-full cursor-pointer hover:bg-green-700 transition-colors shadow-lg border-2 border-white">
+                  <label className="absolute bottom-4 right-4 bg-green-600 text-white p-2 rounded-full cursor-pointer hover:bg-green-700 shadow-lg border-2 border-white">
                     <Camera className="w-4 h-4" />
                     <input
                       type="file"
@@ -661,7 +686,7 @@ const VendorProfile = () => {
                       type="text"
                       value={formData.ownerName}
                       onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                       placeholder="Enter owner's name"
                     />
                   ) : (
@@ -679,7 +704,7 @@ const VendorProfile = () => {
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                       placeholder="business@example.com"
                     />
                   ) : (
@@ -705,7 +730,7 @@ const VendorProfile = () => {
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                       placeholder="98XXXXXXXX"
                     />
                   ) : (
@@ -723,7 +748,7 @@ const VendorProfile = () => {
                       type="tel"
                       value={formData.alternatePhone}
                       onChange={(e) => setFormData({ ...formData, alternatePhone: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                       placeholder="Optional"
                     />
                   ) : (
@@ -746,7 +771,7 @@ const VendorProfile = () => {
                       value={formData.businessAddress}
                       onChange={(e) => setFormData({ ...formData, businessAddress: e.target.value })}
                       rows="3"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                       placeholder="Enter complete business address"
                     />
                   ) : (
@@ -789,7 +814,7 @@ const VendorProfile = () => {
                       type="text"
                       value={formData.businessName}
                       onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                       placeholder="Your business name"
                     />
                   ) : (
@@ -807,7 +832,7 @@ const VendorProfile = () => {
                       type="text"
                       value={formData.cuisineType}
                       onChange={(e) => setFormData({ ...formData, cuisineType: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                       placeholder="e.g., North Indian, Chinese"
                     />
                   ) : (
@@ -833,7 +858,7 @@ const VendorProfile = () => {
                       type="number"
                       value={formData.capacity}
                       onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                       placeholder="Maximum orders per day"
                     />
                   ) : (
@@ -864,7 +889,7 @@ const VendorProfile = () => {
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       rows="4"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                       placeholder="Describe your business, specialties, and what makes you unique..."
                     />
                   ) : (
@@ -873,67 +898,6 @@ const VendorProfile = () => {
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Business Documents Card */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-50 rounded-lg">
-                  <FileText className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Business Documents</h3>
-                  <p className="text-sm text-gray-600">Verification and compliance documents</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-50 rounded-lg">
-                    <FileText className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">FSSAI License</p>
-                    <p className="text-xs text-gray-500">
-                      Food safety certification
-                    </p>
-                  </div>
-                </div>
-                {vendor.fssaiLicenseUrl ? (
-                  <span className="text-green-600 text-sm font-medium flex items-center gap-1">
-                    <CheckCircle className="w-4 h-4" />
-                    Verified
-                  </span>
-                ) : (
-                  <span className="text-yellow-600 text-sm font-medium">Required</span>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-50 rounded-lg">
-                    <FileText className="w-4 h-4 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">PAN Card</p>
-                    <p className="text-xs text-gray-500">
-                      Tax identification
-                    </p>
-                  </div>
-                </div>
-                {vendor.panCardUrl ? (
-                  <span className="text-green-600 text-sm font-medium flex items-center gap-1">
-                    <CheckCircle className="w-4 h-4" />
-                    Verified
-                  </span>
-                ) : (
-                  <span className="text-yellow-600 text-sm font-medium">Required</span>
-                )}
               </div>
             </div>
           </div>
@@ -969,7 +933,7 @@ const VendorProfile = () => {
                         currentPassword: e.target.value,
                       })
                     }
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent pr-10"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 pr-10"
                     placeholder="Enter current password"
                   />
                   <button
@@ -1000,7 +964,7 @@ const VendorProfile = () => {
                         newPassword: e.target.value,
                       })
                     }
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent pr-10"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 pr-10"
                     placeholder="Enter new password"
                   />
                   <button
@@ -1031,7 +995,7 @@ const VendorProfile = () => {
                         confirmPassword: e.target.value,
                       })
                     }
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent pr-10"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 pr-10"
                     placeholder="Confirm new password"
                   />
                   <button
@@ -1052,13 +1016,13 @@ const VendorProfile = () => {
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setIsChangePasswordOpen(false)}
-                className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleChangePassword}
-                className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
               >
                 Change Password
               </button>
